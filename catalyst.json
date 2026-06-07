@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "targets": [
+      "datathon-ksp-app"
+    ],
+    "ignore": [],
+    "source": "functions"
+  },
+  "client": {
+    "source": "datathon-ksp-client",
+    "plugin": "zcatalyst-cli-plugin-react"
+  }
+}
