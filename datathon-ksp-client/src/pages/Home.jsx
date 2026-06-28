@@ -151,7 +151,7 @@ export default function Home() {
                       >
                         <History
                           size={15}
-                          className="text-slate-500 shrink-0"
+                          className="text-slate-800 shrink-0"
                         />
 
                         <span className="truncate text-sm">{query}</span>
