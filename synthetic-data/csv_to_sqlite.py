@@ -14,7 +14,7 @@ import csv
 import os
 import sqlite3
 
-CSV_DIR = "sample_data_csv"
+CSV_DIR = "sample_data_large_csv"
 DB_PATH = "fir_system.db"
 
 # ----------------------------------------------------------------------------

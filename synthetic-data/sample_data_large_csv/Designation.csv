@@ -1,0 +1,10 @@
+DesignationID,DesignationName,Active,SortOrder
+1,Station House Officer,1,1
+2,Investigating Officer,1,2
+3,Beat Officer,1,3
+4,Desk Officer,1,4
+5,Crime Branch Officer,1,5
+6,Traffic Officer,1,6
+7,Women Helpline Officer,1,7
+8,Cyber Cell Officer,1,8
+9,Reserve Officer,1,9
