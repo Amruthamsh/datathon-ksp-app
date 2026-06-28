@@ -1,73 +1,53 @@
-import logging
-
-from flask import jsonify, make_response
 from fastapi import FastAPI
-import zcatalyst_sdk
-'''
-Execute below command to install SDK in global for enabling code suggestions
--> python3 -m pip install zcatalyst-sdk
-'''
+from fastapi.middleware.cors import CORSMiddleware
+import logging
+from flask import Response as FlaskResponse
+from a2wsgi import ASGIMiddleware
 
-logger = logging.getLogger(__name__)
-app = FastAPI(title="Datathon KSP")
+from routes.employees import router as employees_router
+from routes.chat import router as chat_router
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("fastapi_function")
 
-def root_payload():
-    return {
-        "status": "success",
-        "message": "Hello from FastAPI",
-    }
+app = FastAPI(title="Datathon KSP App", version="1.0.0")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-def cache_payload():
-    catalyst_app = zcatalyst_sdk.initialize()
-    default_segment = catalyst_app.cache().segment()
-
-    insert_resp = default_segment.put('Name', 'DefaultName')
-    logger.info('Inserted cache : %s', insert_resp)
-    get_resp = default_segment.get('Name')
-
-    return get_resp
+app.include_router(employees_router)
+app.include_router(chat_router)
 
 
-@app.get("/")
-def read_root():
-    return root_payload()
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
-
-@app.get("/cache")
-def read_cache():
-    try:
-        return cache_payload()
-    except Exception as exc:
-        logger.exception("Cache route failed")
-        return {
-            "status": "error",
-            "message": "Cache route is only available in a Catalyst runtime.",
-            "detail": str(exc),
-        }, 500
-
-
+_wsgi_app = ASGIMiddleware(app)
+ 
+ 
 def handler(request):
-    if request.path == "/":
-        return jsonify(root_payload()), 200
-    if request.path == "/cache":
-        try:
-            return jsonify(cache_payload()), 200
-        except Exception as exc:
-            logger.exception("Cache route failed")
-            return {
-                "status": "error",
-                "message": "Cache route is only available in a Catalyst runtime.",
-                "detail": str(exc),
-            }, 500
+    response_state = {}
+ 
+    def start_response(status, headers, exc_info=None):
+        response_state["status"] = status
+        response_state["headers"] = headers
+ 
+    body_chunks = _wsgi_app(request.environ, start_response)
+    body = b"".join(body_chunks)
+ 
+    status_code = int(response_state["status"].split(" ", 1)[0])
+    return FlaskResponse(body, status=status_code, headers=response_state["headers"])
 
-    response = make_response('Unknown path')
-    response.status_code = 400
-    return response
-
-
+ 
+# Local-only entry point for a quick `python main.py` sanity check outside
+# Catalyst. Catalyst's own `catalyst serve` / `catalyst deploy` call
+# `handler(request)` above, not this block.
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

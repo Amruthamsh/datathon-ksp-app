@@ -1,0 +1,4 @@
+catalyst-debug.log
+.build
+.catalyst
+.env

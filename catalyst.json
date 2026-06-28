@@ -1,13 +1,13 @@
 {
   "functions": {
-    "targets": [
-      "datathon-ksp-app"
-    ],
+    "targets": ["datathon-ksp-app"],
     "ignore": [],
     "source": "functions"
   },
-  "client": {
-    "source": "datathon-ksp-client",
-    "plugin": "zcatalyst-cli-plugin-react"
-  }
+  "slate": [
+    {
+      "name": "datathon-ksp-client",
+      "source": "/Users/apple/Documents/GitHub/datathon-ksp-app/datathon-ksp-client"
+    }
+  ]
 }
