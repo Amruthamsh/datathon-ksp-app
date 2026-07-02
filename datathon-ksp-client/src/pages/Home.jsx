@@ -83,7 +83,7 @@ export default function Home() {
       <div className="flex flex-1 overflow-hidden">
         <LeftNav expanded={expanded} setExpanded={setExpanded} />
         <main className="flex-1 flex overflow-hidden">
-          <section className="w-[50%] bg-white border-slate-300 border-r flex flex-col">
+          <section className="w-[47%] bg-white border-slate-300 border-r flex flex-col">
             <div className="flex-1 overflow-auto p-6 space-y-5">
               {messages.map((m, i) => (
                 <div
