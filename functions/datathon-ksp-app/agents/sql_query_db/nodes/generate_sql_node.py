@@ -3,7 +3,7 @@ import re
 from langchain_core.messages import AIMessage, HumanMessage
 
 from llm.groq_service import groq_service
-from sql_query_db.state import SQLAgentState
+from agents.sql_query_db.state import SQLAgentState
 
 
 def generate_sql_node(state: SQLAgentState):
@@ -67,10 +67,14 @@ Distinct Values
 {state["distinct_values"]}
 """
 
-    sql = groq_service.generate(
-        system_message=system_prompt,
-        human_message=human_prompt,
-    )
+    try:
+        sql = groq_service.generate(
+            system_prompt=system_prompt,
+            user_prompt=human_prompt,
+        )
+    except Exception as e:
+        print("Error during GroqService.generate:", str(e))
+        raise
 
     # Remove markdown fences if the model ignores instructions
     sql = re.sub(r"^```(?:sql)?", "", sql.strip(), flags=re.IGNORECASE)

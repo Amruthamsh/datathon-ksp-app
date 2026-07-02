@@ -28,14 +28,14 @@ class GroqService(LLMService):
             model=self.model,
             messages=messages,
             temperature=0.2,
-            max_completion_tokens=7000,
+            max_completion_tokens=1024,
             top_p=1,
             reasoning_effort="low",
             stream=False,
             stop=None
         )
 
-        return response["choices"][0]["message"]["content"]
+        return response.choices[0].message.content.strip()
     
 
 groq_service = GroqService(host=None, model="openai/gpt-oss-20b")

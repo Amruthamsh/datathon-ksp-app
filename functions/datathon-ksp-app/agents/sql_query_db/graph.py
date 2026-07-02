@@ -1,14 +1,11 @@
 from langgraph.graph import StateGraph, END
 
-from .state import SQLAgentState
-from .nodes import (
-    planner_node,
-    fetch_values_node,
-    generate_sql_node,
-    execute_sql_node,
-    response_node,
-)
-
+from agents.sql_query_db.state import SQLAgentState
+from agents.sql_query_db.nodes.planner_node import planner_node
+from agents.sql_query_db.nodes.fetch_values_node import fetch_values_node
+from agents.sql_query_db.nodes.generate_sql_node import generate_sql_node
+from agents.sql_query_db.nodes.execute_sql_node import execute_sql_node
+from agents.sql_query_db.nodes.response_node import response_node
 builder = StateGraph(SQLAgentState)
 
 builder.add_node("planner", planner_node)

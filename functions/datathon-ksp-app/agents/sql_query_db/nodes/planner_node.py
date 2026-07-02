@@ -4,7 +4,7 @@ import db.dependencies as db_dependencies
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from llm.groq_service import groq_service
-from sql_query_db.state import SQLAgentState
+from agents.sql_query_db.state import SQLAgentState
 
 
 def planner_node(state: SQLAgentState):
@@ -31,8 +31,6 @@ def planner_node(state: SQLAgentState):
         f"{table}\n{ddl}"
         for table, ddl in schemas.items()
     )
-
-    print("Schema Text:", schema_text)
 
     system_prompt = """
 You are a database planning assistant.
@@ -72,11 +70,15 @@ Database Schemas
 
 {schema_text}
 """
-
-    response = groq_service.generate(
-        system_message=SystemMessage(content=system_prompt),
-        human_message=HumanMessage(content=human_prompt),
-    )
+    
+    try:
+        response = groq_service.generate(
+            user_prompt=human_prompt,
+            system_prompt=system_prompt,
+        )
+    except Exception as e:
+        print("Error during GroqService.generate:", str(e))
+        raise
 
     plan = json.loads(response)
 

@@ -3,7 +3,7 @@ import json
 from langchain_core.messages import AIMessage, HumanMessage
 
 from llm.groq_service import groq_service
-from sql_query_db.state import SQLAgentState
+from agents.sql_query_db.state import SQLAgentState
 
 
 def response_node(state: SQLAgentState):
@@ -84,11 +84,14 @@ Example:
     ]
 }}
 """
-
-    response = groq_service.generate(
-        system_message="You are a helpful data analyst.",
-        human_message=prompt,
-    )
+    try:
+        response = groq_service.generate(
+            system_prompt="You are a helpful data analyst.",
+            user_prompt=prompt,
+        )
+    except Exception as e:
+        print("Error during GroqService.generate:", str(e))
+        raise
 
     response = json.loads(response)
 

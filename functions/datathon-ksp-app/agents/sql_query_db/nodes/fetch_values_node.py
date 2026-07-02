@@ -1,4 +1,4 @@
-from sql_query_db.state import SQLAgentState
+from agents.sql_query_db.state import SQLAgentState
 import db.dependencies as db_dependencies
 
 
