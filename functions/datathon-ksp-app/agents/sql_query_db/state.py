@@ -15,3 +15,4 @@ class SQLAgentState(TypedDict):
     sql_result: list[dict]
     error: str | None
     response: str
+    follow_up_questions: list[str]
