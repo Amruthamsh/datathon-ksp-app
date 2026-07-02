@@ -4,60 +4,10 @@ import { ArrowUp, Paperclip } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useState, useRef, useEffect } from "react";
+import DynamicChart from "../components/DynamicChart";
 
 export default function Home() {
   const [expanded, setExpanded] = useState(true);
-
-  const snapshots = [
-    {
-      id: 1,
-      title: "Burglary hotspots",
-      filters: { Crime: "Burglary", District: "Bengaluru", Period: "30 Days" },
-      kpi: { incidents: 326, change: "+18%" },
-      summary:
-        "Whitefield and Bellandur show the highest concentration of burglaries.",
-      trend: [30, 44, 58, 71, 63],
-      areas: [
-        { name: "Whitefield", value: 82 },
-        { name: "Bellandur", value: 70 },
-        { name: "KR Puram", value: 56 },
-        { name: "Marathahalli", value: 49 },
-      ],
-    },
-    {
-      id: 2,
-      title: "Night only",
-      filters: { Crime: "Burglary", Time: "After 10 PM" },
-      kpi: { incidents: 142, change: "-56%" },
-      summary: "Most incidents occur between 10 PM and 2 AM.",
-      trend: [12, 19, 27, 36, 48],
-      areas: [
-        { name: "Whitefield", value: 66 },
-        { name: "Bellandur", value: 54 },
-        { name: "Electronic City", value: 40 },
-        { name: "HSR", value: 35 },
-      ],
-    },
-    {
-      id: 3,
-      title: "Comparison",
-      filters: { Compare: "Previous Month" },
-      kpi: { incidents: 142, change: "+11%" },
-      summary: "Night burglaries increased compared to last month.",
-      trend: [15, 17, 21, 29, 42],
-      areas: [
-        { name: "Whitefield", value: 74 },
-        { name: "Bellandur", value: 58 },
-        { name: "KR Puram", value: 45 },
-        { name: "HSR", value: 39 },
-      ],
-    },
-  ];
-
-  const [activeSnapshot, setActiveSnapshot] = useState(0);
-
-  const s = snapshots[activeSnapshot];
-
   const [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -113,6 +63,8 @@ export default function Home() {
       ]);
 
       setFollowUps(data.follow_up_questions ?? []);
+      setChartConfig(data.chart_config);
+      setChartData(data.sql_result ?? []);
 
       console.log(data.sql_query);
       console.table(data.sql_result);
@@ -146,6 +98,9 @@ export default function Home() {
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [input]);
 
+  const [chartConfig, setChartConfig] = useState(null);
+  const [chartData, setChartData] = useState([]);
+
   return (
     <div className="h-screen flex flex-col bg-slate-50">
       <Header />
@@ -154,7 +109,6 @@ export default function Home() {
         <main className="flex-1 flex overflow-hidden">
           <section className="w-[47%] border-r border-slate-200 bg-white flex flex-col">
             {/* Messages */}
-
             <div
               ref={chatContainerRef}
               className="flex-1 overflow-y-auto px-7 py-6 space-y-5"
@@ -335,67 +289,8 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="flex-1 overflow-auto p-6 bg-slate-100">
-            <div className="flex gap-3 flex-wrap mb-6">
-              {Object.entries(s.filters).map(([k, v]) => (
-                <div key={k} className="bg-white rounded-xl px-4 py-2 shadow">
-                  <div className="text-xs text-slate-500">{k}</div>
-                  <div className="font-medium">{v}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-2 gap-5">
-              <div className="bg-white rounded-2xl p-5 shadow">
-                <div className="font-semibold mb-4">Crime Heatmap</div>
-                <div className="h-72 rounded-xl bg-gradient-to-br from-red-100 via-orange-100 to-blue-100 flex items-center justify-center text-5xl">
-                  🗺️
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl p-5 shadow">
-                <div className="font-semibold mb-4">Summary</div>
-                <div className="text-5xl font-bold">{s.kpi.incidents}</div>
-                <div className="text-slate-500 mb-4">Incidents</div>
-                <div className="text-green-600 font-semibold">
-                  {s.kpi.change}
-                </div>
-                <p className="mt-5 text-sm text-slate-600">{s.summary}</p>
-              </div>
-
-              <div className="bg-white rounded-2xl p-5 shadow">
-                <div className="font-semibold mb-4">Weekly Trend</div>
-                <div className="flex items-end h-52 gap-3">
-                  {s.trend.map((v, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center">
-                      <div
-                        className="bg-blue-600 w-full rounded-t"
-                        style={{ height: v * 2 }}
-                      />
-                      <div className="text-xs mt-2">W{i + 1}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl p-5 shadow">
-                <div className="font-semibold mb-4">Top Locations</div>
-                {s.areas.map((a) => (
-                  <div key={a.name} className="mb-4">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>{a.name}</span>
-                      <span>{a.value}</span>
-                    </div>
-                    <div className="h-3 bg-slate-200 rounded-full">
-                      <div
-                        className="h-3 bg-blue-600 rounded-full"
-                        style={{ width: a.value + "%" }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <section className="flex-1 overflow-auto bg-slate-100 p-6">
+            <DynamicChart config={chartConfig} data={chartData} />
           </section>
         </main>
       </div>

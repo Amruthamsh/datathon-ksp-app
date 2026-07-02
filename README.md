@@ -24,9 +24,15 @@ The platform will go beyond simple data retrieval and enable:
                   |
              Generate SQL
                   |
-             Execute SQL
-                  |
-              Response
+               execute_sql
+                /       \
+               /         \
+          response      chart
+               \         /
+                \       /
+                finalize
+                    |
+                    END
 
 ## Code Setup
 

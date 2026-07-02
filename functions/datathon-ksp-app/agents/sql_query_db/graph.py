@@ -9,6 +9,8 @@ from agents.sql_query_db.nodes.response_node import response_node
 from agents.sql_query_db.nodes.router_node import router_node
 from agents.sql_query_db.nodes.chat_node import chat_node
 from agents.sql_query_db.functions.routing import route_after_router
+from agents.sql_query_db.nodes.chart_node import chart_node
+from agents.sql_query_db.nodes.finalize_node import finalize_node
 
 builder = StateGraph(SQLAgentState)
 
@@ -19,6 +21,8 @@ builder.add_node("generate_sql", generate_sql_node)
 builder.add_node("execute_sql", execute_sql_node)
 builder.add_node("response", response_node)
 builder.add_node("chat", chat_node)
+builder.add_node("chart", chart_node)
+builder.add_node("finalize", finalize_node)
 
 builder.set_entry_point("router")
 
@@ -34,8 +38,11 @@ builder.add_edge("planner", "fetch_column_values")
 builder.add_edge("fetch_column_values", "generate_sql")
 builder.add_edge("generate_sql", "execute_sql")
 builder.add_edge("execute_sql", "response")
+builder.add_edge("execute_sql", "chart")
 
-builder.add_edge("response", END)
-builder.add_edge("chat", END)
+builder.add_edge("response", "finalize")
+builder.add_edge("chart", "finalize")
+
+builder.add_edge("finalize", END)
 
 graph = builder.compile()

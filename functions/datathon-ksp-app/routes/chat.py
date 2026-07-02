@@ -46,6 +46,7 @@ async def generate_response(request: ChatRequest):
         "sql_result": result.get("sql_result", []),
         "error": result.get("error"),
         "follow_up_questions": result.get("follow_up_questions", []),
+        "chart_config": result.get("chart_config"),
     }
     
 # @router.post("/stream")
