@@ -32,15 +32,20 @@ async def generate_response(request: ChatRequest):
         ]
     }
 
-    result = graph.invoke(state)
+    try:
+        result = graph.invoke(state)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise
 
     return {
         "status": "success",
-        "response": result["response"],
-        "sql_query": result["sql_query"],
-        "sql_result": result["sql_result"],
-        "error": result["error"],
-        "follow_up_questions": result["follow_up_questions"]
+        "response": result.get("response"),
+        "sql_query": result.get("sql_query"),
+        "sql_result": result.get("sql_result", []),
+        "error": result.get("error"),
+        "follow_up_questions": result.get("follow_up_questions", []),
     }
     
 # @router.post("/stream")

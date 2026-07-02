@@ -182,11 +182,11 @@ export default function Home() {
                       <button
                         onClick={() => setActiveSnapshot(m.snapshot)}
                         className={`mt-4 rounded-lg border px-4 py-2 text-sm transition
-              ${
-                activeSnapshot === m.snapshot
-                  ? "border-blue-500 bg-blue-50 text-blue-700"
-                  : "border-slate-300 bg-white hover:bg-slate-50"
-              }`}
+                        ${
+                          activeSnapshot === m.snapshot
+                            ? "border-blue-500 bg-blue-50 text-blue-700"
+                            : "border-slate-300 bg-white hover:bg-slate-50"
+                        }`}
                       >
                         {activeSnapshot === m.snapshot
                           ? "Viewing Investigation"
@@ -234,16 +234,16 @@ export default function Home() {
                       key={q}
                       onClick={() => sendMessage(q)}
                       className="
-            rounded-full
-            border
-            border-slate-300
-            bg-white
-            px-4
-            py-2
-            text-sm
-            hover:bg-slate-50
-            transition
-            "
+                      rounded-full
+                      border
+                      border-slate-300
+                      bg-white
+                      px-4
+                      py-2
+                      text-sm
+                      hover:bg-slate-50
+                      transition
+                      "
                     >
                       {q}
                     </button>
@@ -257,32 +257,32 @@ export default function Home() {
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4">
               <div
                 className="
-      flex
-      items-end
-      gap-2
-      rounded-[28px]
-      border
-      border-slate-300
-      bg-white
-      px-3
-      py-2
-      shadow-sm
-      focus-within:border-blue-500
-      focus-within:shadow-md
-      transition
-      "
+                flex
+                items-end
+                gap-2
+                rounded-[28px]
+                border
+                border-slate-300
+                bg-white
+                px-3
+                py-2
+                shadow-sm
+                focus-within:border-blue-500
+                focus-within:shadow-md
+                transition
+                "
               >
                 <button
                   className="
-        flex
-        h-10
-        w-10
-        items-center
-        justify-center
-        rounded-full
-        text-slate-500
-        hover:bg-slate-100
-        "
+                  flex
+                  h-10
+                  w-10
+                  items-center
+                  justify-center
+                  rounded-full
+                  text-slate-500
+                  hover:bg-slate-100
+                  "
                 >
                   <Paperclip size={18} />
                 </button>
@@ -292,17 +292,17 @@ export default function Home() {
                   value={input}
                   placeholder="Ask a question or provide instructions..."
                   className="
-        flex-1
-        resize-none
-        bg-transparent
-        text-[15px]
-        leading-6
-        outline-none
-        overflow-y-auto
-        max-h-[180px]
-        py-2
-        placeholder:text-slate-400
-        "
+                    flex-1
+                    resize-none
+                    bg-transparent
+                    text-[15px]
+                    leading-6
+                    outline-none
+                    overflow-y-auto
+                    max-h-[180px]
+                    py-2
+                    placeholder:text-slate-400
+                  "
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -316,18 +316,18 @@ export default function Home() {
                   disabled={loading}
                   onClick={() => sendMessage()}
                   className="
-        flex
-        h-11
-        w-11
-        items-center
-        justify-center
-        rounded-full
-        bg-slate-900
-        text-white
-        hover:bg-slate-800
-        disabled:bg-slate-300
-        transition
-        "
+                    flex
+                    h-11
+                    w-11
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-slate-900
+                    text-white
+                    hover:bg-slate-800
+                    disabled:bg-slate-300
+                    transition
+                  "
                 >
                   <ArrowUp size={18} />
                 </button>

@@ -2,11 +2,11 @@ from typing import Annotated
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
-from typing_extensions import TypedDict
-
+from typing_extensions import TypedDict, Literal
 
 class SQLAgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
+    intent: Literal["sql", "chat"]
     schemas: dict
     selected_tables: list[str]
     value_lookup_columns: dict[str, list[str]]

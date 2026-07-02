@@ -14,6 +14,20 @@ The platform will go beyond simple data retrieval and enable:
 • Behavioral and criminological profiling
 • Proactive crime prevention intelligence
 
+### Architecture of the SQL Agent Graph:
+
+          Router
+         /      \
+      Chat      SQL Planner
+                  |
+           Fetch Values
+                  |
+             Generate SQL
+                  |
+             Execute SQL
+                  |
+              Response
+
 ## Code Setup
 
 Run `catalyst serve` to start the server.
