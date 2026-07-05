@@ -53,7 +53,7 @@ const Header = () => {
         <button
           type="button"
           onClick={signOut}
-          className="flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
+          className="flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition cursor-pointer"
         >
           <LogOut size={16} />
           Sign out
