@@ -4,7 +4,7 @@ import logging
 from flask import Response as FlaskResponse
 from a2wsgi import ASGIMiddleware
 
-from routes.employees import router as employees_router
+from routes.auth import router as auth_router
 from routes.chat import router as chat_router
 
 logging.basicConfig(level=logging.INFO)
@@ -22,8 +22,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(employees_router)
 app.include_router(chat_router)
+app.include_router(auth_router)
 
 
 @app.get("/health")

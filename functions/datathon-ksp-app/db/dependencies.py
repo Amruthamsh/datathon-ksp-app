@@ -1,26 +1,22 @@
-import os
+from fastapi import Request
 
-from db.sqlite_repository import SQLiteEmployeeRepository, SQLiteMetadataRepository
-from db.catalyst_repository import CatalystEmployeeRepository
-from db.catalyst import get_catalyst_app
+from db.sqlite.sqlite_metadata_repository import SQLiteMetadataRepository
+from db.sqlite.officer_repository import SQLiteOfficerRepository
+from db.catalyst.user_repository import CatalystUserRepository
+from db.catalyst.catalyst import get_catalyst_app
 
 from dotenv import load_dotenv
 load_dotenv()
 
-DATABASE = os.getenv("DATABASE", "sqlite")
-
-
-def get_employee_repository():
-
-    if DATABASE == "sqlite":
-        return SQLiteEmployeeRepository()
-
-    catalyst = get_catalyst_app()
-    return CatalystEmployeeRepository(catalyst)
 
 def get_metadata_repository():
     return SQLiteMetadataRepository()
-    
-    # catalyst = get_catalyst_app()
-    # from db.catalyst_repository import CatalystMetadataRepository
-    # return CatalystMetadataRepository(catalyst)
+
+
+def get_officer_repository():
+    return SQLiteOfficerRepository()
+
+
+def get_catalyst_user_repository(request: Request):
+    catalyst = get_catalyst_app(request)
+    return CatalystUserRepository(catalyst)
