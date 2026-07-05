@@ -28,7 +28,7 @@ class GroqService(LLMService):
             model=self.model,
             messages=messages,
             temperature=0.2,
-            max_completion_tokens=1024,
+            max_completion_tokens=4000,
             top_p=1,
             reasoning_effort="low",
             stream=False,

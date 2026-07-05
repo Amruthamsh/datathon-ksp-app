@@ -21,7 +21,7 @@ def router_node(state: SQLAgentState):
     system_prompt = """
 You are an intent classifier.
 
-Determine whether the latest user message requires querying a database.
+Determine whether the latest user message requires querying the Crime Database.
 
 Return ONLY JSON.
 

@@ -4,7 +4,7 @@ import { ArrowUp, Paperclip } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useState, useRef, useEffect } from "react";
-import DynamicChart from "../components/DynamicChart";
+import AnalysisPanel from "../components/AnalysisPanel";
 
 export default function Home() {
   const [expanded, setExpanded] = useState(true);
@@ -18,6 +18,7 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [followUps, setFollowUps] = useState([]);
+  const [activeAnalysis, setActiveAnalysis] = useState(null);
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -52,22 +53,22 @@ export default function Home() {
       });
 
       const data = await response.json();
+      const analysis = {
+        ...data,
+        user_query: question,
+      };
 
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
           text: data.response,
-          snapshot: data.snapshot,
+          analysis,
         },
       ]);
 
+      setActiveAnalysis(analysis);
       setFollowUps(data.follow_up_questions ?? []);
-      setChartConfig(data.chart_config);
-      setChartData(data.sql_result ?? []);
-
-      console.log(data.sql_query);
-      console.table(data.sql_result);
     } catch (e) {
       setMessages((prev) => [
         ...prev,
@@ -97,9 +98,6 @@ export default function Home() {
     el.style.height = "0px";
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [input]);
-
-  const [chartConfig, setChartConfig] = useState(null);
-  const [chartData, setChartData] = useState([]);
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">
@@ -132,17 +130,17 @@ export default function Home() {
                       {m.text}
                     </ReactMarkdown>
 
-                    {m.snapshot !== undefined && (
+                    {m.analysis && (
                       <button
-                        onClick={() => setActiveSnapshot(m.snapshot)}
+                        onClick={() => setActiveAnalysis(m.analysis)}
                         className={`mt-4 rounded-lg border px-4 py-2 text-sm transition
                         ${
-                          activeSnapshot === m.snapshot
+                          activeAnalysis === m.analysis
                             ? "border-blue-500 bg-blue-50 text-blue-700"
                             : "border-slate-300 bg-white hover:bg-slate-50"
                         }`}
                       >
-                        {activeSnapshot === m.snapshot
+                        {activeAnalysis === m.analysis
                           ? "Viewing Investigation"
                           : "Open Investigation"}
                       </button>
@@ -177,34 +175,6 @@ export default function Home() {
 
               <div ref={messagesEndRef} />
             </div>
-
-            {/* Follow Ups */}
-
-            {followUps.length > 0 && (
-              <div className="border-t border-slate-100 px-5 pt-4">
-                <div className="flex flex-wrap gap-2">
-                  {followUps.map((q) => (
-                    <button
-                      key={q}
-                      onClick={() => sendMessage(q)}
-                      className="
-                      rounded-full
-                      border
-                      border-slate-300
-                      bg-white
-                      px-4
-                      py-2
-                      text-sm
-                      hover:bg-slate-50
-                      transition
-                      "
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Input */}
 
@@ -253,7 +223,7 @@ export default function Home() {
                     leading-6
                     outline-none
                     overflow-y-auto
-                    max-h-[180px]
+                    max-h-45
                     py-2
                     placeholder:text-slate-400
                   "
@@ -286,11 +256,25 @@ export default function Home() {
                   <ArrowUp size={18} />
                 </button>
               </div>
+
+              {followUps.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {followUps.map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => sendMessage(q)}
+                      className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm transition hover:bg-slate-50"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
-          <section className="flex-1 overflow-auto bg-slate-100 p-6">
-            <DynamicChart config={chartConfig} data={chartData} />
+          <section className="flex-1 overflow-auto bg-linear-to-br from-slate-100 to-slate-200 p-6">
+            <AnalysisPanel analysis={activeAnalysis} />
           </section>
         </main>
       </div>

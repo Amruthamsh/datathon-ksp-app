@@ -11,6 +11,26 @@ def response_node(state: SQLAgentState):
     Generates a natural language response and suggested follow-up questions.
     """
 
+    markdown_guidance = """
+Write the answer in markdown.
+
+Use this structure when it fits the data:
+
+A clear, direct summary of the answer in 1-2 sentences.
+
+## Key findings
+
+- Call out the most important values, comparisons, or trends.
+- Use bold text for the most important numbers or categories.
+- If there are multiple rows, compare the top entries instead of listing them flatly.
+
+## Interpretation
+
+Explain what the numbers suggest in plain language.
+
+Keep the tone concise but more detailed than a one-line answer.
+"""
+
     conversation = []
 
     for message in state["messages"]:
@@ -40,6 +60,8 @@ Error
 
 {state['error']}
 
+{markdown_guidance}
+
 Return ONLY valid JSON.
 
 {{
@@ -65,6 +87,8 @@ Query Result
 
 Answer the user's latest question.
 
+{markdown_guidance}
+
 Then suggest 4 useful follow-up questions that naturally continue the analysis.
 
 Rules:
@@ -75,7 +99,7 @@ Rules:
 Example:
 
 {{
-    "answer": "There are 125 employees in Bangalore.",
+    "answer": "There are **125 employees** in Bangalore.\n\n## Key findings\n\n- Bangalore has the highest count in the result set.\n- The distribution suggests a strong concentration in one location.\n\n## Interpretation\n\nThis likely indicates that Bangalore is the main center for the dataset being queried.",
     "follow_up_questions": [
         "How many are female?",
         "Which department has the most employees?",
