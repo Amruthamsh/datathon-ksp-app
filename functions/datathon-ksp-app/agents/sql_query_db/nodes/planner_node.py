@@ -3,7 +3,7 @@ import json
 import db.dependencies as db_dependencies
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from llm.groq_service import groq_service
+from llm.catalyst_llm_service import catalyst_llm_service as llm
 from agents.sql_query_db.state import SQLAgentState
 
 
@@ -72,12 +72,12 @@ Database Schemas
 """
     
     try:
-        response = groq_service.generate(
+        response = llm.generate(
             user_prompt=human_prompt,
             system_prompt=system_prompt,
         )
     except Exception as e:
-        print("Error during GroqService.generate:", str(e))
+        print("Error during LLM.generate (planner):", str(e))
         raise
 
     plan = json.loads(response)

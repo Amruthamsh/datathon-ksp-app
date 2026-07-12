@@ -83,7 +83,7 @@ async def generate_response(
                 analysis={
                     "sql_query": result.get("sql_query"),
                     "sql_result": result.get("sql_result", []),
-                    "chart_config": result.get("chart_config"),
+                    "charts": result.get("charts", []),
                     "follow_up_questions": result.get("follow_up_questions", []),
                 },
             )
@@ -104,7 +104,7 @@ async def generate_response(
         "sql_result": result.get("sql_result", []),
         "error": result.get("error"),
         "follow_up_questions": result.get("follow_up_questions", []),
-        "chart_config": result.get("chart_config"),
+        "charts": result.get("charts", []),
     }
 
 

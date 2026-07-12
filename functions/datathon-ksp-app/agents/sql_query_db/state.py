@@ -16,4 +16,4 @@ class SQLAgentState(TypedDict):
     error: str | None
     response: str
     follow_up_questions: list[str]
-    chart_config: dict | None
+    charts: list[dict]

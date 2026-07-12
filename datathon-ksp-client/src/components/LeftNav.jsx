@@ -12,16 +12,12 @@ import {
 } from "lucide-react";
 import { menuItems } from "../data/leftNavMenu.js";
 
-const ConversationItem = ({
-  conv,
-  isActive,
-  onSelect,
-  onRename,
-  onDelete,
-}) => {
+const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [draftTitle, setDraftTitle] = useState(conv.title || conv.last_message || "Untitled");
+  const [draftTitle, setDraftTitle] = useState(
+    conv.title || conv.last_message || "Untitled",
+  );
   const inputRef = useRef(null);
   const menuRef = useRef(null);
 
@@ -41,7 +37,10 @@ const ConversationItem = ({
 
   const commitRename = () => {
     const trimmed = draftTitle.trim();
-    if (trimmed && trimmed !== (conv.title || conv.last_message || "Untitled")) {
+    if (
+      trimmed &&
+      trimmed !== (conv.title || conv.last_message || "Untitled")
+    ) {
       onRename(conv.conversation_id, trimmed);
     }
     setEditing(false);
@@ -53,9 +52,11 @@ const ConversationItem = ({
   };
 
   return (
-    <div className={`group relative flex items-center rounded-lg transition ${
-      isActive ? "bg-blue-50" : "hover:bg-slate-100"
-    }`}>
+    <div
+      className={`group relative flex items-center rounded-lg transition ${
+        isActive ? "bg-blue-50" : "hover:bg-slate-100"
+      }`}
+    >
       {editing ? (
         <div className="flex w-full items-center gap-1 px-2 py-1">
           <input
@@ -68,10 +69,16 @@ const ConversationItem = ({
             }}
             className="flex-1 rounded border border-blue-300 bg-white px-2 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-400"
           />
-          <button onClick={commitRename} className="rounded p-0.5 hover:bg-green-100 text-green-600">
+          <button
+            onClick={commitRename}
+            className="rounded p-0.5 hover:bg-green-100 text-green-600"
+          >
             <Check size={14} />
           </button>
-          <button onClick={cancelRename} className="rounded p-0.5 hover:bg-red-100 text-red-500">
+          <button
+            onClick={cancelRename}
+            className="rounded p-0.5 hover:bg-red-100 text-red-500"
+          >
             <X size={14} />
           </button>
         </div>
@@ -79,7 +86,7 @@ const ConversationItem = ({
         <>
           <button
             onClick={() => onSelect(conv.conversation_id)}
-            className={`flex flex-1 items-start gap-2 px-3 py-2 text-left ${
+            className={`flex min-w-0 flex-1 items-start gap-2 px-3 py-2 text-left ${
               isActive ? "text-blue-700" : "text-slate-700"
             }`}
           >
@@ -87,7 +94,7 @@ const ConversationItem = ({
               size={15}
               className={`mt-0.5 shrink-0 ${isActive ? "text-blue-600" : "text-slate-400"}`}
             />
-            <span className="truncate text-sm leading-5">
+            <span className="min-w-0 flex-1 truncate text-sm leading-5">
               {conv.title || conv.last_message || "Untitled"}
             </span>
           </button>
@@ -96,7 +103,9 @@ const ConversationItem = ({
             <button
               onClick={() => setMenuOpen((o) => !o)}
               className={`mr-1 rounded p-1 transition ${
-                menuOpen ? "bg-slate-200" : "opacity-0 group-hover:opacity-100 hover:bg-slate-200"
+                menuOpen
+                  ? "bg-slate-200"
+                  : "opacity-0 group-hover:opacity-100 hover:bg-slate-200"
               }`}
             >
               <MoreHorizontal size={14} className="text-slate-500" />
@@ -105,14 +114,20 @@ const ConversationItem = ({
             {menuOpen && (
               <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-lg border border-slate-200 bg-white shadow-lg">
                 <button
-                  onClick={() => { setMenuOpen(false); setEditing(true); }}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setEditing(true);
+                  }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50"
                 >
                   <Pencil size={13} className="text-slate-500" />
                   Rename
                 </button>
                 <button
-                  onClick={() => { setMenuOpen(false); onDelete(conv.conversation_id); }}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDelete(conv.conversation_id);
+                  }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                 >
                   <Trash2 size={13} />
@@ -221,7 +236,9 @@ const LeftNav = ({
               )}
 
               {!historyLoading && conversations.length === 0 && (
-                <p className="pl-2 text-xs text-slate-400">No conversations yet.</p>
+                <p className="pl-2 text-xs text-slate-400">
+                  No conversations yet.
+                </p>
               )}
 
               <div className="space-y-1">

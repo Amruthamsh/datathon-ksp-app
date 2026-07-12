@@ -19,8 +19,11 @@ def get_officer_repository():
 
 
 def get_catalyst_user_repository(request: Request):
-    catalyst = get_catalyst_app(request)
-    return CatalystUserRepository(catalyst)
+    try:
+        catalyst = get_catalyst_app(request)
+        return CatalystUserRepository(catalyst)
+    except Exception:
+        return None
 
 
 def get_chat_repository(request: Request):

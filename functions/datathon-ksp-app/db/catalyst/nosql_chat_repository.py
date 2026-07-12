@@ -56,10 +56,10 @@ class ChatRepository:
             for item in items:
                 try:
                     self.table.delete_items({
-                        "keys": [{
+                        "keys": {
                             "conversation_id": {"S": item["conversation_id"]},
                             "created_at": {"S": item["created_at"]},
-                        }]
+                        }
                     })
                 except Exception as err:
                     print(f"Failed to delete message: {err}")
@@ -113,7 +113,9 @@ class ConversationRepository:
         """Fetch a conversation by its full primary key (user_id + conversation_id)."""
         try:
             result = self.table.fetch_item({
-                "keys": [{"user_id": {"S": user_id}, "conversation_id": {"S": conversation_id}}]
+                "keys": [
+                    {"user_id": {"S": user_id}, "conversation_id": {"S": conversation_id}}
+                ]
             })
             items = _deserialize_items(result)
             return items[0] if items else None
@@ -151,7 +153,7 @@ class ConversationRepository:
 
     def delete(self, conversation_id: str, user_id: str) -> None:
         self.table.delete_items({
-            "keys": [{"user_id": {"S": user_id}, "conversation_id": {"S": conversation_id}}]
+            "keys": {"user_id": {"S": user_id}, "conversation_id": {"S": conversation_id}}
         })
 
     def touch(self, conversation_id: str, user_id: str, last_message: str) -> None:

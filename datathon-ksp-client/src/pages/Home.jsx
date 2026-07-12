@@ -129,12 +129,13 @@ export default function Home() {
           .catch(() => {});
       }
 
-      const analysis = { ...data, user_query: question };
+      const hasAnalysis = data.sql_query && data.sql_result?.length > 0;
+      const analysis = hasAnalysis ? { ...data, user_query: question } : null;
       setMessages((prev) => [
         ...prev,
         { role: "assistant", text: data.response, analysis },
       ]);
-      setActiveAnalysis(analysis);
+      if (hasAnalysis) setActiveAnalysis(analysis);
       setFollowUps(data.follow_up_questions ?? []);
     } catch {
       setMessages((prev) => [

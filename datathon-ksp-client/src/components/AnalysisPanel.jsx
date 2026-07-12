@@ -1,3 +1,5 @@
+import { useState, useMemo } from "react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, X } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -41,12 +43,8 @@ function formatValue(value) {
 }
 
 function getNumericColumns(data, excludedKeys = []) {
-  if (!Array.isArray(data) || data.length === 0) {
-    return [];
-  }
-
+  if (!Array.isArray(data) || data.length === 0) return [];
   const sample = data[0];
-
   return Object.keys(sample).filter(
     (key) =>
       !excludedKeys.includes(key) && data.every((row) => isNumeric(row?.[key])),
@@ -54,19 +52,14 @@ function getNumericColumns(data, excludedKeys = []) {
 }
 
 function getCategoryColumns(data, excludedKeys = []) {
-  if (!Array.isArray(data) || data.length === 0) {
-    return [];
-  }
-
+  if (!Array.isArray(data) || data.length === 0) return [];
   const sample = data[0];
-
   return Object.keys(sample).filter((key) => !excludedKeys.includes(key));
 }
 
 function buildHeatmapBuckets(data, xKey, yKey, valueKey) {
   const xLabels = Array.from(new Set(data.map((row) => row?.[xKey])));
   const yLabels = Array.from(new Set(data.map((row) => row?.[yKey])));
-
   const buckets = new Map();
   let min = Number.POSITIVE_INFINITY;
   let max = Number.NEGATIVE_INFINITY;
@@ -76,7 +69,6 @@ function buildHeatmapBuckets(data, xKey, yKey, valueKey) {
     const yValue = row?.[yKey];
     const rawValue = Number(row?.[valueKey] ?? 0);
     const key = `${xValue}__${yValue}`;
-
     buckets.set(key, rawValue);
     min = Math.min(min, rawValue);
     max = Math.max(max, rawValue);
@@ -92,17 +84,15 @@ function HeatmapChart({ data, xKey, yKey, valueKey }) {
     yKey,
     valueKey,
   );
-
   const range = max - min || 1;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
-        <span>Low intensity</span>
+        <span>Low</span>
         <div className="h-2 flex-1 rounded-full bg-linear-to-r from-[#dbeafe] via-[#38bdf8] to-[#1d4ed8]" />
-        <span>High intensity</span>
+        <span>High</span>
       </div>
-
       <div className="overflow-auto rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
         <div
           className="grid gap-1"
@@ -121,14 +111,12 @@ function HeatmapChart({ data, xKey, yKey, valueKey }) {
               {formatValue(label)}
             </div>
           ))}
-
           {yLabels.map((rowLabel) => {
             const cells = xLabels.map((colLabel) => {
               const cellValue = buckets.get(`${colLabel}__${rowLabel}`);
               const normalized =
                 cellValue === undefined ? 0 : (cellValue - min) / range;
               const background = `rgba(29, 78, 216, ${0.1 + normalized * 0.85})`;
-
               return (
                 <div
                   key={`${rowLabel}-${colLabel}`}
@@ -140,7 +128,6 @@ function HeatmapChart({ data, xKey, yKey, valueKey }) {
                 </div>
               );
             });
-
             return (
               <>
                 <div
@@ -160,9 +147,7 @@ function HeatmapChart({ data, xKey, yKey, valueKey }) {
 }
 
 function renderChart(config, data) {
-  if (!config?.show_chart || !Array.isArray(data) || data.length === 0) {
-    return null;
-  }
+  if (!config || !Array.isArray(data) || data.length === 0) return null;
 
   const { chart_type, x_axis, y_axis, series } = config;
   const numericColumns = getNumericColumns(
@@ -173,18 +158,12 @@ function renderChart(config, data) {
   const categoryKeys = getCategoryColumns(data, [valueKey]);
   const firstCategoryKey = x_axis || categoryKeys[0];
 
-  if (!chart_type) {
-    return null;
-  }
+  if (!chart_type) return null;
 
   if (chart_type === "heatmap") {
     const heatmapX = x_axis || categoryKeys[0];
     const heatmapY = y_axis || categoryKeys[1] || categoryKeys[0];
-
-    if (!heatmapX || !heatmapY || !valueKey) {
-      return null;
-    }
-
+    if (!heatmapX || !heatmapY || !valueKey) return null;
     return (
       <HeatmapChart
         data={data}
@@ -198,7 +177,6 @@ function renderChart(config, data) {
   if (chart_type === "pie" || chart_type === "donut") {
     const pieValueKey = valueKey || numericColumns[0];
     const nameKey = firstCategoryKey;
-
     return (
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
@@ -233,11 +211,7 @@ function renderChart(config, data) {
   if (chart_type === "scatter") {
     const scatterX = x_axis || numericColumns[0];
     const scatterY = y_axis || numericColumns[1] || numericColumns[0];
-
-    if (!scatterX || !scatterY) {
-      return null;
-    }
-
+    if (!scatterX || !scatterY) return null;
     return (
       <ResponsiveContainer width="100%" height="100%">
         <ScatterChart margin={{ top: 12, right: 20, bottom: 12, left: 0 }}>
@@ -266,11 +240,7 @@ function renderChart(config, data) {
   if (chart_type === "line" || chart_type === "area") {
     const lineX = x_axis || firstCategoryKey;
     const lineY = y_axis || valueKey || numericColumns[0];
-
-    if (!lineX || !lineY) {
-      return null;
-    }
-
+    if (!lineX || !lineY) return null;
     return (
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
@@ -310,11 +280,7 @@ function renderChart(config, data) {
   if (chart_type === "bar" || chart_type === "horizontal_bar") {
     const barCategory = x_axis || firstCategoryKey;
     const barValue = y_axis || valueKey || numericColumns[0];
-
-    if (!barCategory || !barValue) {
-      return null;
-    }
-
+    if (!barCategory || !barValue) return null;
     return (
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
@@ -385,27 +351,162 @@ function renderChart(config, data) {
   return null;
 }
 
+// ── Sortable, filterable data table ──────────────────────────────────────────
+
+function DataTable({ rows, columns }) {
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const [filter, setFilter] = useState("");
+
+  const toggleSort = (col) => {
+    if (sortKey === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(col);
+      setSortDir("asc");
+    }
+  };
+
+  const filtered = useMemo(() => {
+    if (!filter.trim()) return rows;
+    const q = filter.toLowerCase();
+    return rows.filter((row) =>
+      columns.some((col) =>
+        String(row?.[col] ?? "").toLowerCase().includes(q),
+      ),
+    );
+  }, [rows, columns, filter]);
+
+  const sorted = useMemo(() => {
+    if (!sortKey) return filtered;
+    return [...filtered].sort((a, b) => {
+      const av = a?.[sortKey];
+      const bv = b?.[sortKey];
+      if (av === null || av === undefined) return 1;
+      if (bv === null || bv === undefined) return -1;
+      const cmp =
+        typeof av === "number" && typeof bv === "number"
+          ? av - bv
+          : String(av).localeCompare(String(bv));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [filtered, sortKey, sortDir]);
+
+  return (
+    <div className="space-y-3">
+      {/* Search bar */}
+      <div className="relative">
+        <Search
+          size={14}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+        />
+        <input
+          type="text"
+          placeholder="Filter rows…"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-8 pr-8 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+        />
+        {filter && (
+          <button
+            onClick={() => setFilter("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          >
+            <X size={13} />
+          </button>
+        )}
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-slate-200">
+        <div className="max-h-96 overflow-y-auto overflow-x-auto">
+          <table className="w-full table-fixed border-collapse text-left text-xs">
+            <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
+              <tr>
+                {columns.map((col) => (
+                  <th
+                    key={col}
+                    className="border-b border-slate-200 px-3 py-3 align-top font-semibold text-slate-700"
+                  >
+                    <button
+                      onClick={() => toggleSort(col)}
+                      className="flex items-center gap-1 hover:text-blue-600 transition"
+                    >
+                      <span className="whitespace-normal wrap-break-word">{col}</span>
+                      {sortKey === col ? (
+                        sortDir === "asc" ? (
+                          <ArrowUp size={12} className="shrink-0 text-blue-500" />
+                        ) : (
+                          <ArrowDown size={12} className="shrink-0 text-blue-500" />
+                        )
+                      ) : (
+                        <ArrowUpDown size={12} className="shrink-0 text-slate-400" />
+                      )}
+                    </button>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.length > 0 ? (
+                sorted.map((row, rowIndex) => (
+                  <tr key={rowIndex} className="odd:bg-white even:bg-slate-50">
+                    {columns.map((col) => (
+                      <td
+                        key={col}
+                        className="border-b border-slate-100 px-3 py-3 align-top text-slate-700"
+                      >
+                        <span className="block whitespace-normal wrap-break-word">
+                          {formatValue(row?.[col])}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    className="px-4 py-8 text-center text-slate-500"
+                    colSpan={Math.max(columns.length, 1)}
+                  >
+                    {filter ? "No rows match the filter." : "No result rows were returned."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {filter && (
+        <p className="text-right text-xs text-slate-500">
+          {sorted.length} / {rows.length} rows shown
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────
+
 export default function AnalysisPanel({ analysis }) {
   const rows = Array.isArray(analysis?.sql_result) ? analysis.sql_result : [];
   const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
-  const chartNode = renderChart(analysis?.chart_config, rows);
+  const charts = Array.isArray(analysis?.charts) ? analysis.charts : [];
   const rowCount = rows.length;
 
   if (!analysis) {
     return (
       <div className="flex h-full items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-white/80 px-8 text-center text-slate-500 shadow-sm">
-        Pick a response with analysis to inspect the visualization and query
-        data.
+        Pick a response with analysis to inspect the visualization and query data.
       </div>
     );
   }
 
-  const chartType = analysis?.chart_config?.show_chart
-    ? analysis.chart_config.chart_type
-    : "table";
+  const hasCharts = charts.length > 0;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-linear-to-b from-white via-slate-50 to-slate-100 shadow-[0_18px_60px_rgba(15,23,42,0.12)]">
+      {/* Header */}
       <div className="border-b border-slate-200/80 bg-white/80 px-5 py-4 backdrop-blur">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -413,135 +514,94 @@ export default function AnalysisPanel({ analysis }) {
               Analysis Workspace
             </p>
             <h2 className="mt-2 truncate text-xl font-semibold text-slate-900">
-              {analysis?.chart_config?.title || "Query Analysis"}
+              {charts[0]?.title || "Query Analysis"}
             </h2>
           </div>
-
           <div className="flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            {chartType}
+            {hasCharts ? `${charts.length} chart${charts.length > 1 ? "s" : ""}` : "table"}
           </div>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Rows
-            </p>
-            <p className="mt-1 text-lg font-semibold text-slate-900">
-              {rowCount}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Rows</p>
+            <p className="mt-1 text-lg font-semibold text-slate-900">{rowCount}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Columns
-            </p>
-            <p className="mt-1 text-lg font-semibold text-slate-900">
-              {columns.length}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Columns</p>
+            <p className="mt-1 text-lg font-semibold text-slate-900">{columns.length}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Chart
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Charts</p>
             <p className="mt-1 truncate text-lg font-semibold text-slate-900">
-              {analysis?.chart_config?.chart_type || "none"}
+              {hasCharts ? charts.map((c) => c.chart_type).join(", ") : "none"}
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Mode
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Mode</p>
             <p className="mt-1 text-lg font-semibold text-slate-900">
-              {analysis?.chart_config?.show_chart ? "visual" : "table"}
+              {hasCharts ? "visual" : "table"}
             </p>
           </div>
         </div>
       </div>
 
+      {/* Body */}
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-5">
         <section className="space-y-4">
-          <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Visualization
-                </p>
-                <h3 className="text-lg font-semibold text-slate-900">
-                  {analysis?.chart_config?.show_chart
-                    ? analysis.chart_config.chart_type
-                    : "No chart suggested"}
-                </h3>
-              </div>
-            </div>
 
-            <div className="h-96 rounded-2xl bg-linear-to-br from-slate-50 to-slate-100 p-3">
-              {chartNode || (
-                <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 text-center text-slate-500">
-                  No visualization returned for this answer.
+          {/* Charts — only rendered when there are charts */}
+          {hasCharts && charts.map((chartConfig, idx) => {
+            const chartNode = renderChart(chartConfig, rows);
+            if (!chartNode) return null;
+            return (
+              <div
+                key={idx}
+                className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      Visualization {charts.length > 1 ? `${idx + 1} of ${charts.length}` : ""}
+                    </p>
+                    <h3 className="text-lg font-semibold text-slate-900">
+                      {chartConfig.title || chartConfig.chart_type}
+                    </h3>
+                    {chartConfig.reason && (
+                      <p className="mt-0.5 text-xs text-slate-500">{chartConfig.reason}</p>
+                    )}
+                  </div>
+                  <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
+                    {chartConfig.chart_type}
+                  </span>
                 </div>
-              )}
-            </div>
-          </div>
+                <div className="h-80 rounded-2xl bg-linear-to-br from-slate-50 to-slate-100 p-3">
+                  {chartNode}
+                </div>
+              </div>
+            );
+          })}
 
+          {/* SQL Results table */}
           <details
             className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
             open
           >
             <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900">
               SQL Results
+              {rowCount > 0 && (
+                <span className="ml-2 text-xs font-normal text-slate-500">
+                  ({rowCount} rows)
+                </span>
+              )}
             </summary>
-            <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
-              <div className="max-h-96 overflow-y-auto overflow-x-hidden">
-                <table className="w-full table-fixed border-collapse text-left text-xs">
-                  <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
-                    <tr>
-                      {columns.map((column) => (
-                        <th
-                          key={column}
-                          className="border-b border-slate-200 px-3 py-3 align-top font-semibold text-slate-700"
-                        >
-                          <span className="block whitespace-normal wrap-break-word">
-                            {column}
-                          </span>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.length > 0 ? (
-                      rows.map((row, rowIndex) => (
-                        <tr
-                          key={rowIndex}
-                          className="odd:bg-white even:bg-slate-50"
-                        >
-                          {columns.map((column) => (
-                            <td
-                              key={column}
-                              className="border-b border-slate-100 px-3 py-3 align-top text-slate-700"
-                            >
-                              <span className="block whitespace-normal wrap-break-word">
-                                {formatValue(row?.[column])}
-                              </span>
-                            </td>
-                          ))}
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          className="px-4 py-8 text-center text-slate-500"
-                          colSpan={Math.max(columns.length, 1)}
-                        >
-                          No result rows were returned.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+            <div className="mt-4">
+              <DataTable rows={rows} columns={columns} />
             </div>
           </details>
+
+          {/* SQL Query */}
           <details
             className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
             open
@@ -555,6 +615,7 @@ export default function AnalysisPanel({ analysis }) {
               </pre>
             </div>
           </details>
+
         </section>
       </div>
     </div>

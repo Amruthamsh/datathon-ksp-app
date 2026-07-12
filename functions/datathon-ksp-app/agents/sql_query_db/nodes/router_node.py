@@ -1,6 +1,6 @@
 import json
 
-from llm.groq_service import groq_service
+from llm.catalyst_llm_service import catalyst_llm_service as llm
 from agents.sql_query_db.state import SQLAgentState
 
 
@@ -48,7 +48,7 @@ Database question:
 }
 """
 
-    response = groq_service.generate(
+    response = llm.generate(
         system_prompt=system_prompt,
         user_prompt=conversation,
     )

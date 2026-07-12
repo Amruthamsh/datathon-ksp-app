@@ -4,6 +4,8 @@ from threading import Lock
 from fastapi import HTTPException, Request
 import zcatalyst_sdk
 
+from llm.catalyst_llm_service import catalyst_llm_service
+
 logger = logging.getLogger("fastapi_function")
 
 _catalyst_app = None
@@ -22,6 +24,7 @@ def get_catalyst_app(request: Request):
 
         try:
             _catalyst_app = zcatalyst_sdk.initialize(req=request)
+            catalyst_llm_service.set_catalyst_app(_catalyst_app)
             return _catalyst_app
         except Exception as err:
             logger.error(f"Failed to initialize Catalyst SDK: {err}")
