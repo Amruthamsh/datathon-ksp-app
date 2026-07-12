@@ -121,7 +121,7 @@ Example:
 
     return {
         "response": response["answer"],
-        "follow_up_questions": response["follow_up_questions"],
+        "follow_up_questions": response.get("follow_up_questions", []),
         "messages": [
             AIMessage(content=response["answer"])
         ],

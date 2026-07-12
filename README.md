@@ -44,3 +44,26 @@ Run the following commands to generate fake data for testing:
 
 `pip install faker --break-system-packages
 python3 generate_fir_data.py`
+
+## TO-DO List
+
+1. Voice input support for queries
+2. Database integration for chats and messages
+3. Kannada Support for queries and entire UI
+4. Dashboard for saving and visualizing queries and results.. also sends notifications for new cases and updates
+5. Structured search for specific crime types, locations, and offender profiles
+6. export query results to CSV or PDF. Save the Conversation History in PDF format locally
+7. Improve all the prompts.
+8. migrate to Zoho LLM calls
+9. Deploy
+10. Role based access control for different user types (investigators, analysts, policymakers)
+
+11. Public API for Correlation of crime with urbanization, migration, economic stress, education and other social indicators.
+12. audit logs and traceability - who asked what and when, and what was the response. and how much did LLMs cost
+
+4000 applications - 313 participants - 162
+
+app to find missing person in khumbh mela and concerts
+but the way we find them is through description and filters in an app without face identification or anything. it was so funny
+
+personalized movies. they took a scene from dhurandhar. to change location names and change advertisements for billboards in the movie.
