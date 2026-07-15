@@ -6,7 +6,6 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
-  Dot,
   Legend,
   Line,
   Pie,
@@ -17,6 +16,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Label,
 } from "recharts";
 
 const CHART_COLORS = [
@@ -30,6 +30,8 @@ const CHART_COLORS = [
   "#0284c7",
 ];
 
+// ── Data Profiling Helpers ───────────────────────────────────────────────────
+
 function isNumeric(value) {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -42,31 +44,123 @@ function formatValue(value) {
   return String(value);
 }
 
-function getNumericColumns(data, excludedKeys = []) {
-  if (!Array.isArray(data) || data.length === 0) return [];
-  const sample = data[0];
-  return Object.keys(sample).filter(
-    (key) =>
-      !excludedKeys.includes(key) && data.every((row) => isNumeric(row?.[key])),
-  );
+function formatHeaderLabel(str) {
+  if (!str) return "";
+  return str
+    .replace(/([A-Z])/g, " $1")
+    .replace(/_/g, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/^\w/, (c) => c.toUpperCase());
 }
 
-function getCategoryColumns(data, excludedKeys = []) {
-  if (!Array.isArray(data) || data.length === 0) return [];
-  const sample = data[0];
-  return Object.keys(sample).filter((key) => !excludedKeys.includes(key));
+function looksLikeIdentifier(colName) {
+  return /(id|uuid|guid|caseid|casemasterid|fir|pk)$/i.test(colName);
 }
+
+function getColumnTypes(data, requestedColumns = []) {
+  if (!Array.isArray(data) || data.length === 0)
+    return { numeric: [], categorical: [] };
+
+  const colsToCheck =
+    requestedColumns.length > 0 ? requestedColumns : Object.keys(data[0]);
+
+  const numeric = [];
+  const categorical = [];
+
+  colsToCheck.forEach((col) => {
+    if (looksLikeIdentifier(col)) return;
+
+    const isNum = data.every((row) => {
+      const val = row?.[col];
+      return val === null || val === undefined || isNumeric(val);
+    });
+
+    if (isNum) numeric.push(col);
+    else categorical.push(col);
+  });
+
+  return { numeric, categorical };
+}
+
+function getUniqueCount(data, col) {
+  if (!col) return 0;
+  return new Set(data.map((row) => row?.[col])).size;
+}
+
+function getMaxLabelLength(data, col) {
+  if (!col) return 0;
+  let max = 0;
+  data.forEach((row) => {
+    const len = String(row?.[col] || "").length;
+    if (len > max) max = len;
+  });
+  return max;
+}
+
+// ── Deterministic Layout Engine ──────────────────────────────────────────────
+
+function resolveChartLayout(intent, requestedColumns, data) {
+  const { numeric, categorical } = getColumnTypes(data, requestedColumns);
+
+  let chart_type = "bar";
+  let xKey = null;
+  let yKey = null;
+  let categoryKey = categorical[0] || null;
+  let valueKey = numeric[0] || null;
+  let seriesKey = categorical[1] || null;
+
+  if (intent === "time_series") {
+    chart_type = "line";
+    xKey = categoryKey;
+    yKey = valueKey;
+  } else if (intent === "correlation" && numeric.length >= 2) {
+    chart_type = "scatter";
+    xKey = numeric[0];
+    yKey = numeric[1];
+    seriesKey = categoryKey;
+  } else if (
+    intent === "heatmap" ||
+    (intent === "distribution" &&
+      categorical.length >= 2 &&
+      numeric.length >= 1)
+  ) {
+    chart_type = "heatmap";
+    xKey = categorical[0];
+    yKey = categorical[1];
+    valueKey = numeric[0];
+  } else if (intent === "part_of_whole") {
+    const unique = getUniqueCount(data, categoryKey);
+    if (unique > 8) {
+      chart_type = "horizontal_bar";
+    } else {
+      chart_type = "donut";
+    }
+  } else {
+    const unique = getUniqueCount(data, categoryKey);
+    const maxLen = getMaxLabelLength(data, categoryKey);
+    if (unique > 12 || maxLen > 15) {
+      chart_type = "horizontal_bar";
+    } else {
+      chart_type = "bar";
+    }
+  }
+
+  return { chart_type, xKey, yKey, categoryKey, valueKey, seriesKey };
+}
+
+// ── Heatmap Component ────────────────────────────────────────────────────────
 
 function buildHeatmapBuckets(data, xKey, yKey, valueKey) {
-  const xLabels = Array.from(new Set(data.map((row) => row?.[xKey])));
-  const yLabels = Array.from(new Set(data.map((row) => row?.[yKey])));
+  const xLabels = Array.from(new Set(data.map((row) => String(row?.[xKey]))));
+  const yLabels = Array.from(new Set(data.map((row) => String(row?.[yKey]))));
   const buckets = new Map();
   let min = Number.POSITIVE_INFINITY;
   let max = Number.NEGATIVE_INFINITY;
 
   data.forEach((row) => {
-    const xValue = row?.[xKey];
-    const yValue = row?.[yKey];
+    const xValue = String(row?.[xKey]);
+    const yValue = String(row?.[yKey]);
     const rawValue = Number(row?.[valueKey] ?? 0);
     const key = `${xValue}__${yValue}`;
     buckets.set(key, rawValue);
@@ -87,57 +181,64 @@ function HeatmapChart({ data, xKey, yKey, valueKey }) {
   const range = max - min || 1;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+    <div className="flex h-full w-full flex-col space-y-3 min-h-0 max-h-full">
+      {/* Legend / Scale */}
+      <div className="flex shrink-0 items-center justify-between gap-3 text-xs text-slate-500">
         <span>Low</span>
         <div className="h-2 flex-1 rounded-full bg-linear-to-r from-[#dbeafe] via-[#38bdf8] to-[#1d4ed8]" />
         <span>High</span>
       </div>
-      <div className="overflow-auto rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+
+      {/* Scrollable Viewport */}
+      <div className="flex-1 min-h-0 overflow-auto rounded-2xl border border-slate-200 bg-white">
         <div
-          className="grid gap-1"
+          className="grid min-w-max bg-white"
           style={{
-            gridTemplateColumns: `180px repeat(${xLabels.length}, minmax(44px, 1fr))`,
+            gridTemplateColumns: `160px repeat(${xLabels.length}, minmax(130px, 1fr))`,
           }}
         >
-          <div className="sticky left-0 z-10 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-            {yKey} / {xKey}
+          {/* Top-Left Corner Piece */}
+          <div className="sticky top-0 left-0 z-30 bg-slate-200 px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b-2 border-r-2 border-slate-300 select-none flex items-center justify-center">
+            {formatHeaderLabel(yKey)} / {formatHeaderLabel(xKey)}
           </div>
+
+          {/* X-Axis Headers */}
           {xLabels.map((label) => (
             <div
               key={label}
-              className="rounded-lg bg-slate-100 px-3 py-2 text-center text-xs font-semibold text-slate-600"
+              className="sticky top-0 z-20 bg-slate-100 px-3 py-3 text-center text-xs font-bold text-slate-700 border-b-2 border-r border-slate-200 flex items-center justify-center"
             >
               {formatValue(label)}
             </div>
           ))}
+
+          {/* Matrix Rows */}
           {yLabels.map((rowLabel) => {
-            const cells = xLabels.map((colLabel) => {
-              const cellValue = buckets.get(`${colLabel}__${rowLabel}`);
-              const normalized =
-                cellValue === undefined ? 0 : (cellValue - min) / range;
-              const background = `rgba(29, 78, 216, ${0.1 + normalized * 0.85})`;
-              return (
-                <div
-                  key={`${rowLabel}-${colLabel}`}
-                  className="flex h-11 items-center justify-center rounded-lg border border-white/60 text-xs font-semibold text-slate-900 shadow-sm"
-                  style={{ background }}
-                  title={`${formatValue(rowLabel)} / ${formatValue(colLabel)}: ${formatValue(cellValue)}`}
-                >
-                  {formatValue(cellValue)}
-                </div>
-              );
-            });
             return (
-              <>
-                <div
-                  key={rowLabel}
-                  className="sticky left-0 z-10 rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700"
-                >
+              <div key={`row-${rowLabel}`} className="contents">
+                {/* Y-Axis Headers */}
+                <div className="sticky left-0 z-10 bg-slate-50 px-3 py-3 text-xs font-semibold text-slate-700 border-b border-r-2 border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.05)] flex items-center">
                   {formatValue(rowLabel)}
                 </div>
-                {cells}
-              </>
+
+                {xLabels.map((colLabel) => {
+                  const cellValue = buckets.get(`${colLabel}__${rowLabel}`);
+                  const normalized =
+                    cellValue === undefined ? 0 : (cellValue - min) / range;
+                  const background = `rgba(29, 78, 216, ${0.08 + normalized * 0.85})`;
+
+                  return (
+                    <div
+                      key={`${rowLabel}-${colLabel}`}
+                      className="flex h-11 items-center justify-center border-b border-r border-slate-100 text-xs font-semibold text-slate-900 transition-colors hover:bg-black/5"
+                      style={{ background }}
+                      title={`${formatHeaderLabel(yKey)}: ${formatValue(rowLabel)} | ${formatHeaderLabel(xKey)}: ${formatValue(colLabel)} | Value: ${formatValue(cellValue)}`}
+                    >
+                      {formatValue(cellValue)}
+                    </div>
+                  );
+                })}
+              </div>
             );
           })}
         </div>
@@ -146,37 +247,26 @@ function HeatmapChart({ data, xKey, yKey, valueKey }) {
   );
 }
 
-function renderChart(config, data) {
-  if (!config || !Array.isArray(data) || data.length === 0) return null;
+// ── Main Chart Renderer ──────────────────────────────────────────────────────
 
-  const { chart_type, x_axis, y_axis, series } = config;
-  const numericColumns = getNumericColumns(
-    data,
-    [x_axis, y_axis, series].filter(Boolean),
-  );
-  const valueKey = series || y_axis || numericColumns[0];
-  const categoryKeys = getCategoryColumns(data, [valueKey]);
-  const firstCategoryKey = x_axis || categoryKeys[0];
+function renderChart(rawConfig, data) {
+  if (!rawConfig || !Array.isArray(data) || data.length === 0) return null;
 
-  if (!chart_type) return null;
+  const { intent, columns } = rawConfig;
+  const layout = resolveChartLayout(intent, columns, data);
+  const { chart_type, xKey, yKey, categoryKey, valueKey, seriesKey } = layout;
 
-  if (chart_type === "heatmap") {
-    const heatmapX = x_axis || categoryKeys[0];
-    const heatmapY = y_axis || categoryKeys[1] || categoryKeys[0];
-    if (!heatmapX || !heatmapY || !valueKey) return null;
+  if (chart_type === "heatmap" && xKey && yKey && valueKey) {
     return (
-      <HeatmapChart
-        data={data}
-        xKey={heatmapX}
-        yKey={heatmapY}
-        valueKey={valueKey}
-      />
+      <HeatmapChart data={data} xKey={xKey} yKey={yKey} valueKey={valueKey} />
     );
   }
 
-  if (chart_type === "pie" || chart_type === "donut") {
-    const pieValueKey = valueKey || numericColumns[0];
-    const nameKey = firstCategoryKey;
+  if (
+    (chart_type === "pie" || chart_type === "donut") &&
+    categoryKey &&
+    valueKey
+  ) {
     return (
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
@@ -187,18 +277,18 @@ function renderChart(config, data) {
               boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
             }}
           />
-          <Legend />
+          <Legend verticalAlign="top" height={36} />
           <Pie
             data={data}
-            dataKey={pieValueKey}
-            nameKey={nameKey}
+            dataKey={valueKey}
+            nameKey={categoryKey}
             innerRadius={chart_type === "donut" ? 72 : 0}
             outerRadius={150}
             paddingAngle={2}
           >
             {data.map((entry, index) => (
               <Cell
-                key={`${entry?.[nameKey] ?? index}`}
+                key={`${entry?.[categoryKey] ?? index}`}
                 fill={CHART_COLORS[index % CHART_COLORS.length]}
               />
             ))}
@@ -208,55 +298,111 @@ function renderChart(config, data) {
     );
   }
 
-  if (chart_type === "scatter") {
-    const scatterX = x_axis || numericColumns[0];
-    const scatterY = y_axis || numericColumns[1] || numericColumns[0];
-    if (!scatterX || !scatterY) return null;
+  if (chart_type === "scatter" && xKey && yKey) {
+    const seriesGroups = seriesKey
+      ? Array.from(new Set(data.map((r) => r?.[seriesKey]))).map((val) => ({
+          name: String(val),
+          data: data.filter((r) => r?.[seriesKey] === val),
+        }))
+      : [{ name: null, data }];
+
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <ScatterChart margin={{ top: 12, right: 20, bottom: 12, left: 0 }}>
+        <ScatterChart margin={{ top: 20, right: 24, bottom: 45, left: 65 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
           <XAxis
-            dataKey={scatterX}
-            tick={{ fill: "#475569", fontSize: 12 }}
+            dataKey={xKey}
+            type="number"
+            tick={{ fill: "#475569", fontSize: 11 }}
             axisLine={{ stroke: "#94a3b8" }}
-          />
+            tickLine={{ stroke: "#94a3b8" }}
+          >
+            <Label
+              value={formatHeaderLabel(xKey)}
+              position="insideBottom"
+              offset={-25}
+              style={{ fill: "#475569", fontSize: 12, fontWeight: 600 }}
+            />
+          </XAxis>
           <YAxis
-            dataKey={scatterY}
-            tick={{ fill: "#475569", fontSize: 12 }}
+            dataKey={yKey}
+            type="number"
+            tick={{ fill: "#475569", fontSize: 11 }}
             axisLine={{ stroke: "#94a3b8" }}
+            tickLine={{ stroke: "#94a3b8" }}
+          >
+            <Label
+              value={formatHeaderLabel(yKey)}
+              angle={-90}
+              position="insideLeft"
+              offset={-10}
+              style={{
+                fill: "#475569",
+                fontSize: 12,
+                fontWeight: 600,
+                textAnchor: "middle",
+              }}
+            />
+          </YAxis>
+          <Tooltip
+            contentStyle={{
+              borderRadius: 16,
+              border: "1px solid #e2e8f0",
+              boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
+            }}
+            cursor={{ strokeDasharray: "3 3" }}
           />
-          <Tooltip />
-          <Scatter
-            data={data}
-            fill="#2563eb"
-            shape={<Dot r={5} fill="#2563eb" />}
-          />
+          <Legend verticalAlign="top" height={36} />
+          {seriesGroups.map((group, idx) => (
+            <Scatter
+              key={group.name ?? "default"}
+              name={group.name ?? undefined}
+              data={group.data}
+              fill={CHART_COLORS[idx % CHART_COLORS.length]}
+            />
+          ))}
         </ScatterChart>
       </ResponsiveContainer>
     );
   }
 
-  if (chart_type === "line" || chart_type === "area") {
-    const lineX = x_axis || firstCategoryKey;
-    const lineY = y_axis || valueKey || numericColumns[0];
-    if (!lineX || !lineY) return null;
+  if ((chart_type === "line" || chart_type === "area") && xKey && yKey) {
     return (
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={data}
-          margin={{ top: 12, right: 20, bottom: 12, left: 0 }}
+          margin={{ top: 20, right: 20, bottom: 45, left: 65 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
           <XAxis
-            dataKey={lineX}
-            tick={{ fill: "#475569", fontSize: 12 }}
+            dataKey={xKey}
+            tick={{ fill: "#475569", fontSize: 11 }}
             axisLine={{ stroke: "#94a3b8" }}
-          />
+          >
+            <Label
+              value={formatHeaderLabel(xKey)}
+              position="insideBottom"
+              offset={-25}
+              style={{ fill: "#475569", fontSize: 12, fontWeight: 600 }}
+            />
+          </XAxis>
           <YAxis
-            tick={{ fill: "#475569", fontSize: 12 }}
+            tick={{ fill: "#475569", fontSize: 11 }}
             axisLine={{ stroke: "#94a3b8" }}
-          />
+          >
+            <Label
+              value={formatHeaderLabel(yKey)}
+              angle={-90}
+              position="insideLeft"
+              offset={-10}
+              style={{
+                fill: "#475569",
+                fontSize: 12,
+                fontWeight: 600,
+                textAnchor: "middle",
+              }}
+            />
+          </YAxis>
           <Tooltip
             contentStyle={{
               borderRadius: 16,
@@ -264,10 +410,10 @@ function renderChart(config, data) {
               boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
             }}
           />
-          <Legend />
+          <Legend verticalAlign="top" height={36} />
           <Line
             type="monotone"
-            dataKey={lineY}
+            dataKey={yKey}
             stroke="#2563eb"
             strokeWidth={3}
             dot={{ r: 3 }}
@@ -277,49 +423,92 @@ function renderChart(config, data) {
     );
   }
 
-  if (chart_type === "bar" || chart_type === "horizontal_bar") {
-    const barCategory = x_axis || firstCategoryKey;
-    const barValue = y_axis || valueKey || numericColumns[0];
-    if (!barCategory || !barValue) return null;
+  if (
+    (chart_type === "bar" || chart_type === "horizontal_bar") &&
+    categoryKey &&
+    valueKey
+  ) {
+    const isHorizontal = chart_type === "horizontal_bar";
     return (
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
-          layout={chart_type === "horizontal_bar" ? "vertical" : "horizontal"}
+          layout={isHorizontal ? "vertical" : "horizontal"}
           data={data}
           margin={{
-            top: 12,
+            top: 20,
             right: 20,
-            bottom: 12,
-            left: chart_type === "horizontal_bar" ? 28 : 0,
+            bottom: 45,
+            left: isHorizontal ? 30 : 65,
           }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
-          {chart_type === "horizontal_bar" ? (
+          {isHorizontal ? (
             <>
               <XAxis
                 type="number"
-                tick={{ fill: "#475569", fontSize: 12 }}
+                dataKey={valueKey}
+                tick={{ fill: "#475569", fontSize: 11 }}
                 axisLine={{ stroke: "#94a3b8" }}
-              />
+              >
+                <Label
+                  value={formatHeaderLabel(valueKey)}
+                  position="insideBottom"
+                  offset={-25}
+                  style={{ fill: "#475569", fontSize: 12, fontWeight: 600 }}
+                />
+              </XAxis>
               <YAxis
                 type="category"
-                dataKey={barCategory}
-                width={170}
-                tick={{ fill: "#475569", fontSize: 12 }}
+                dataKey={categoryKey}
+                width={150}
+                tick={{ fill: "#475569", fontSize: 11 }}
                 axisLine={{ stroke: "#94a3b8" }}
-              />
+              >
+                <Label
+                  value={formatHeaderLabel(categoryKey)}
+                  angle={-90}
+                  position="insideLeft"
+                  offset={-10}
+                  style={{
+                    fill: "#475569",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    textAnchor: "middle",
+                  }}
+                />
+              </YAxis>
             </>
           ) : (
             <>
               <XAxis
-                dataKey={barCategory}
-                tick={{ fill: "#475569", fontSize: 12 }}
+                dataKey={categoryKey}
+                tick={{ fill: "#475569", fontSize: 11 }}
                 axisLine={{ stroke: "#94a3b8" }}
-              />
+              >
+                <Label
+                  value={formatHeaderLabel(categoryKey)}
+                  position="insideBottom"
+                  offset={-25}
+                  style={{ fill: "#475569", fontSize: 12, fontWeight: 600 }}
+                />
+              </XAxis>
               <YAxis
-                tick={{ fill: "#475569", fontSize: 12 }}
+                tick={{ fill: "#475569", fontSize: 11 }}
                 axisLine={{ stroke: "#94a3b8" }}
-              />
+              >
+                <Label
+                  value={formatHeaderLabel(valueKey)}
+                  angle={-90}
+                  position="insideLeft"
+                  offset={-10}
+                  style={{
+                    fill: "#475569",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    textAnchor: "middle",
+                  }}
+                />
+              </YAxis>
             </>
           )}
           <Tooltip
@@ -329,16 +518,14 @@ function renderChart(config, data) {
               boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
             }}
           />
-          <Legend />
+          <Legend verticalAlign="top" height={36} />
           <Bar
-            dataKey={barValue}
-            radius={
-              chart_type === "horizontal_bar" ? [0, 14, 14, 0] : [14, 14, 0, 0]
-            }
+            dataKey={valueKey}
+            radius={isHorizontal ? [0, 14, 14, 0] : [14, 14, 0, 0]}
           >
             {data.map((entry, index) => (
               <Cell
-                key={`${entry?.[barCategory] ?? index}`}
+                key={`${entry?.[categoryKey] ?? index}`}
                 fill={CHART_COLORS[index % CHART_COLORS.length]}
               />
             ))}
@@ -348,10 +535,14 @@ function renderChart(config, data) {
     );
   }
 
-  return null;
+  return (
+    <div className="flex h-full items-center justify-center text-slate-400">
+      Could not map columns {JSON.stringify(columns)} to a visualization.
+    </div>
+  );
 }
 
-// ── Sortable, filterable data table ──────────────────────────────────────────
+// ── Data Table ───────────────────────────────────────────────────────────────
 
 function DataTable({ rows, columns }) {
   const [sortKey, setSortKey] = useState(null);
@@ -372,7 +563,9 @@ function DataTable({ rows, columns }) {
     const q = filter.toLowerCase();
     return rows.filter((row) =>
       columns.some((col) =>
-        String(row?.[col] ?? "").toLowerCase().includes(q),
+        String(row?.[col] ?? "")
+          .toLowerCase()
+          .includes(q),
       ),
     );
   }, [rows, columns, filter]);
@@ -394,7 +587,6 @@ function DataTable({ rows, columns }) {
 
   return (
     <div className="space-y-3">
-      {/* Search bar */}
       <div className="relative">
         <Search
           size={14}
@@ -431,15 +623,26 @@ function DataTable({ rows, columns }) {
                       onClick={() => toggleSort(col)}
                       className="flex items-center gap-1 hover:text-blue-600 transition"
                     >
-                      <span className="whitespace-normal wrap-break-word">{col}</span>
+                      <span className="whitespace-normal wrap-break-word">
+                        {col}
+                      </span>
                       {sortKey === col ? (
                         sortDir === "asc" ? (
-                          <ArrowUp size={12} className="shrink-0 text-blue-500" />
+                          <ArrowUp
+                            size={12}
+                            className="shrink-0 text-blue-500"
+                          />
                         ) : (
-                          <ArrowDown size={12} className="shrink-0 text-blue-500" />
+                          <ArrowDown
+                            size={12}
+                            className="shrink-0 text-blue-500"
+                          />
                         )
                       ) : (
-                        <ArrowUpDown size={12} className="shrink-0 text-slate-400" />
+                        <ArrowUpDown
+                          size={12}
+                          className="shrink-0 text-slate-400"
+                        />
                       )}
                     </button>
                   </th>
@@ -468,7 +671,9 @@ function DataTable({ rows, columns }) {
                     className="px-4 py-8 text-center text-slate-500"
                     colSpan={Math.max(columns.length, 1)}
                   >
-                    {filter ? "No rows match the filter." : "No result rows were returned."}
+                    {filter
+                      ? "No rows match the filter."
+                      : "No result rows were returned."}
                   </td>
                 </tr>
               )}
@@ -476,17 +681,11 @@ function DataTable({ rows, columns }) {
           </table>
         </div>
       </div>
-
-      {filter && (
-        <p className="text-right text-xs text-slate-500">
-          {sorted.length} / {rows.length} rows shown
-        </p>
-      )}
     </div>
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────
+// ── Main Layout Component ────────────────────────────────────────────────────
 
 export default function AnalysisPanel({ analysis }) {
   const rows = Array.isArray(analysis?.sql_result) ? analysis.sql_result : [];
@@ -496,8 +695,9 @@ export default function AnalysisPanel({ analysis }) {
 
   if (!analysis) {
     return (
-      <div className="flex h-full items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-white/80 px-8 text-center text-slate-500 shadow-sm">
-        Pick a response with analysis to inspect the visualization and query data.
+      <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/80 px-8 text-center text-slate-500 shadow-sm">
+        Pick a response with analysis to inspect the visualization and query
+        data.
       </div>
     );
   }
@@ -505,7 +705,7 @@ export default function AnalysisPanel({ analysis }) {
   const hasCharts = charts.length > 0;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-linear-to-b from-white via-slate-50 to-slate-100 shadow-[0_18px_60px_rgba(15,23,42,0.12)]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-linear-to-b from-white via-slate-50 to-slate-100 shadow-[0_18px_60px_rgba(15,23,42,0.12)]">
       {/* Header */}
       <div className="border-b border-slate-200/80 bg-white/80 px-5 py-4 backdrop-blur">
         <div className="flex items-start justify-between gap-4">
@@ -514,35 +714,14 @@ export default function AnalysisPanel({ analysis }) {
               Analysis Workspace
             </p>
             <h2 className="mt-2 truncate text-xl font-semibold text-slate-900">
-              {charts[0]?.title || "Query Analysis"}
+              {charts[0]?.title || charts[0]?.intent || "Query Analysis"}
             </h2>
           </div>
           <div className="flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            {hasCharts ? `${charts.length} chart${charts.length > 1 ? "s" : ""}` : "table"}
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Rows</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900">{rowCount}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Columns</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900">{columns.length}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Charts</p>
-            <p className="mt-1 truncate text-lg font-semibold text-slate-900">
-              {hasCharts ? charts.map((c) => c.chart_type).join(", ") : "none"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Mode</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900">
-              {hasCharts ? "visual" : "table"}
-            </p>
+            {hasCharts
+              ? `${charts.length} chart${charts.length > 1 ? "s" : ""}`
+              : "table"}
           </div>
         </div>
       </div>
@@ -550,38 +729,52 @@ export default function AnalysisPanel({ analysis }) {
       {/* Body */}
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-5">
         <section className="space-y-4">
+          {/* Charts Rendering Loop */}
+          {hasCharts &&
+            charts.map((chartConfig, idx) => {
+              const chartNode = renderChart(chartConfig, rows);
+              if (!chartNode) return null;
 
-          {/* Charts — only rendered when there are charts */}
-          {hasCharts && charts.map((chartConfig, idx) => {
-            const chartNode = renderChart(chartConfig, rows);
-            if (!chartNode) return null;
-            return (
-              <div
-                key={idx}
-                className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                      Visualization {charts.length > 1 ? `${idx + 1} of ${charts.length}` : ""}
-                    </p>
-                    <h3 className="text-lg font-semibold text-slate-900">
-                      {chartConfig.title || chartConfig.chart_type}
+              const layout = resolveChartLayout(
+                chartConfig.intent,
+                chartConfig.columns,
+                rows,
+              );
+
+              // Standard fallback height updated to 550px as customized
+              let containerStyle = { height: "550px" };
+              if (layout.chart_type === "heatmap" && layout.yKey) {
+                const uniqueYCount = new Set(
+                  rows.map((r) => String(r?.[layout.yKey])),
+                ).size;
+                const calculatedHeight = uniqueYCount * 44 + 110;
+                // Adapt dynamically if space is not fully utilized, otherwise cap clean limits at 550px
+                containerStyle = {
+                  height: `${Math.min(Math.max(calculatedHeight, 250), 550)}px`,
+                };
+              }
+
+              return (
+                <div
+                  key={idx}
+                  className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-slate-800">
+                      {chartConfig.title}
                     </h3>
-                    {chartConfig.reason && (
-                      <p className="mt-0.5 text-xs text-slate-500">{chartConfig.reason}</p>
-                    )}
                   </div>
-                  <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
-                    {chartConfig.chart_type}
-                  </span>
+
+                  {/* Adaptive flexible panel container */}
+                  <div
+                    style={containerStyle}
+                    className="rounded-2xl bg-linear-to-br from-slate-50 to-slate-100 p-3 flex flex-col overflow-hidden transition-[height] duration-300 ease-out"
+                  >
+                    {chartNode}
+                  </div>
                 </div>
-                <div className="h-80 rounded-2xl bg-linear-to-br from-slate-50 to-slate-100 p-3">
-                  {chartNode}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
 
           {/* SQL Results table */}
           <details
@@ -615,7 +808,6 @@ export default function AnalysisPanel({ analysis }) {
               </pre>
             </div>
           </details>
-
         </section>
       </div>
     </div>

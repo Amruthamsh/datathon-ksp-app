@@ -80,6 +80,10 @@ Database Schemas
         print("Error during LLM.generate (planner):", str(e))
         raise
 
+    response = response.strip()
+    if response.startswith("```"):
+        response = response.replace("```json", "").replace("```", "").strip()
+
     plan = json.loads(response)
 
     print("Planner Node Output:", plan)

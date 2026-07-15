@@ -107,7 +107,7 @@ Answer the user's latest question with depth and precision.
 
 {markdown_guidance}
 
-Then suggest 5 high-value follow-up questions that would help the user explore the data further.
+Then suggest 2-3 high-value follow-up questions that would help the user explore the data further.
 Follow-up questions should be specific (reference actual categories, districts, or values from the result),
 actionable for a crime analyst, and diverse (don't ask the same type of question twice).
 
@@ -118,9 +118,6 @@ Return ONLY valid JSON:
     "follow_up_questions": [
         "...",
         "...",
-        "...",
-        "...",
-        "..."
     ]
 }}
 """

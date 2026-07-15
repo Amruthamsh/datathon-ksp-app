@@ -11,7 +11,7 @@ load_dotenv()  # Load environment variables from .env file if present
 pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 
 SECRET_KEY = os.getenv("SECRET_KEY", "default-secret-key")  # Ensure you set this in your environment for production
-TOKEN_EXPIRE_MINUTES = 480  # 8hr shift
+TOKEN_EXPIRE_MINUTES = 240 # 4 hours
 TOKEN_SALT = "ksp-auth-token"
 
 def hash_password(password: str) -> str:

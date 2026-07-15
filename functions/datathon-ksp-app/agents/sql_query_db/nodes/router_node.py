@@ -53,6 +53,10 @@ Database question:
         user_prompt=conversation,
     )
 
+    response = response.strip()
+    if response.startswith("```"):
+        response = response.replace("```json", "").replace("```", "").strip()
+
     intent = json.loads(response)["intent"]
 
     return {

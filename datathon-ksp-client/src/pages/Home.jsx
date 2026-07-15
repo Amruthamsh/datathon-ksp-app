@@ -6,9 +6,18 @@ import remarkGfm from "remark-gfm";
 import { useState, useRef, useEffect, useCallback } from "react";
 import AnalysisPanel from "../components/AnalysisPanel";
 import { useAuth } from "../auth/AuthContext";
-import { generateResponse, listConversations, getConversation, renameConversation, deleteConversation } from "../api/chat";
+import {
+  generateResponse,
+  listConversations,
+  getConversation,
+  renameConversation,
+  deleteConversation,
+} from "../api/chat";
 
-const GREETING = { role: "assistant", text: "Hello! Ask me anything about the crime database." };
+const GREETING = {
+  role: "assistant",
+  text: "Hello! Ask me anything about the crime database.",
+};
 
 export default function Home() {
   const { token } = useAuth();
@@ -56,57 +65,68 @@ export default function Home() {
     setInput("");
   }, []);
 
-  const loadConversation = useCallback(async (id) => {
-    if (!token) return;
-    setHistoryLoading(true);
-    try {
-      const data = await getConversation(token, id);
-      setConversationId(id);
-      setFollowUps([]);
-      setActiveAnalysis(null);
+  const loadConversation = useCallback(
+    async (id) => {
+      if (!token) return;
+      setHistoryLoading(true);
+      try {
+        const data = await getConversation(token, id);
+        setConversationId(id);
+        setFollowUps([]);
+        setActiveAnalysis(null);
 
-      const loaded = data.messages.map((m) => {
-        if (m.role === "user") return { role: "user", text: m.content };
-        const analysis = m.analysis
-          ? { ...m.analysis, response: m.content, user_query: "" }
-          : null;
-        return { role: "assistant", text: m.content, analysis };
-      });
+        const loaded = data.messages.map((m) => {
+          if (m.role === "user") return { role: "user", text: m.content };
+          const analysis = m.analysis
+            ? { ...m.analysis, response: m.content, user_query: "" }
+            : null;
+          return { role: "assistant", text: m.content, analysis };
+        });
 
-      setMessages([GREETING, ...loaded]);
+        setMessages([GREETING, ...loaded]);
 
-      // Restore the last assistant analysis so the panel isn't blank
-      const lastAssistant = [...loaded].reverse().find((m) => m.analysis);
-      if (lastAssistant) setActiveAnalysis(lastAssistant.analysis);
-    } catch {
-      // keep current state on error
-    } finally {
-      setHistoryLoading(false);
-    }
-  }, [token]);
+        // Restore the last assistant analysis so the panel isn't blank
+        const lastAssistant = [...loaded].reverse().find((m) => m.analysis);
+        if (lastAssistant) setActiveAnalysis(lastAssistant.analysis);
+      } catch {
+        // keep current state on error
+      } finally {
+        setHistoryLoading(false);
+      }
+    },
+    [token],
+  );
 
-  const handleRenameConversation = useCallback(async (id, title) => {
-    if (!token) return;
-    try {
-      await renameConversation(token, id, title);
-      setConversations((prev) =>
-        prev.map((c) => (c.conversation_id === id ? { ...c, title } : c))
-      );
-    } catch {
-      // non-fatal; UI already shows old title
-    }
-  }, [token]);
+  const handleRenameConversation = useCallback(
+    async (id, title) => {
+      if (!token) return;
+      try {
+        await renameConversation(token, id, title);
+        setConversations((prev) =>
+          prev.map((c) => (c.conversation_id === id ? { ...c, title } : c)),
+        );
+      } catch {
+        // non-fatal; UI already shows old title
+      }
+    },
+    [token],
+  );
 
-  const handleDeleteConversation = useCallback(async (id) => {
-    if (!token) return;
-    try {
-      await deleteConversation(token, id);
-      setConversations((prev) => prev.filter((c) => c.conversation_id !== id));
-      if (conversationId === id) startNewChat();
-    } catch {
-      // non-fatal
-    }
-  }, [token, conversationId, startNewChat]);
+  const handleDeleteConversation = useCallback(
+    async (id) => {
+      if (!token) return;
+      try {
+        await deleteConversation(token, id);
+        setConversations((prev) =>
+          prev.filter((c) => c.conversation_id !== id),
+        );
+        if (conversationId === id) startNewChat();
+      } catch {
+        // non-fatal
+      }
+    },
+    [token, conversationId, startNewChat],
+  );
 
   const sendMessage = async (overrideQuestion = null) => {
     const question = overrideQuestion ?? input;
@@ -179,7 +199,9 @@ export default function Home() {
                         : "bg-slate-100 max-w-[84%]"
                     }`}
                   >
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {m.text}
+                    </ReactMarkdown>
 
                     {m.analysis?.sql_query && (
                       <button
@@ -204,8 +226,14 @@ export default function Home() {
                   <div className="rounded-3xl bg-slate-100 px-5 py-4 shadow-sm">
                     <div className="flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce" />
-                      <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce" style={{ animationDelay: ".15s" }} />
-                      <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce" style={{ animationDelay: ".3s" }} />
+                      <span
+                        className="h-2 w-2 rounded-full bg-slate-500 animate-bounce"
+                        style={{ animationDelay: ".15s" }}
+                      />
+                      <span
+                        className="h-2 w-2 rounded-full bg-slate-500 animate-bounce"
+                        style={{ animationDelay: ".3s" }}
+                      />
                       <span className="ml-3 text-sm text-slate-600">
                         {historyLoading ? "Loading..." : "Thinking..."}
                       </span>
@@ -264,7 +292,7 @@ export default function Home() {
           </section>
 
           {/* Analysis panel */}
-          <section className="flex-1 overflow-auto bg-linear-to-br from-slate-100 to-slate-200 p-6">
+          <section className="flex-1 overflow-auto bg-linear-to-br from-slate-100 to-slate-200 p-2">
             <AnalysisPanel analysis={activeAnalysis} />
           </section>
         </main>

@@ -65,7 +65,10 @@ class CatalystLLMService(LLMService):
             error_body = e.read().decode("utf-8")
             raise RuntimeError(f"Zoho LLM HTTP {e.code}: {error_body}") from e
 
-        return body["choices"][0]["message"]["content"].strip()
+        response = body["response"]
+        print(f"Zoho LLM body: {body}")  # Debugging log
+        print(f"Zoho LLM response: {response}")  # Debugging log
+        return response
 
 
 catalyst_llm_service = CatalystLLMService()

@@ -8,8 +8,9 @@ from agents.sql_query_db.state import SQLAgentState
 
 def chart_node(state: SQLAgentState):
     """
-    Determines whether one or more visualizations should be shown for the SQL result.
-    Returns a list of chart configurations for the frontend.
+    Determines the analytical intent and relevant columns for the SQL result.
+    Delegates the specific chart type selection (e.g., pie vs horizontal_bar) 
+    to the deterministic frontend renderer.
     """
 
     if state.get("error"):
@@ -43,61 +44,46 @@ def chart_node(state: SQLAgentState):
     prompt = f"""
 You are a senior business intelligence engineer specialising in crime analytics dashboards.
 
-Your task: decide which visualizations best illuminate the SQL result below.
+Your task: decide the analytical intent for the SQL result below.
 You may recommend 1 to 3 charts. Each chart must add distinct analytical value.
 
-Conversation
+Conversation:
 
 {conversation}
 
-SQL Query
+SQL Query:
 
 {state["sql_query"]}
 
-Columns available
+Columns available:
 
 {columns}
 
-Query Result (first 50 rows)
+Query Result (first 50 rows):
 
 {json.dumps(rows[:50], indent=2)}
 
 Rules:
 1. If NO chart adds value (e.g. a single row), return: {{"charts": []}}
-2. Otherwise return up to 3 chart configs. Each must use exact column names from the result.
+2. DO NOT decide the specific chart type (e.g., bar, pie). The frontend renderer handles that.
+3. Your job is ONLY to determine the broad analytical intent. You MUST use exactly one of these string values for "intent":
+   - "distribution": Comparing values across exactly ONE categorical column (e.g., crimes by district).
+   - "heatmap": Comparing values across a matrix of exactly TWO categorical columns (e.g., crimes by district AND month, or offence by time of day).
+   - "time_series": Showing a trend over a temporal/date column.
+   - "part_of_whole": Showing shares or percentages of a whole.
+   - "correlation": Comparing exactly TWO numeric columns.
+4. Select the exact "columns" from the SQL result that support this intent. 
+5. NEVER use identifier columns (e.g., CaseMasterID, CrimeID, UUID) as quantitative values.
 
-Supported chart types:
-- bar              (categories with counts/values, ≤20 categories)
-- horizontal_bar   (categories with counts/values, >20 categories or long labels)
-- line             (time-series or ordered sequence)
-- area             (cumulative or continuous trend)
-- pie              (part-of-whole, ≤8 slices)
-- donut            (part-of-whole with center label, ≤8 slices)
-- scatter          (two numeric variables, correlation)
-- heatmap          (two categorical dimensions × one numeric value)
-
-Chart selection guidelines:
-- Time/date sequence → line or area
-- Category distribution → bar or horizontal_bar
-- Part of whole (shares, percentages) → donut
-- Two numeric columns → scatter
-- Two categorical axes (e.g. hour vs district) → heatmap
-- If top-N category question: primary = bar/horizontal_bar, optional secondary = donut for share
-- Prefer horizontal_bar when any label exceeds 15 characters or there are >12 categories
-- A heatmap requires exactly: xKey (category), yKey (category), valueKey (numeric)
-- Do NOT duplicate the same chart type with the same columns
-
-Return ONLY valid JSON:
+Return ONLY valid JSON with NO markdown fences using the schema below:
 
 {{
   "charts": [
     {{
-      "chart_type": "...",
-      "title": "...",
-      "x_axis": "...",
-      "y_axis": "...",
-      "series": null,
-      "reason": "..."
+      "title": "Crime Volume by District",
+      "intent": "distribution",
+      "columns": ["DistrictName", "CaseCount"],
+      "reason": "Compare crime volume by district."
     }}
   ]
 }}
@@ -105,7 +91,7 @@ Return ONLY valid JSON:
 
     try:
         response = llm.generate(
-            system_prompt="You are an expert in business intelligence and data visualization. Return only valid JSON.",
+            system_prompt="You are an expert in business intelligence and data visualization. Return only valid JSON with no markdown fences.",
             user_prompt=prompt,
         )
     except Exception as e:
@@ -114,6 +100,7 @@ Return ONLY valid JSON:
 
     response = response.strip()
     if response.startswith("```"):
+        # Strip out markdown formatting if the LLM ignores the prompt rule
         response = response.replace("```json", "").replace("```", "").strip()
 
     try:
@@ -125,10 +112,10 @@ Return ONLY valid JSON:
     if not isinstance(charts, list):
         return {"charts": []}
 
-    # Filter out any malformed entries
+    # Validate based on the new, simplified schema
     valid_charts = [
         c for c in charts
-        if isinstance(c, dict) and c.get("chart_type")
+        if isinstance(c, dict) and c.get("intent") and c.get("columns")
     ]
 
     return {"charts": valid_charts}
