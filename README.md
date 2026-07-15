@@ -47,8 +47,6 @@ python3 generate_fir_data.py`
 
 ## TO-DO List
 
-- migrate to Zoho LLM calls
-- Improve all the prompts.
 - Voice input support for queries
 - Kannada Support for queries and entire UI
 - Dashboard for saving and visualizing queries and results.. also sends notifications for new cases and updates
@@ -59,10 +57,3 @@ python3 generate_fir_data.py`
 
 - Public API for Correlation of crime with urbanization, migration, economic stress, education and other social indicators.
 - audit logs and traceability - who asked what and when, and what was the response. and how much did LLMs cost
-
-4000 applications - 313 participants - 162
-
-app to find missing person in khumbh mela and concerts
-but the way we find them is through description and filters in an app without face identification or anything. it was so funny
-
-personalized movies. they took a scene from dhurandhar. to change location names and change advertisements for billboards in the movie.
