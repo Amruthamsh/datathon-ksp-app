@@ -142,6 +142,40 @@ const mockGraphData = [
   },
 ];
 
+const GraphLegend = () => (
+  <div className="absolute bottom-16 left-4 z-20 bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-slate-200 text-xs text-slate-600">
+    <h4 className="font-bold text-slate-800 mb-2 uppercase tracking-wider">
+      Graph Keys
+    </h4>
+    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 bg-red-500 rounded-sm rotate-45" /> Case
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 bg-orange-500 rounded-full" /> Accused
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 bg-blue-500 rounded-sm" /> Officer
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 bg-green-500 rounded-sm skew-x-12" /> Station
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 bg-cyan-500 rotate-45" /> Section
+      </div>
+    </div>
+    <div className="mt-3 pt-2 border-t border-slate-200 space-y-1">
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-0.5 bg-slate-400" /> Database Link
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-0.5 border-t border-purple-500 border-dashed" />{" "}
+        AI/Semantic Match
+      </div>
+    </div>
+  </div>
+);
+
 export default function ConnectedInvestigations() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -357,6 +391,9 @@ export default function ConnectedInvestigations() {
               ))}
             </div>
           )}
+
+          {/* NEW: Floating Legend */}
+          <GraphLegend />
 
           {elements.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center text-slate-400">
