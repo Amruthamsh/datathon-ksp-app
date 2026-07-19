@@ -47,8 +47,8 @@ python3 generate_fir_data.py`
 
 ## TO-DO List
 
-- Voice input support for queries
 - Kannada Support for queries and entire UI
+- Voice input support for queries
 - Dashboard for saving and visualizing queries and results.. also sends notifications for new cases and updates
 - Structured search for specific crime types, locations, and offender profiles
 - export query results to CSV or PDF. Save the Conversation History in PDF format locally

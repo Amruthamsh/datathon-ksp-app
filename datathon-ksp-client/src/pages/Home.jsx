@@ -206,7 +206,7 @@ export default function Home() {
                     {m.analysis?.sql_query && (
                       <button
                         onClick={() => setActiveAnalysis(m.analysis)}
-                        className={`mt-4 rounded-lg border px-4 py-2 text-sm transition ${
+                        className={`mt-4 rounded-lg border px-4 py-2 text-sm transition cursor-pointer ${
                           activeAnalysis === m.analysis
                             ? "border-blue-500 bg-blue-50 text-blue-700"
                             : "border-slate-300 bg-white hover:bg-slate-50"
