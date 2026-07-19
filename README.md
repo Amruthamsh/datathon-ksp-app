@@ -8,11 +8,21 @@ The proposed solution will enable users to discover hidden relationships between
 
 The platform will go beyond simple data retrieval and enable:
 
-• Crime pattern discovery
-• Criminal network analysis
-• Socio-demographic crime insights
-• Behavioral and criminological profiling
-• Proactive crime prevention intelligence
+- Crime pattern discovery
+- Criminal network analysis
+- Socio-demographic crime insights
+- Behavioral and criminological profiling
+- Proactive crime prevention intelligence
+
+### KSP user workflows
+
+| User Goal                                                   | Page                       | Primary Interaction                                              |
+| ----------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------- |
+| I have a question and want to explore the data              | **Chat**                   | Natural language conversation with generated charts and SQL      |
+| I need to solve a specific case                             | **Investigations**         | Case Command Center with AI recommendations and case-scoped chat |
+| I need to monitor and prevent crime across regions          | **Crime Intelligence Map** | Maps, trends, forecasts, and deployment suggestions              |
+| I need to understand relationships between people and cases | **Criminal Networks**      | Interactive graph analysis with network-scoped AI                |
+| I need to collect findings and share them                   | **Reports**                | Editable intelligence workbooks built from saved chat outputs    |
 
 ### Architecture of the SQL Agent Graph:
 
@@ -57,3 +67,5 @@ python3 generate_fir_data.py`
 
 - Public API for Correlation of crime with urbanization, migration, economic stress, education and other social indicators.
 - audit logs and traceability - who asked what and when, and what was the response. and how much did LLMs cost
+
+## Sample Questions

@@ -2,6 +2,7 @@ from fastapi import Request
 
 from db.sqlite.sqlite_metadata_repository import SQLiteMetadataRepository
 from db.sqlite.officer_repository import SQLiteOfficerRepository
+from db.sqlite.sqlite_dashboard_repository import SQLiteDashboardRepository
 from db.catalyst.user_repository import CatalystUserRepository
 from db.catalyst.nosql_chat_repository import ChatRepository, ConversationRepository
 from db.catalyst.catalyst import get_catalyst_app
@@ -40,3 +41,6 @@ def get_conversation_repository(request: Request):
         return ConversationRepository(catalyst)
     except Exception:
         return None
+    
+def get_dashboard_repository():
+    return SQLiteDashboardRepository()
