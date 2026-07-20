@@ -84,7 +84,7 @@ export default function Login() {
             </label>
             <input
               className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 font-mono uppercase text-white focus:border-blue-500 focus:outline-none"
-              placeholder="KA123456"
+              placeholder="KGIDxxxxxxxx"
               value={form.kgid}
               onChange={set("kgid")}
               autoComplete="username"

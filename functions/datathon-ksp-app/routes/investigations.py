@@ -10,9 +10,9 @@ from db.dependencies import get_dashboard_repository
 from db.sqlite.sqlite_dashboard_repository import SQLiteDashboardRepository
 
 logger = logging.getLogger("fastapi_function")
-router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+router = APIRouter(prefix="/investigations", tags=["Investigations"])
 
-@router.get("/investigations", status_code=status.HTTP_200_OK)
+@router.get("/", status_code=status.HTTP_200_OK)
 async def get_investigations(
     current_user: dict = Depends(get_current_user),
     repo: SQLiteDashboardRepository = Depends(get_dashboard_repository),

@@ -1,5 +1,14 @@
 import { useState, useMemo } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, Search, X } from "lucide-react";
+import {
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Search,
+  X,
+  Save,
+  Download,
+  FileText,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -18,6 +27,7 @@ import {
   YAxis,
   Label,
 } from "recharts";
+import { toBlob } from "html-to-image";
 
 const CHART_COLORS = [
   "#0f766e",
@@ -693,6 +703,122 @@ export default function AnalysisPanel({ analysis }) {
   const charts = Array.isArray(analysis?.charts) ? analysis.charts : [];
   const rowCount = rows.length;
 
+  const [saving, setSaving] = useState(false);
+
+  async function handleSaveReport() {
+    console.log("Saving analysis report ", analysis);
+    try {
+      setSaving(true);
+
+      const response = await fetch("/api/reports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: charts[0]?.title || charts[0]?.intent || "Query Analysis",
+
+          sql_query: analysis.sql_query,
+          sql_result: analysis.sql_result,
+          charts: analysis.charts,
+          summary: analysis.response,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save report");
+      }
+
+      alert("Analysis saved.");
+    } catch (err) {
+      console.error(err);
+      alert("Unable to save analysis.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function exportAnalysis(format) {
+    try {
+      if (!analysis) return;
+
+      // 1. Construct standardized Report Data structure
+      const reportData = {
+        title: analysis.charts?.[0]?.title ?? "Investigation Analysis Report",
+        generated_at: new Date().toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+        }),
+        generated_by: "KSP Intelligence Officer",
+        executive_summary: analysis.response ?? "",
+        sql: {
+          query: analysis.sql_query ?? "",
+          row_count: analysis.sql_result?.length ?? 0,
+          rows: analysis.sql_result ?? [],
+        },
+        visualizations: (analysis.charts || []).map((c, i) => ({
+          id: `chart-${i}`, // Matched with JSX id tag: <div id={`chart-${i}`}>
+          title: c.title || `Visualization ${i + 1}`,
+          intent: c.intent,
+          reason: c.reason,
+        })),
+        follow_up_questions: analysis.follow_up_questions || [],
+      };
+
+      const formData = new FormData();
+
+      // Pass raw JSON string directly into 'report' form field
+      formData.append("report", JSON.stringify(reportData));
+
+      // 2. Capture dynamic elements using DOM lookups
+      if (Array.isArray(analysis.charts)) {
+        for (let i = 0; i < analysis.charts.length; i++) {
+          const chartId = `chart-${i}`;
+          const element = document.getElementById(chartId);
+
+          if (element) {
+            const blob = await toBlob(element, {
+              backgroundColor: "#ffffff",
+              cacheBust: true,
+              pixelRatio: 2, // High resolution capture for crisp printing
+            });
+
+            if (blob) {
+              // Append with matching ID filename (e.g., "chart-0.png")
+              formData.append("charts", blob, `${chartId}.png`);
+            }
+          }
+        }
+      }
+
+      // 3. POST multipart data to backend endpoint
+      const response = await fetch(`/api/reports/export/${format}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Server returned ${response.status}: ${errText}`);
+      }
+
+      // 4. Trigger direct user file download
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `ksp_analysis_report_${Date.now()}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up memory
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error("Export generation error:", err);
+      alert("Export failed. Please check backend logs or try again.");
+    }
+  }
+
   if (!analysis) {
     return (
       <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/80 px-8 text-center text-slate-500 shadow-sm">
@@ -707,21 +833,73 @@ export default function AnalysisPanel({ analysis }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-linear-to-b from-white via-slate-50 to-slate-100 shadow-[0_18px_60px_rgba(15,23,42,0.12)]">
       {/* Header */}
-      <div className="border-b border-slate-200/80 bg-white/80 px-5 py-4 backdrop-blur">
-        <div className="flex items-start justify-between gap-4">
+      <div className="border-b border-slate-200/80 bg-white/80 px-5 py-4 backdrop-blur z-100000000">
+        <div className="flex items-center justify-between gap-6">
+          {/* Left */}
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
               Analysis Workspace
             </p>
-            <h2 className="mt-2 truncate text-xl font-semibold text-slate-900">
+
+            <h2 className="mt-1 truncate text-xl font-semibold text-slate-900">
               {charts[0]?.title || charts[0]?.intent || "Query Analysis"}
             </h2>
           </div>
-          <div className="flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            {hasCharts
-              ? `${charts.length} chart${charts.length > 1 ? "s" : ""}`
-              : "table"}
+
+          {/* Right */}
+          <div className="flex shrink-0 items-center gap-3">
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              {hasCharts
+                ? `${charts.length} chart${charts.length > 1 ? "s" : ""}`
+                : "Table"}
+            </div>
+
+            <button
+              onClick={handleSaveReport}
+              disabled={saving}
+              className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm hover:bg-slate-50"
+            >
+              <Save size={15} />
+              {saving ? "Adding..." : "Add to Reports"}
+            </button>
+
+            <div className="relative group">
+              <button className="flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700 cursor-pointer">
+                <Download size={15} />
+                Export
+              </button>
+
+              <div className="absolute right-0 top-full z-50 pt-2 hidden w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-xl group-hover:block">
+                <button
+                  onClick={() => exportAnalysis("pdf")}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 cursor-pointer"
+                >
+                  PDF
+                </button>
+
+                <button
+                  onClick={() => exportAnalysis("docx")}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 cursor-pointer"
+                >
+                  Word
+                </button>
+                {/* 
+                <button
+                  onClick={() => exportAnalysis("html")}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100"
+                >
+                  HTML
+                </button>
+
+                <button
+                  onClick={() => exportAnalysis("json")}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100"
+                >
+                  JSON
+                </button> */}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -757,6 +935,7 @@ export default function AnalysisPanel({ analysis }) {
               return (
                 <div
                   key={idx}
+                  id={`chart-${idx}`}
                   className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">
@@ -765,7 +944,6 @@ export default function AnalysisPanel({ analysis }) {
                     </h3>
                   </div>
 
-                  {/* Adaptive flexible panel container */}
                   <div
                     style={containerStyle}
                     className="rounded-2xl bg-linear-to-br from-slate-50 to-slate-100 p-3 flex flex-col overflow-hidden transition-[height] duration-300 ease-out"
