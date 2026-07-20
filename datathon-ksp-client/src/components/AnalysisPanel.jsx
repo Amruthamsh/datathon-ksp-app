@@ -28,6 +28,7 @@ import {
   Label,
 } from "recharts";
 import { toBlob } from "html-to-image";
+import * as XLSX from "xlsx";
 
 const CHART_COLORS = [
   "#0f766e",
@@ -553,8 +554,7 @@ function renderChart(rawConfig, data) {
 }
 
 // ── Data Table ───────────────────────────────────────────────────────────────
-
-function DataTable({ rows, columns }) {
+function DataTable({ rows = [], columns = [], filename = "export_data" }) {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
   const [filter, setFilter] = useState("");
@@ -595,30 +595,76 @@ function DataTable({ rows, columns }) {
     });
   }, [filtered, sortKey, sortDir]);
 
+  // Export filtered & sorted data to Excel (.xlsx)
+  const handleExportExcel = () => {
+    if (!sorted.length) return;
+
+    // Prepare data mapping only the displayed columns in order
+    const exportData = sorted.map((row) => {
+      const rowData = {};
+      columns.forEach((col) => {
+        rowData[col] = row?.[col] ?? "";
+      });
+      return rowData;
+    });
+
+    // Create worksheet & workbook
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+
+    // Auto-fit column widths (optional enhancement)
+    const colWidths = columns.map((col) => ({
+      wch:
+        Math.max(
+          col.length,
+          ...sorted.map((r) => String(r?.[col] ?? "").length),
+        ) + 3,
+    }));
+    worksheet["!cols"] = colWidths;
+
+    // Save file
+    XLSX.writeFile(workbook, `${filename}.xlsx`);
+  };
+
   return (
     <div className="space-y-3">
-      <div className="relative">
-        <Search
-          size={14}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-        />
-        <input
-          type="text"
-          placeholder="Filter rows…"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-8 pr-8 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-        />
-        {filter && (
-          <button
-            onClick={() => setFilter("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-          >
-            <X size={13} />
-          </button>
-        )}
+      {/* Top Bar with Filter & Export Button */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+          <input
+            type="text"
+            placeholder="Filter rows…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-8 pr-8 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          />
+          {filter && (
+            <button
+              onClick={() => setFilter("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* Export Button */}
+        <button
+          onClick={handleExportExcel}
+          disabled={sorted.length === 0}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+        >
+          <Download size={14} className="text-slate-500" />
+          <span>Export Excel</span>
+        </button>
       </div>
 
+      {/* Table Section */}
       <div className="overflow-hidden rounded-2xl border border-slate-200">
         <div className="max-h-96 overflow-y-auto overflow-x-auto">
           <table className="w-full table-fixed border-collapse text-left text-xs">
