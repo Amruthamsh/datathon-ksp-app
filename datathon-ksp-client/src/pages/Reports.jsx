@@ -11,6 +11,7 @@ import {
   Code,
   Check,
   Copy,
+  Trash,
 } from "lucide-react";
 import {
   BarChart,
@@ -30,7 +31,7 @@ import {
   YAxis,
 } from "recharts";
 
-import { listReports, executeReportQuery } from "../api/reports";
+import { listReports, executeReportQuery, deleteReport } from "../api/reports";
 import { useAuth } from "../auth/AuthContext";
 
 const CHART_COLORS = [
@@ -543,6 +544,24 @@ const Reports = () => {
     };
   }, [token]);
 
+  const DeleteReport = async (reportId) => {
+    if (!window.confirm("Are you sure you want to delete this report?")) {
+      return;
+    }
+
+    try {
+      const response = await deleteReport(token, reportId);
+
+      // Remove the deleted report from the state
+      setReports((prevReports) =>
+        prevReports.filter((report) => report.report_id !== reportId),
+      );
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      alert("Failed to delete the report. Please try again.");
+    }
+  };
+
   const parsedCharts = useMemo(() => {
     return reports.map((report) => {
       let chartConfig = null;
@@ -673,6 +692,13 @@ const Reports = () => {
 
                     {/* Control Icons */}
                     <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => DeleteReport(id)}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer"
+                        title="Delete Report"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => handleToggleSqlView(id)}
                         className={`p-1.5 rounded transition cursor-pointer ${

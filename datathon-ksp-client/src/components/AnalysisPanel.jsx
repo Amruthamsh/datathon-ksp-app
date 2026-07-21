@@ -856,7 +856,10 @@ export default function AnalysisPanel({ analysis }) {
     }
   }
 
-  if (!analysis) {
+  if (
+    !analysis ||
+    (analysis.sql_result?.length === 0 && analysis.charts?.length === 0)
+  ) {
     return (
       <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/80 px-8 text-center text-slate-500 shadow-sm">
         Pick a response with analysis to inspect the visualization and query
