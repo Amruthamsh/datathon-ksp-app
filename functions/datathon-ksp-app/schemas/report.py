@@ -24,3 +24,13 @@ class ReportPayload(BaseModel):
     sql: SQLDataSchema
     visualizations: List[VisualizationSchema] = Field(default_factory=list)
     follow_up_questions: List[str] = Field(default_factory=list)
+
+
+class SaveReportRequest(BaseModel):
+    title: str
+    sql_query: str
+    charts: list
+    summary: str
+
+class ExecuteQueryRequest(BaseModel):
+    sql_query: str = Field(..., description="ZCQL query to execute")

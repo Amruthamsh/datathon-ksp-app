@@ -5,6 +5,7 @@ from db.sqlite.officer_repository import SQLiteOfficerRepository
 from db.sqlite.sqlite_dashboard_repository import SQLiteDashboardRepository
 from db.catalyst.user_repository import CatalystUserRepository
 from db.catalyst.nosql_chat_repository import ChatRepository, ConversationRepository
+from db.catalyst.report_repository import CatalystReportRepository
 from db.catalyst.catalyst import get_catalyst_app
 
 from dotenv import load_dotenv
@@ -44,3 +45,10 @@ def get_conversation_repository(request: Request):
     
 def get_dashboard_repository():
     return SQLiteDashboardRepository()
+
+def get_report_repository(request: Request):
+    try:
+        catalyst = get_catalyst_app(request)
+        return CatalystReportRepository(catalyst)
+    except Exception:
+        return None

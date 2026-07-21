@@ -29,6 +29,8 @@ import {
 } from "recharts";
 import { toBlob } from "html-to-image";
 import * as XLSX from "xlsx";
+import { saveReport } from "../api/reports";
+import { useAuth } from "../auth/AuthContext";
 
 const CHART_COLORS = [
   "#0f766e",
@@ -751,34 +753,23 @@ export default function AnalysisPanel({ analysis }) {
 
   const [saving, setSaving] = useState(false);
 
+  const { token } = useAuth();
+
   async function handleSaveReport() {
-    console.log("Saving analysis report ", analysis);
     try {
       setSaving(true);
 
-      const response = await fetch("/api/reports", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: charts[0]?.title || charts[0]?.intent || "Query Analysis",
-
-          sql_query: analysis.sql_query,
-          sql_result: analysis.sql_result,
-          charts: analysis.charts,
-          summary: analysis.response,
-        }),
+      await saveReport(token, {
+        title: charts[0]?.title || charts[0]?.intent || "Query Analysis",
+        sql_query: analysis.sql_query,
+        charts: analysis.charts,
+        summary: analysis.response || "",
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to save report");
-      }
-
-      alert("Analysis saved.");
+      alert("Report added.");
     } catch (err) {
       console.error(err);
-      alert("Unable to save analysis.");
+      alert("Unable to save report.");
     } finally {
       setSaving(false);
     }
@@ -904,7 +895,7 @@ export default function AnalysisPanel({ analysis }) {
             <button
               onClick={handleSaveReport}
               disabled={saving}
-              className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm hover:bg-slate-50"
+              className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm hover:bg-slate-50 cursor-pointer"
             >
               <Save size={15} />
               {saving ? "Adding..." : "Add to Reports"}
@@ -930,20 +921,6 @@ export default function AnalysisPanel({ analysis }) {
                 >
                   Word
                 </button>
-                {/* 
-                <button
-                  onClick={() => exportAnalysis("html")}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100"
-                >
-                  HTML
-                </button>
-
-                <button
-                  onClick={() => exportAnalysis("json")}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100"
-                >
-                  JSON
-                </button> */}
               </div>
             </div>
           </div>
