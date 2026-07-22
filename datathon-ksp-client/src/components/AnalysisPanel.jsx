@@ -43,10 +43,21 @@ const CHART_COLORS = [
   "#0284c7",
 ];
 
-// ── Data Profiling Helpers ───────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function isNumeric(value) {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function looksLikeDate(value) {
+  if (typeof value !== "string") return false;
+  return /^\d{4}-\d{2}-\d{2}/.test(value);
+}
+
+function looksLikeIdentifier(colName) {
+  return /(^|_)(id|uuid|guid|pk|caseid|casemasterid|employeeid|fir)$/i.test(
+    colName,
+  );
 }
 
 function formatValue(value) {
@@ -67,35 +78,6 @@ function formatHeaderLabel(str) {
     .replace(/^\w/, (c) => c.toUpperCase());
 }
 
-function looksLikeIdentifier(colName) {
-  return /(id|uuid|guid|caseid|casemasterid|fir|pk)$/i.test(colName);
-}
-
-function getColumnTypes(data, requestedColumns = []) {
-  if (!Array.isArray(data) || data.length === 0)
-    return { numeric: [], categorical: [] };
-
-  const colsToCheck =
-    requestedColumns.length > 0 ? requestedColumns : Object.keys(data[0]);
-
-  const numeric = [];
-  const categorical = [];
-
-  colsToCheck.forEach((col) => {
-    if (looksLikeIdentifier(col)) return;
-
-    const isNum = data.every((row) => {
-      const val = row?.[col];
-      return val === null || val === undefined || isNumeric(val);
-    });
-
-    if (isNum) numeric.push(col);
-    else categorical.push(col);
-  });
-
-  return { numeric, categorical };
-}
-
 function getUniqueCount(data, col) {
   if (!col) return 0;
   return new Set(data.map((row) => row?.[col])).size;
@@ -111,55 +93,247 @@ function getMaxLabelLength(data, col) {
   return max;
 }
 
-// ── Deterministic Layout Engine ──────────────────────────────────────────────
+// ── Data Aggregation Engine ───────────────────────────────────────────────────
+//
+// Transforms raw SQL rows + chart config into chart-ready data.
+// This is the core fix: whenever the LLM sends a single-column config
+// (e.g. ["CaseStatusName"] or ["CrimeRegisteredDate"]), we aggregate
+// frequencies/counts here so the renderer always has {category, value} pairs.
 
-function resolveChartLayout(intent, requestedColumns, data) {
-  const { numeric, categorical } = getColumnTypes(data, requestedColumns);
+function aggregateData(rows, intent, requestedColumns) {
+  if (!rows || rows.length === 0)
+    return { data: [], columns: requestedColumns };
 
-  let chart_type = "bar";
-  let xKey = null;
-  let yKey = null;
-  let categoryKey = categorical[0] || null;
-  let valueKey = numeric[0] || null;
-  let seriesKey = categorical[1] || null;
+  const cols = requestedColumns.filter(Boolean);
+  const allKeys = Object.keys(rows[0]);
 
+  // ── Classify each requested column ──────────────────────────────────────
+  const numericCols = cols.filter(
+    (c) =>
+      !looksLikeIdentifier(c) &&
+      rows.every((r) => r[c] === null || r[c] === undefined || isNumeric(r[c])),
+  );
+  const dateCols = cols.filter(
+    (c) => !looksLikeIdentifier(c) && rows.some((r) => looksLikeDate(r[c])),
+  );
+  const categoricalCols = cols.filter(
+    (c) =>
+      !looksLikeIdentifier(c) &&
+      !numericCols.includes(c) &&
+      !dateCols.includes(c),
+  );
+
+  // ── time_series ───────────────────────────────────────────────────────────
   if (intent === "time_series") {
-    chart_type = "line";
-    xKey = categoryKey;
-    yKey = valueKey;
-  } else if (intent === "correlation" && numeric.length >= 2) {
-    chart_type = "scatter";
-    xKey = numeric[0];
-    yKey = numeric[1];
-    seriesKey = categoryKey;
-  } else if (
-    intent === "heatmap" ||
-    (intent === "distribution" &&
-      categorical.length >= 2 &&
-      numeric.length >= 1)
-  ) {
-    chart_type = "heatmap";
-    xKey = categorical[0];
-    yKey = categorical[1];
-    valueKey = numeric[0];
-  } else if (intent === "part_of_whole") {
-    const unique = getUniqueCount(data, categoryKey);
-    if (unique > 8) {
-      chart_type = "horizontal_bar";
-    } else {
-      chart_type = "donut";
+    const dateCol = dateCols[0] || cols[0];
+    const valueCol = numericCols[0] || null;
+
+    if (valueCol) {
+      // date + numeric already present — pass through sorted by date
+      const sorted = [...rows].sort((a, b) =>
+        String(a[dateCol]).localeCompare(String(b[dateCol])),
+      );
+      return { data: sorted, columns: [dateCol, valueCol] };
     }
-  } else {
-    const unique = getUniqueCount(data, categoryKey);
-    const maxLen = getMaxLabelLength(data, categoryKey);
-    if (unique > 12 || maxLen > 15) {
-      chart_type = "horizontal_bar";
-    } else {
-      chart_type = "bar";
+
+    // Only a date column — count occurrences per month/date bucket
+    const buckets = new Map();
+    rows.forEach((row) => {
+      const raw = String(row[dateCol] || "");
+      // Bucket by YYYY-MM for readability
+      const key = raw.length >= 7 ? raw.slice(0, 7) : raw;
+      buckets.set(key, (buckets.get(key) || 0) + 1);
+    });
+
+    const data = Array.from(buckets.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([period, count]) => ({ Period: period, Count: count }));
+
+    return { data, columns: ["Period", "Count"] };
+  }
+
+  // ── heatmap ───────────────────────────────────────────────────────────────
+  if (intent === "heatmap") {
+    // Needs exactly two categorical + one numeric
+    // If all three explicit cols provided, pass through
+    if (cols.length >= 3) {
+      const xKey = categoricalCols[0] || cols[0];
+      const yKey = categoricalCols[1] || cols[1];
+      const vKey = numericCols[0] || cols[2];
+      return { data: rows, columns: [xKey, yKey, vKey] };
+    }
+    // Two categoricals, no numeric — count occurrences
+    if (categoricalCols.length >= 2) {
+      const xKey = categoricalCols[0];
+      const yKey = categoricalCols[1];
+      const buckets = new Map();
+      rows.forEach((row) => {
+        const key = `${row[xKey]}__${row[yKey]}`;
+        if (!buckets.has(key))
+          buckets.set(key, { [xKey]: row[xKey], [yKey]: row[yKey], Count: 0 });
+        buckets.get(key).Count++;
+      });
+      return {
+        data: Array.from(buckets.values()),
+        columns: [xKey, yKey, "Count"],
+      };
     }
   }
 
-  return { chart_type, xKey, yKey, categoryKey, valueKey, seriesKey };
+  // ── correlation ───────────────────────────────────────────────────────────
+  if (intent === "correlation") {
+    if (numericCols.length >= 2) {
+      return { data: rows, columns: numericCols.slice(0, 2) };
+    }
+  }
+
+  // ── distribution / ranking / part_of_whole ────────────────────────────────
+  // Canonical cases:
+  //   A) One categorical + one numeric   → pass through
+  //   B) One categorical only            → frequency count
+  //   C) Two categoricals + one numeric  → treat as distribution on first categorical
+  //   D) Only numerics                   → histogram buckets
+
+  const catCol = categoricalCols[0] || dateCols[0] || null;
+  const valCol = numericCols[0] || null;
+
+  if (catCol && valCol) {
+    // Case A — already aggregated by SQL
+    return { data: rows, columns: [catCol, valCol] };
+  }
+
+  if (catCol && !valCol) {
+    // Case B — need to count frequencies
+    const freq = new Map();
+    rows.forEach((row) => {
+      const key = String(row[catCol] ?? "Unknown");
+      freq.set(key, (freq.get(key) || 0) + 1);
+    });
+    const data = Array.from(freq.entries())
+      .sort(([, a], [, b]) => b - a)
+      .map(([label, count]) => ({ [catCol]: label, Count: count }));
+    return { data, columns: [catCol, "Count"] };
+  }
+
+  if (!catCol && numericCols.length >= 1) {
+    // Case D — histogram of a numeric column
+    const col = numericCols[0];
+    const values = rows.map((r) => Number(r[col])).filter(Number.isFinite);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const bucketCount = Math.min(10, getUniqueCount(rows, col));
+    const step = (max - min) / bucketCount || 1;
+    const buckets = new Map();
+    for (let i = 0; i < bucketCount; i++) {
+      const label = `${Math.round(min + i * step)}–${Math.round(min + (i + 1) * step)}`;
+      buckets.set(label, 0);
+    }
+    values.forEach((v) => {
+      const idx = Math.min(Math.floor((v - min) / step), bucketCount - 1);
+      const label = Array.from(buckets.keys())[idx];
+      if (label !== undefined) buckets.set(label, buckets.get(label) + 1);
+    });
+    const data = Array.from(buckets.entries()).map(([range, count]) => ({
+      Range: range,
+      Count: count,
+    }));
+    return { data, columns: ["Range", "Count"] };
+  }
+
+  // Final fallback — return raw rows with original columns
+  return { data: rows, columns: cols };
+}
+
+// ── Layout Resolution (runs on AGGREGATED data) ───────────────────────────────
+
+function resolveChartLayout(intent, columns, aggregatedData) {
+  if (!aggregatedData || aggregatedData.length === 0) return null;
+
+  const sampleRow = aggregatedData[0];
+  const availableKeys = Object.keys(sampleRow);
+
+  // Only consider columns that actually exist after aggregation
+  const validCols = columns.filter((c) => availableKeys.includes(c));
+  if (validCols.length === 0) return null;
+
+  const numericCols = validCols.filter((c) =>
+    aggregatedData.every(
+      (r) => r[c] === null || r[c] === undefined || isNumeric(r[c]),
+    ),
+  );
+  const categoricalCols = validCols.filter((c) => !numericCols.includes(c));
+
+  const categoryKey = categoricalCols[0] || null;
+  const valueKey = numericCols[0] || null;
+
+  // ── Specific intent overrides ─────────────────────────────────────────────
+  if (intent === "time_series" && validCols.length >= 2) {
+    return {
+      chart_type: "line",
+      xKey: validCols[0],
+      yKey: validCols[1],
+      categoryKey: validCols[0],
+      valueKey: validCols[1],
+    };
+  }
+
+  if (intent === "correlation" && numericCols.length >= 2) {
+    return {
+      chart_type: "scatter",
+      xKey: numericCols[0],
+      yKey: numericCols[1],
+      categoryKey: null,
+      valueKey: null,
+    };
+  }
+
+  if (intent === "heatmap" && validCols.length >= 3) {
+    return {
+      chart_type: "heatmap",
+      xKey: validCols[0],
+      yKey: validCols[1],
+      valueKey: validCols[2],
+      categoryKey: null,
+    };
+  }
+
+  if (intent === "part_of_whole" && categoryKey && valueKey) {
+    const unique = getUniqueCount(aggregatedData, categoryKey);
+    return {
+      chart_type: unique > 8 ? "horizontal_bar" : "donut",
+      categoryKey,
+      valueKey,
+      xKey: categoryKey,
+      yKey: valueKey,
+    };
+  }
+
+  // distribution / ranking / fallback
+  if (categoryKey && valueKey) {
+    const unique = getUniqueCount(aggregatedData, categoryKey);
+    const maxLen = getMaxLabelLength(aggregatedData, categoryKey);
+    const chart_type = unique > 12 || maxLen > 15 ? "horizontal_bar" : "bar";
+    return {
+      chart_type,
+      categoryKey,
+      valueKey,
+      xKey: categoryKey,
+      yKey: valueKey,
+    };
+  }
+
+  // Only numeric columns — bar with index
+  if (valueKey && !categoryKey) {
+    return {
+      chart_type: "bar",
+      categoryKey: null,
+      valueKey,
+      xKey: null,
+      yKey: valueKey,
+    };
+  }
+
+  return null;
 }
 
 // ── Heatmap Component ────────────────────────────────────────────────────────
@@ -195,14 +369,11 @@ function HeatmapChart({ data, xKey, yKey, valueKey }) {
 
   return (
     <div className="flex h-full w-full flex-col space-y-3 min-h-0 max-h-full">
-      {/* Legend / Scale */}
       <div className="flex shrink-0 items-center justify-between gap-3 text-xs text-slate-500">
         <span>Low</span>
         <div className="h-2 flex-1 rounded-full bg-linear-to-r from-[#dbeafe] via-[#38bdf8] to-[#1d4ed8]" />
         <span>High</span>
       </div>
-
-      {/* Scrollable Viewport */}
       <div className="flex-1 min-h-0 overflow-auto rounded-2xl border border-slate-200 bg-white">
         <div
           className="grid min-w-max bg-white"
@@ -210,12 +381,9 @@ function HeatmapChart({ data, xKey, yKey, valueKey }) {
             gridTemplateColumns: `160px repeat(${xLabels.length}, minmax(130px, 1fr))`,
           }}
         >
-          {/* Top-Left Corner Piece */}
           <div className="sticky top-0 left-0 z-30 bg-slate-200 px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b-2 border-r-2 border-slate-300 select-none flex items-center justify-center">
             {formatHeaderLabel(yKey)} / {formatHeaderLabel(xKey)}
           </div>
-
-          {/* X-Axis Headers */}
           {xLabels.map((label) => (
             <div
               key={label}
@@ -224,50 +392,66 @@ function HeatmapChart({ data, xKey, yKey, valueKey }) {
               {formatValue(label)}
             </div>
           ))}
-
-          {/* Matrix Rows */}
-          {yLabels.map((rowLabel) => {
-            return (
-              <div key={`row-${rowLabel}`} className="contents">
-                {/* Y-Axis Headers */}
-                <div className="sticky left-0 z-10 bg-slate-50 px-3 py-3 text-xs font-semibold text-slate-700 border-b border-r-2 border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.05)] flex items-center">
-                  {formatValue(rowLabel)}
-                </div>
-
-                {xLabels.map((colLabel) => {
-                  const cellValue = buckets.get(`${colLabel}__${rowLabel}`);
-                  const normalized =
-                    cellValue === undefined ? 0 : (cellValue - min) / range;
-                  const background = `rgba(29, 78, 216, ${0.08 + normalized * 0.85})`;
-
-                  return (
-                    <div
-                      key={`${rowLabel}-${colLabel}`}
-                      className="flex h-11 items-center justify-center border-b border-r border-slate-100 text-xs font-semibold text-slate-900 transition-colors hover:bg-black/5"
-                      style={{ background }}
-                      title={`${formatHeaderLabel(yKey)}: ${formatValue(rowLabel)} | ${formatHeaderLabel(xKey)}: ${formatValue(colLabel)} | Value: ${formatValue(cellValue)}`}
-                    >
-                      {formatValue(cellValue)}
-                    </div>
-                  );
-                })}
+          {yLabels.map((rowLabel) => (
+            <div key={`row-${rowLabel}`} className="contents">
+              <div className="sticky left-0 z-10 bg-slate-50 px-3 py-3 text-xs font-semibold text-slate-700 border-b border-r-2 border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.05)] flex items-center">
+                {formatValue(rowLabel)}
               </div>
-            );
-          })}
+              {xLabels.map((colLabel) => {
+                const cellValue = buckets.get(`${colLabel}__${rowLabel}`);
+                const normalized =
+                  cellValue === undefined ? 0 : (cellValue - min) / range;
+                const background = `rgba(29, 78, 216, ${0.08 + normalized * 0.85})`;
+                return (
+                  <div
+                    key={`${rowLabel}-${colLabel}`}
+                    className="flex h-11 items-center justify-center border-b border-r border-slate-100 text-xs font-semibold text-slate-900 transition-colors hover:bg-black/5"
+                    style={{ background }}
+                    title={`${formatHeaderLabel(yKey)}: ${formatValue(rowLabel)} | ${formatHeaderLabel(xKey)}: ${formatValue(colLabel)} | Value: ${formatValue(cellValue)}`}
+                  >
+                    {formatValue(cellValue)}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-// ── Main Chart Renderer ──────────────────────────────────────────────────────
+// ── Main Chart Renderer ───────────────────────────────────────────────────────
 
-function renderChart(rawConfig, data) {
-  if (!rawConfig || !Array.isArray(data) || data.length === 0) return null;
+function renderChart(rawConfig, rawRows) {
+  if (!rawConfig || !Array.isArray(rawRows) || rawRows.length === 0)
+    return null;
 
   const { intent, columns } = rawConfig;
-  const layout = resolveChartLayout(intent, columns, data);
-  const { chart_type, xKey, yKey, categoryKey, valueKey, seriesKey } = layout;
+
+  // 1. Aggregate raw rows into chart-ready data
+  const { data, columns: resolvedCols } = aggregateData(
+    rawRows,
+    intent,
+    columns,
+  );
+
+  if (!data || data.length === 0) return null;
+
+  // 2. Resolve layout from aggregated data
+  const layout = resolveChartLayout(intent, resolvedCols, data);
+
+  if (!layout) {
+    return (
+      <div className="flex h-full items-center justify-center text-slate-400 text-sm">
+        No visualization available for this result.
+      </div>
+    );
+  }
+
+  const { chart_type, xKey, yKey, categoryKey, valueKey } = layout;
+
+  // 3. Render by chart type
 
   if (chart_type === "heatmap" && xKey && yKey && valueKey) {
     return (
@@ -287,7 +471,7 @@ function renderChart(rawConfig, data) {
             contentStyle={{
               borderRadius: 16,
               border: "1px solid #e2e8f0",
-              boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
+              boxShadow: "0 12px 30px rgba(15,23,42,0.12)",
             }}
           />
           <Legend verticalAlign="top" height={36} />
@@ -312,13 +496,6 @@ function renderChart(rawConfig, data) {
   }
 
   if (chart_type === "scatter" && xKey && yKey) {
-    const seriesGroups = seriesKey
-      ? Array.from(new Set(data.map((r) => r?.[seriesKey]))).map((val) => ({
-          name: String(val),
-          data: data.filter((r) => r?.[seriesKey] === val),
-        }))
-      : [{ name: null, data }];
-
     return (
       <ResponsiveContainer width="100%" height="100%">
         <ScatterChart margin={{ top: 20, right: 24, bottom: 45, left: 65 }}>
@@ -361,19 +538,16 @@ function renderChart(rawConfig, data) {
             contentStyle={{
               borderRadius: 16,
               border: "1px solid #e2e8f0",
-              boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
+              boxShadow: "0 12px 30px rgba(15,23,42,0.12)",
             }}
             cursor={{ strokeDasharray: "3 3" }}
           />
           <Legend verticalAlign="top" height={36} />
-          {seriesGroups.map((group, idx) => (
-            <Scatter
-              key={group.name ?? "default"}
-              name={group.name ?? undefined}
-              data={group.data}
-              fill={CHART_COLORS[idx % CHART_COLORS.length]}
-            />
-          ))}
+          <Scatter
+            name={formatHeaderLabel(yKey)}
+            data={data}
+            fill={CHART_COLORS[0]}
+          />
         </ScatterChart>
       </ResponsiveContainer>
     );
@@ -420,7 +594,7 @@ function renderChart(rawConfig, data) {
             contentStyle={{
               borderRadius: 16,
               border: "1px solid #e2e8f0",
-              boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
+              boxShadow: "0 12px 30px rgba(15,23,42,0.12)",
             }}
           />
           <Legend verticalAlign="top" height={36} />
@@ -436,17 +610,19 @@ function renderChart(rawConfig, data) {
     );
   }
 
-  if (
-    (chart_type === "bar" || chart_type === "horizontal_bar") &&
-    categoryKey &&
-    valueKey
-  ) {
+  if ((chart_type === "bar" || chart_type === "horizontal_bar") && valueKey) {
     const isHorizontal = chart_type === "horizontal_bar";
+    // categoryKey may be null if only numerics; fall back to row index label
+    const effectiveCategoryKey = categoryKey || "_index";
+    const chartData = categoryKey
+      ? data
+      : data.map((row, i) => ({ ...row, _index: `Row ${i + 1}` }));
+
     return (
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           layout={isHorizontal ? "vertical" : "horizontal"}
-          data={data}
+          data={chartData}
           margin={{
             top: 20,
             right: 20,
@@ -472,13 +648,13 @@ function renderChart(rawConfig, data) {
               </XAxis>
               <YAxis
                 type="category"
-                dataKey={categoryKey}
+                dataKey={effectiveCategoryKey}
                 width={150}
                 tick={{ fill: "#475569", fontSize: 11 }}
                 axisLine={{ stroke: "#94a3b8" }}
               >
                 <Label
-                  value={formatHeaderLabel(categoryKey)}
+                  value={formatHeaderLabel(effectiveCategoryKey)}
                   angle={-90}
                   position="insideLeft"
                   offset={-10}
@@ -494,12 +670,12 @@ function renderChart(rawConfig, data) {
           ) : (
             <>
               <XAxis
-                dataKey={categoryKey}
+                dataKey={effectiveCategoryKey}
                 tick={{ fill: "#475569", fontSize: 11 }}
                 axisLine={{ stroke: "#94a3b8" }}
               >
                 <Label
-                  value={formatHeaderLabel(categoryKey)}
+                  value={formatHeaderLabel(effectiveCategoryKey)}
                   position="insideBottom"
                   offset={-25}
                   style={{ fill: "#475569", fontSize: 12, fontWeight: 600 }}
@@ -528,7 +704,7 @@ function renderChart(rawConfig, data) {
             contentStyle={{
               borderRadius: 16,
               border: "1px solid #e2e8f0",
-              boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
+              boxShadow: "0 12px 30px rgba(15,23,42,0.12)",
             }}
           />
           <Legend verticalAlign="top" height={36} />
@@ -536,9 +712,9 @@ function renderChart(rawConfig, data) {
             dataKey={valueKey}
             radius={isHorizontal ? [0, 14, 14, 0] : [14, 14, 0, 0]}
           >
-            {data.map((entry, index) => (
+            {chartData.map((entry, index) => (
               <Cell
-                key={`${entry?.[categoryKey] ?? index}`}
+                key={`${entry?.[effectiveCategoryKey] ?? index}`}
                 fill={CHART_COLORS[index % CHART_COLORS.length]}
               />
             ))}
@@ -549,13 +725,14 @@ function renderChart(rawConfig, data) {
   }
 
   return (
-    <div className="flex h-full items-center justify-center text-slate-400">
-      Could not map columns {JSON.stringify(columns)} to a visualization.
+    <div className="flex h-full items-center justify-center text-slate-400 text-sm">
+      No visualization available for this result.
     </div>
   );
 }
 
 // ── Data Table ───────────────────────────────────────────────────────────────
+
 function DataTable({ rows = [], columns = [], filename = "export_data" }) {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
@@ -597,11 +774,8 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
     });
   }, [filtered, sortKey, sortDir]);
 
-  // Export filtered & sorted data to Excel (.xlsx)
   const handleExportExcel = () => {
     if (!sorted.length) return;
-
-    // Prepare data mapping only the displayed columns in order
     const exportData = sorted.map((row) => {
       const rowData = {};
       columns.forEach((col) => {
@@ -609,13 +783,9 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
       });
       return rowData;
     });
-
-    // Create worksheet & workbook
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
-
-    // Auto-fit column widths (optional enhancement)
     const colWidths = columns.map((col) => ({
       wch:
         Math.max(
@@ -624,14 +794,11 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
         ) + 3,
     }));
     worksheet["!cols"] = colWidths;
-
-    // Save file
     XLSX.writeFile(workbook, `${filename}.xlsx`);
   };
 
   return (
     <div className="space-y-3">
-      {/* Top Bar with Filter & Export Button */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search
@@ -654,8 +821,6 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
             </button>
           )}
         </div>
-
-        {/* Export Button */}
         <button
           onClick={handleExportExcel}
           disabled={sorted.length === 0}
@@ -666,7 +831,6 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
         </button>
       </div>
 
-      {/* Table Section */}
       <div className="overflow-hidden rounded-2xl border border-slate-200">
         <div className="max-h-96 overflow-y-auto overflow-x-auto">
           <table className="w-full table-fixed border-collapse text-left text-xs">
@@ -752,20 +916,17 @@ export default function AnalysisPanel({ analysis }) {
   const rowCount = rows.length;
 
   const [saving, setSaving] = useState(false);
-
   const { token } = useAuth();
 
   async function handleSaveReport() {
     try {
       setSaving(true);
-
       await saveReport(token, {
         title: charts[0]?.title || charts[0]?.intent || "Query Analysis",
         sql_query: analysis.sql_query,
         charts: analysis.charts,
         summary: analysis.response || "",
       });
-
       alert("Report added.");
     } catch (err) {
       console.error(err);
@@ -779,7 +940,6 @@ export default function AnalysisPanel({ analysis }) {
     try {
       if (!analysis) return;
 
-      // 1. Construct standardized Report Data structure
       const reportData = {
         title: analysis.charts?.[0]?.title ?? "Investigation Analysis Report",
         generated_at: new Date().toLocaleString("en-IN", {
@@ -793,7 +953,7 @@ export default function AnalysisPanel({ analysis }) {
           rows: analysis.sql_result ?? [],
         },
         visualizations: (analysis.charts || []).map((c, i) => ({
-          id: `chart-${i}`, // Matched with JSX id tag: <div id={`chart-${i}`}>
+          id: `chart-${i}`,
           title: c.title || `Visualization ${i + 1}`,
           intent: c.intent,
           reason: c.reason,
@@ -802,32 +962,22 @@ export default function AnalysisPanel({ analysis }) {
       };
 
       const formData = new FormData();
-
-      // Pass raw JSON string directly into 'report' form field
       formData.append("report", JSON.stringify(reportData));
 
-      // 2. Capture dynamic elements using DOM lookups
       if (Array.isArray(analysis.charts)) {
         for (let i = 0; i < analysis.charts.length; i++) {
-          const chartId = `chart-${i}`;
-          const element = document.getElementById(chartId);
-
+          const element = document.getElementById(`chart-${i}`);
           if (element) {
             const blob = await toBlob(element, {
               backgroundColor: "#ffffff",
               cacheBust: true,
-              pixelRatio: 2, // High resolution capture for crisp printing
+              pixelRatio: 2,
             });
-
-            if (blob) {
-              // Append with matching ID filename (e.g., "chart-0.png")
-              formData.append("charts", blob, `${chartId}.png`);
-            }
+            if (blob) formData.append("charts", blob, `chart-${i}.png`);
           }
         }
       }
 
-      // 3. POST multipart data to backend endpoint
       const response = await fetch(`/api/reports/export/${format}`, {
         method: "POST",
         body: formData,
@@ -838,7 +988,6 @@ export default function AnalysisPanel({ analysis }) {
         throw new Error(`Server returned ${response.status}: ${errText}`);
       }
 
-      // 4. Trigger direct user file download
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -846,8 +995,6 @@ export default function AnalysisPanel({ analysis }) {
       link.download = `ksp_analysis_report_${Date.now()}.${format}`;
       document.body.appendChild(link);
       link.click();
-
-      // Clean up memory
       link.remove();
       window.URL.revokeObjectURL(downloadUrl);
     } catch (err) {
@@ -875,18 +1022,15 @@ export default function AnalysisPanel({ analysis }) {
       {/* Header */}
       <div className="border-b border-slate-200/80 bg-white/80 px-5 py-4 backdrop-blur z-100000000">
         <div className="flex items-center justify-between gap-6">
-          {/* Left */}
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
               Analysis Workspace
             </p>
-
             <h2 className="mt-1 truncate text-xl font-semibold text-slate-900">
               {charts[0]?.title || charts[0]?.intent || "Query Analysis"}
             </h2>
           </div>
 
-          {/* Right */}
           <div className="flex shrink-0 items-center gap-3">
             <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -909,7 +1053,6 @@ export default function AnalysisPanel({ analysis }) {
                 <Download size={15} />
                 Export
               </button>
-
               <div className="absolute right-0 top-full z-50 pt-2 hidden w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-xl group-hover:block">
                 <button
                   onClick={() => exportAnalysis("pdf")}
@@ -917,7 +1060,6 @@ export default function AnalysisPanel({ analysis }) {
                 >
                   PDF
                 </button>
-
                 <button
                   onClick={() => exportAnalysis("docx")}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 cursor-pointer"
@@ -933,30 +1075,33 @@ export default function AnalysisPanel({ analysis }) {
       {/* Body */}
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-5">
         <section className="space-y-4">
-          {/* Charts Rendering Loop */}
           {hasCharts &&
             charts.map((chartConfig, idx) => {
-              const chartNode = renderChart(chartConfig, rows);
-              if (!chartNode) return null;
-
-              const layout = resolveChartLayout(
+              // Pre-aggregate to determine container sizing
+              const { data: aggData, columns: aggCols } = aggregateData(
+                rows,
                 chartConfig.intent,
                 chartConfig.columns,
-                rows,
+              );
+              const layout = resolveChartLayout(
+                chartConfig.intent,
+                aggCols,
+                aggData,
               );
 
-              // Standard fallback height updated to 550px as customized
               let containerStyle = { height: "550px" };
-              if (layout.chart_type === "heatmap" && layout.yKey) {
+              if (layout?.chart_type === "heatmap" && layout.yKey) {
                 const uniqueYCount = new Set(
-                  rows.map((r) => String(r?.[layout.yKey])),
+                  aggData.map((r) => String(r?.[layout.yKey])),
                 ).size;
                 const calculatedHeight = uniqueYCount * 44 + 110;
-                // Adapt dynamically if space is not fully utilized, otherwise cap clean limits at 550px
                 containerStyle = {
                   height: `${Math.min(Math.max(calculatedHeight, 250), 550)}px`,
                 };
               }
+
+              const chartNode = renderChart(chartConfig, rows);
+              if (!chartNode) return null;
 
               return (
                 <div
@@ -969,7 +1114,6 @@ export default function AnalysisPanel({ analysis }) {
                       {chartConfig.title}
                     </h3>
                   </div>
-
                   <div
                     style={containerStyle}
                     className="rounded-2xl bg-linear-to-br from-slate-50 to-slate-100 p-3 flex flex-col overflow-hidden transition-[height] duration-300 ease-out"

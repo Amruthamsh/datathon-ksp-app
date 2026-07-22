@@ -9,7 +9,7 @@ from agents.sql_query_db.state import SQLAgentState
 def chart_node(state: SQLAgentState):
     """
     Determines the analytical intent and relevant columns for the SQL result.
-    Delegates the specific chart type selection (e.g., pie vs horizontal_bar) 
+    Delegates specific chart type selection (e.g., pie vs horizontal_bar)
     to the deterministic frontend renderer.
     """
 
@@ -39,7 +39,7 @@ def chart_node(state: SQLAgentState):
 
     conversation = "\n".join(conversation)
 
-    columns = list(rows[0].keys())
+    available_columns = list(rows[0].keys())
 
     prompt = f"""
 You are a senior business intelligence engineer specialising in crime analytics dashboards.
@@ -55,25 +55,32 @@ SQL Query:
 
 {state["sql_query"]}
 
-Columns available:
+Available columns (these are the ONLY valid column names — use them exactly as written):
 
-{columns}
+{json.dumps(available_columns)}
 
 Query Result (first 50 rows):
 
 {json.dumps(rows[:50], indent=2)}
 
 Rules:
-1. If NO chart adds value (e.g. a single row), return: {{"charts": []}}
+1. If NO chart adds value (e.g. a single row lookup with no aggregation), return: {{"charts": []}}
 2. DO NOT decide the specific chart type (e.g., bar, pie). The frontend renderer handles that.
 3. Your job is ONLY to determine the broad analytical intent. You MUST use exactly one of these string values for "intent":
-   - "distribution": Comparing values across exactly ONE categorical column (e.g., crimes by district).
-   - "heatmap": Comparing values across a matrix of exactly TWO categorical columns (e.g., crimes by district AND month, or offence by time of day).
-   - "time_series": Showing a trend over a temporal/date column.
+   - "distribution": Comparing counts or values across one categorical column (e.g., crimes by district).
+                     Works even with a SINGLE categorical column — the frontend will count frequencies.
+   - "ranking":      Same as distribution, but explicitly ordered by value (e.g., top 10 stations by crime count).
+   - "heatmap":      Comparing values across a matrix of exactly TWO categorical columns (e.g., district × month).
+   - "time_series":  Showing a trend over a temporal/date column. Works with a single date column — the frontend
+                     will count occurrences per date unit automatically.
    - "part_of_whole": Showing shares or percentages of a whole.
-   - "correlation": Comparing exactly TWO numeric columns.
-4. Select the exact "columns" from the SQL result that support this intent. 
-5. NEVER use identifier columns (e.g., CaseMasterID, CrimeID, UUID) as quantitative values.
+   - "correlation":  Comparing exactly TWO numeric columns against each other.
+4. "columns" MUST be a subset of the available columns listed above. Copy column names exactly — do NOT invent or rename them.
+5. For "distribution" or "ranking" with a single categorical column (e.g., ["CaseStatusName"]), that is valid —
+   include just that one column. The frontend will aggregate frequencies automatically.
+6. For "time_series" with a single date column (e.g., ["CrimeRegisteredDate"]), that is valid —
+   include just that one column. The frontend will count occurrences per date unit automatically.
+7. NEVER use identifier columns (e.g., CaseMasterID, CrimeID, UUID, EmployeeID) as values or categories.
 
 Return ONLY valid JSON with NO markdown fences using the schema below:
 
@@ -100,7 +107,6 @@ Return ONLY valid JSON with NO markdown fences using the schema below:
 
     response = response.strip()
     if response.startswith("```"):
-        # Strip out markdown formatting if the LLM ignores the prompt rule
         response = response.replace("```json", "").replace("```", "").strip()
 
     try:
@@ -112,10 +118,23 @@ Return ONLY valid JSON with NO markdown fences using the schema below:
     if not isinstance(charts, list):
         return {"charts": []}
 
-    # Validate based on the new, simplified schema
-    valid_charts = [
-        c for c in charts
-        if isinstance(c, dict) and c.get("intent") and c.get("columns")
-    ]
+    valid_intents = {"distribution", "ranking", "heatmap", "time_series", "part_of_whole", "correlation"}
 
-    return {"charts": valid_charts}
+    validated = []
+    for c in charts:
+        if not isinstance(c, dict):
+            continue
+        intent = c.get("intent")
+        columns = c.get("columns")
+        if not intent or intent not in valid_intents:
+            continue
+        if not isinstance(columns, list) or len(columns) == 0:
+            continue
+        # Ensure every referenced column actually exists in the result
+        bad_cols = [col for col in columns if col not in available_columns]
+        if bad_cols:
+            print(f"chart_node: dropping chart '{c.get('title')}' — unknown columns: {bad_cols}")
+            continue
+        validated.append(c)
+
+    return {"charts": validated}
