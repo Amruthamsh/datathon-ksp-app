@@ -24,7 +24,6 @@ export default function DashboardLayout() {
     setHistoryLoading(true);
     try {
       const data = await listConversations(token);
-      console.log("API Conversations Response:", data);
 
       // FIX: Access data.conversations instead of just data
       if (data && Array.isArray(data.conversations)) {

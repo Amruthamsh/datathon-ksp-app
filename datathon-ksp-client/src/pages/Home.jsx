@@ -1,4 +1,6 @@
-import { ArrowUp, Paperclip } from "lucide-react";
+import { ArrowUp, Paperclip, Mic, MicOff, Volume2 } from "lucide-react";
+import useSpeechRecognition from "../hooks/useSpeechRecognition";
+import useSpeechSynthesis from "../hooks/useSpeechSynthesis";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useState, useRef, useEffect } from "react";
@@ -6,6 +8,7 @@ import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import AnalysisPanel from "../components/AnalysisPanel";
 import { useAuth } from "../auth/AuthContext";
 import { generateResponse, getConversation } from "../api/chat";
+import { useCallback } from "react";
 
 const GREETING = {
   role: "assistant",
@@ -22,11 +25,21 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [followUps, setFollowUps] = useState([]);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [activeAnalysis, setActiveAnalysis] = useState(null);
   const [conversationId, setConversationId] = useState(id || null);
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+
+  const { speak, stop } = useSpeechSynthesis();
+
+  const handleTranscript = useCallback((text) => {
+    setInput(text);
+  }, []);
+
+  const { supported, isListening, startListening, stopListening } =
+    useSpeechRecognition(handleTranscript);
 
   useEffect(() => {
     if (id) {
@@ -72,6 +85,7 @@ export default function Home() {
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
+    stop();
 
     setMessages((prev) => [...prev, { role: "user", content: input }]);
     setInput("");
@@ -91,6 +105,10 @@ export default function Home() {
         { role: "assistant", content: data.response, analysis: data.analysis },
       ]);
       setActiveAnalysis(data.analysis || null);
+
+      if (voiceEnabled) {
+        speak(data.response);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -103,39 +121,58 @@ export default function Home() {
       {/* Chat column */}
       <section className="w-[47%] border-r border-slate-200 flex flex-col">
         <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
-          {messages.map((m, i) => (
-            <div
-              key={i}
-              className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-            >
+          {messages.map((m, i) => {
+            // Ensure analysis contains actual data (SQL query or SQL results)
+            const hasAnalysis =
+              m.analysis &&
+              (m.analysis.sql_query ||
+                (Array.isArray(m.analysis.sql_result) &&
+                  m.analysis.sql_result.length > 0));
+
+            // Value-based comparison to accurately detect active item across re-renders
+            const isCurrentlyActive =
+              activeAnalysis &&
+              hasAnalysis &&
+              (activeAnalysis === m.analysis ||
+                activeAnalysis.sql_query === m.analysis.sql_query);
+
+            return (
               <div
-                className={`rounded-3xl px-5 py-4 shadow-sm text-[15px] leading-7 ${
-                  m.role === "user"
-                    ? "bg-red-50 max-w-[78%]"
-                    : "bg-slate-100 max-w-[84%]"
+                key={i}
+                className={`flex ${
+                  m.role === "user" ? "justify-end" : "justify-start"
                 }`}
               >
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {m.content}
-                </ReactMarkdown>
+                <div
+                  className={`rounded-3xl px-5 py-4 shadow-sm text-[15px] leading-7 ${
+                    m.role === "user"
+                      ? "bg-red-50 max-w-[78%]"
+                      : "bg-slate-100 max-w-[84%]"
+                  }`}
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {m.content}
+                  </ReactMarkdown>
 
-                {m.analysis && (
-                  <button
-                    onClick={() => setActiveAnalysis(m.analysis)}
-                    className={`mt-4 rounded-lg border px-4 py-2 text-sm transition cursor-pointer ${
-                      activeAnalysis === m.analysis
-                        ? "border-blue-500 bg-blue-50 text-blue-700"
-                        : "border-slate-300 bg-white hover:bg-slate-50"
-                    }`}
-                  >
-                    {activeAnalysis === m.analysis
-                      ? "Viewing Investigation"
-                      : "Open Investigation"}
-                  </button>
-                )}
+                  {/* Button renders reliably on any response containing analysis data */}
+                  {hasAnalysis && (
+                    <button
+                      onClick={() => setActiveAnalysis(m.analysis)}
+                      className={`mt-4 rounded-lg border px-4 py-2 text-sm transition cursor-pointer ${
+                        isCurrentlyActive
+                          ? "border-blue-500 bg-blue-50 text-blue-700 font-medium shadow-xs"
+                          : "border-slate-300 bg-white hover:bg-slate-50 text-slate-700"
+                      }`}
+                    >
+                      {isCurrentlyActive
+                        ? "Viewing Investigation"
+                        : "Open Investigation"}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {loading && (
             <div className="flex justify-start">
@@ -165,6 +202,23 @@ export default function Home() {
               <Paperclip size={18} />
             </button>
 
+            {supported && (
+              <button
+                onClick={() => {
+                  console.log("Mic button clicked. Listening:", isListening);
+                  if (isListening) stopListening();
+                  else startListening();
+                }}
+                className={`flex h-10 w-10 items-center justify-center rounded-full transition cursor-pointer ${
+                  isListening
+                    ? "bg-red-100 text-red-600 animate-pulse"
+                    : "text-slate-500 hover:bg-slate-100"
+                }`}
+              >
+                {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+              </button>
+            )}
+
             <textarea
               ref={textareaRef}
               value={input}
@@ -185,6 +239,26 @@ export default function Home() {
               className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-300 transition"
             >
               <ArrowUp size={18} />
+            </button>
+          </div>
+
+          <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+            <div>
+              {isListening && (
+                <span className="text-red-500 font-medium">
+                  🎤 Listening...
+                </span>
+              )}
+            </div>
+
+            <button
+              onClick={() => setVoiceEnabled(!voiceEnabled)}
+              className={`flex items-center gap-1 rounded-full px-3 py-1 transition ${
+                voiceEnabled ? "bg-blue-100 text-blue-700" : "bg-slate-100"
+              }`}
+            >
+              <Volume2 size={14} />
+              Voice
             </button>
           </div>
 
