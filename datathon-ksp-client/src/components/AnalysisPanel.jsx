@@ -732,7 +732,6 @@ function renderChart(rawConfig, rawRows) {
 }
 
 // ── Data Table ───────────────────────────────────────────────────────────────
-
 function DataTable({ rows = [], columns = [], filename = "export_data" }) {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
@@ -799,6 +798,7 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
 
   return (
     <div className="space-y-3">
+      {/* Top Bar */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search
@@ -827,25 +827,33 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
           className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         >
           <Download size={14} className="text-slate-500" />
-          <span>Export Excel</span>
+          <span className="whitespace-nowrap">Export Excel</span>
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200">
-        <div className="max-h-96 overflow-y-auto overflow-x-auto">
-          <table className="w-full table-fixed border-collapse text-left text-xs">
+      {/* Table Container */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="max-h-96 overflow-auto">
+          {/* 
+            FIX: Changed `table-fixed` to `table-auto` and added `min-w-full`.
+            This allows columns to size naturally based on header/content width.
+          */}
+          <table className="min-w-full table-auto border-collapse text-left text-xs">
             <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
               <tr>
                 {columns.map((col) => (
                   <th
                     key={col}
-                    className="border-b border-slate-200 px-3 py-3 align-top font-semibold text-slate-700"
+                    /* 
+                      FIX: Added `min-w-[120px]` and `whitespace-nowrap` to keep headers readable 
+                    */
+                    className="border-b border-slate-200 px-3 py-3 font-semibold text-slate-700 whitespace-nowrap min-w-[120px]"
                   >
                     <button
                       onClick={() => toggleSort(col)}
-                      className="flex items-center gap-1 hover:text-blue-600 transition"
+                      className="flex items-center justify-between gap-1.5 w-full hover:text-blue-600 transition"
                     >
-                      <span className="whitespace-normal wrap-break-word">
+                      <span className="truncate" title={col}>
                         {col}
                       </span>
                       {sortKey === col ? (
@@ -863,7 +871,7 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
                       ) : (
                         <ArrowUpDown
                           size={12}
-                          className="shrink-0 text-slate-400"
+                          className="shrink-0 text-slate-400 opacity-60"
                         />
                       )}
                     </button>
@@ -871,18 +879,23 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {sorted.length > 0 ? (
                 sorted.map((row, rowIndex) => (
-                  <tr key={rowIndex} className="odd:bg-white even:bg-slate-50">
+                  <tr
+                    key={rowIndex}
+                    className="odd:bg-white even:bg-slate-50/50 hover:bg-slate-100/60 transition-colors"
+                  >
                     {columns.map((col) => (
                       <td
                         key={col}
-                        className="border-b border-slate-100 px-3 py-3 align-top text-slate-700"
+                        /* 
+                          FIX: `whitespace-nowrap` keeps values on one line, or use `max-w-xs truncate` if cells are too wide 
+                        */
+                        className="px-3 py-2.5 align-middle text-slate-700 whitespace-nowrap max-w-xs truncate"
+                        title={String(row?.[col] ?? "")}
                       >
-                        <span className="block whitespace-normal wrap-break-word">
-                          {formatValue(row?.[col])}
-                        </span>
+                        {formatValue(row?.[col])}
                       </td>
                     ))}
                   </tr>

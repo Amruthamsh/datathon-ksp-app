@@ -32,7 +32,7 @@ export default function Home() {
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
-  const { speak, stop } = useSpeechSynthesis();
+  const { speak, stop, isSpeaking } = useSpeechSynthesis();
 
   const handleTranscript = useCallback((text) => {
     setInput(text);
@@ -83,17 +83,25 @@ export default function Home() {
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [input]);
 
-  const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+  const sendMessage = async (message = input) => {
+    if (!message.trim() || loading) return;
+
     stop();
 
-    setMessages((prev) => [...prev, { role: "user", content: input }]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: message,
+      },
+    ]);
+
     setInput("");
     setLoading(true);
+    setFollowUps([]);
 
     try {
-      const data = await generateResponse(token, input, id || null);
-
+      const data = await generateResponse(token, message, id || null);
       // If this was a new chat, refresh the sidebar and redirect
       if (!id && data.conversation_id) {
         refreshConversations();
@@ -105,6 +113,7 @@ export default function Home() {
         { role: "assistant", content: data.response, analysis: data.analysis },
       ]);
       setActiveAnalysis(data.analysis || null);
+      setFollowUps(data.follow_up_questions || []);
 
       if (voiceEnabled) {
         speak(data.response);
@@ -150,7 +159,68 @@ export default function Home() {
                       : "bg-slate-100 max-w-[84%]"
                   }`}
                 >
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({ children }) => (
+                        <h1 className="text-2xl font-bold mt-6 mb-4 text-slate-900">
+                          {children}
+                        </h1>
+                      ),
+
+                      h2: ({ children }) => (
+                        <h2 className="text-xl font-semibold mt-6 mb-3 border-b border-slate-300 pb-1 text-slate-900">
+                          {children}
+                        </h2>
+                      ),
+
+                      h3: ({ children }) => (
+                        <h3 className="text-lg font-semibold mt-5 mb-2 text-slate-900">
+                          {children}
+                        </h3>
+                      ),
+
+                      p: ({ children }) => (
+                        <p className="mb-4 leading-8 text-slate-800">
+                          {children}
+                        </p>
+                      ),
+
+                      ul: ({ children }) => (
+                        <ul className="list-disc pl-6 mb-4 space-y-2">
+                          {children}
+                        </ul>
+                      ),
+
+                      ol: ({ children }) => (
+                        <ol className="list-decimal pl-6 mb-4 space-y-2">
+                          {children}
+                        </ol>
+                      ),
+
+                      li: ({ children }) => (
+                        <li className="leading-7">{children}</li>
+                      ),
+
+                      strong: ({ children }) => (
+                        <strong className="font-semibold text-slate-900">
+                          {children}
+                        </strong>
+                      ),
+
+                      blockquote: ({ children }) => (
+                        <blockquote className="border-l-4 border-slate-300 pl-4 italic text-slate-600 my-4">
+                          {children}
+                        </blockquote>
+                      ),
+
+                      code: ({ children }) => (
+                        <code className="rounded bg-slate-200 px-1 py-0.5 text-sm font-mono">
+                          {children}
+                        </code>
+                      ),
+                    }}
+                  >
                     {m.content}
                   </ReactMarkdown>
 
@@ -252,13 +322,23 @@ export default function Home() {
             </div>
 
             <button
-              onClick={() => setVoiceEnabled(!voiceEnabled)}
-              className={`flex items-center gap-1 rounded-full px-3 py-1 transition ${
-                voiceEnabled ? "bg-blue-100 text-blue-700" : "bg-slate-100"
+              onClick={() => {
+                if (isSpeaking) {
+                  stop();
+                } else {
+                  setVoiceEnabled((v) => !v);
+                }
+              }}
+              className={`flex items-center gap-1 rounded-full px-3 py-1 transition cursor-pointer ${
+                isSpeaking
+                  ? "bg-red-100 text-red-700"
+                  : voiceEnabled
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-slate-100 text-slate-700"
               }`}
             >
               <Volume2 size={14} />
-              Voice
+              {isSpeaking ? "Stop" : voiceEnabled ? "Voice On" : "Voice Off"}
             </button>
           </div>
 
