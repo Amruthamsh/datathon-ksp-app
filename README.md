@@ -60,9 +60,12 @@ python3 generate_fir_data.py`
 - Kannada Support for queries and entire UI
 - send notifications for new cases and updates
 - Structured search for specific crime types, locations, and offender profiles
-- Save the Conversation responses. copy. retry. etc
+- Save the Conversation responses. copy. export. etc
+- save conversation agent response alongside chart when exporting analysis as pdf or word
 - Deploy
 - Role based access control for different user types (investigators, analysts, policymakers)
+- Shouldn’t be able to add same chart once I have added charts to reports
+- Use all of zia ai ml services -- can upload files while chatting and it will analyze and answer questions based on the uploaded files
 
 - Public API for Correlation of crime with urbanization, migration, economic stress, education and other social indicators.
 - audit logs and traceability - who asked what and when, and what was the response. and how much did LLMs cost
