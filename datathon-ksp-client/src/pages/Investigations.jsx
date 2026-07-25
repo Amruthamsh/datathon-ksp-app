@@ -31,6 +31,7 @@ import {
   getSimilarCases,
 } from "../api/investigations";
 import { useAuth } from "../auth/AuthContext";
+import actSectionMeta from "../data/actSectionMetadata.json";
 
 export default function InvestigationsQueue() {
   const { token } = useAuth();
@@ -284,6 +285,22 @@ export default function InvestigationsQueue() {
     return caseIntel.acts.map((a) =>
       typeof a === "object" ? `${a.ActID} ${a.SectionID}`.trim() : String(a),
     );
+  }, [caseIntel]);
+
+  const actSectionDetails = useMemo(() => {
+    if (!caseIntel?.acts || !Array.isArray(caseIntel.acts)) return [];
+    return caseIntel.acts.map((a) => {
+      const actId = a.ActID;
+      const sectionId = a.SectionID;
+      const actMeta = actSectionMeta.acts?.[actId];
+      const sectionMeta = actMeta?.sections?.[sectionId];
+      return {
+        actId,
+        sectionId,
+        actMeta,
+        sectionMeta,
+      };
+    });
   }, [caseIntel]);
 
   const metrics = summary
@@ -741,19 +758,66 @@ export default function InvestigationsQueue() {
                   <Users size={16} className="text-slate-400 mr-2" />
                   People
                 </h3>
-                <div className="space-y-2 text-sm pl-6 text-slate-700">
-                  <div className="flex justify-between items-center py-1 border-b border-slate-50">
-                    <span className="text-slate-500">Accused</span>
-                    <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-xs">
-                      {caseIntel?.accused ?? selectedCase.accused ?? 0}
-                    </span>
+                <div className="space-y-3 text-sm pl-6 text-slate-700">
+                  {/* ACCUSED */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Accused ({caseIntel?.accused_count ?? caseIntel?.accused ?? 0})
+                      </span>
+                    </div>
+                    {caseIntel?.accused && caseIntel.accused.length > 0 ? (
+                      <div className="space-y-1">
+                        {caseIntel.accused.map((p) => (
+                          <div
+                            key={p.AccusedMasterID}
+                            className="flex items-center justify-between bg-red-50/40 rounded px-2.5 py-1.5"
+                          >
+                            <span className="font-medium text-slate-800">
+                              {p.AccusedName}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {p.AgeYear}y · {p.GenderID === "M" ? "Male" : p.GenderID === "F" ? "Female" : p.GenderID}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">None recorded</p>
+                    )}
                   </div>
-                  <div className="flex justify-between items-center py-1 border-b border-slate-50">
-                    <span className="text-slate-500">Victims</span>
-                    <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-xs">
-                      {caseIntel?.victims ?? selectedCase.victims ?? 0}
-                    </span>
+
+                  {/* VICTIMS */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Victims ({caseIntel?.victim_count ?? caseIntel?.victims ?? 0})
+                      </span>
+                    </div>
+                    {caseIntel?.victims && Array.isArray(caseIntel.victims) && caseIntel.victims.length > 0 ? (
+                      <div className="space-y-1">
+                        {caseIntel.victims.map((p) => (
+                          <div
+                            key={p.VictimMasterID}
+                            className="flex items-center justify-between bg-blue-50/40 rounded px-2.5 py-1.5"
+                          >
+                            <span className="font-medium text-slate-800">
+                              {p.VictimName}
+                              {p.VictimPolice ? (
+                                <span className="ml-1.5 px-1 py-0.5 bg-blue-100 text-blue-600 rounded text-[10px] font-semibold">POLICE</span>
+                              ) : null}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {p.AgeYear}y · {p.GenderID === "M" ? "Male" : p.GenderID === "F" ? "Female" : p.GenderID}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">None recorded</p>
+                    )}
                   </div>
+
                   {selectedCase.FirstName && (
                     <div className="flex justify-between items-center py-1">
                       <span className="text-slate-500 flex items-center">
@@ -770,22 +834,86 @@ export default function InvestigationsQueue() {
 
               {/* ACTS & SECTIONS */}
               <div className="border-b border-slate-100 pb-4">
-                <h3 className="text-sm font-semibold text-slate-800 flex items-center mb-2">
+                <h3 className="text-sm font-semibold text-slate-800 flex items-center mb-3">
                   <Gavel size={16} className="text-slate-400 mr-2" />
                   Acts & Sections
                 </h3>
-                <div className="pl-6">
-                  {formattedActs.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {formattedActs.map((act, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-1 bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded"
-                        >
-                          {act}
-                        </span>
-                      ))}
-                    </div>
+                <div className="pl-6 space-y-3">
+                  {actSectionDetails.length > 0 ? (
+                    actSectionDetails.map((item, i) => (
+                      <div
+                        key={i}
+                        className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-slate-800">
+                            {item.actMeta?.fullName || item.actId}{" "}
+                            <span className="text-slate-400">/</span>{" "}
+                            {item.sectionMeta?.title
+                              ? `Section ${item.sectionId} — ${item.sectionMeta.title}`
+                              : `Section ${item.sectionId}`}
+                          </span>
+                        </div>
+
+                        {item.sectionMeta?.plain_language && (
+                          <p className="text-xs text-slate-600 leading-relaxed">
+                            {item.sectionMeta.plain_language}
+                          </p>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          {item.sectionMeta?.bailable !== undefined && (
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                                item.sectionMeta.bailable
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {item.sectionMeta.bailable
+                                ? "Bailable"
+                                : "Non-Bailable"}
+                            </span>
+                          )}
+                          {item.sectionMeta?.punishment && (
+                            <span className="text-[10px] text-slate-500">
+                              {item.sectionMeta.punishment}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3 pt-0.5">
+                          {(item.sectionMeta?.indiacode_url || item.actMeta?.indiacode_url) && (
+                            <a
+                              href={item.sectionMeta?.indiacode_url || item.actMeta?.indiacode_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] text-blue-600 hover:underline font-medium flex items-center"
+                            >
+                              <ExternalLink size={10} className="mr-1" />
+                              IndiaCode
+                            </a>
+                          )}
+                          {(item.sectionMeta?.kanoon_url || item.actMeta?.kanoon_url) && (
+                            <a
+                              href={item.sectionMeta?.kanoon_url || item.actMeta?.kanoon_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] text-blue-600 hover:underline font-medium flex items-center"
+                            >
+                              <ExternalLink size={10} className="mr-1" />
+                              Indian Kanoon
+                            </a>
+                          )}
+                        </div>
+
+                        {item.actMeta?.note && (
+                          <p className="text-[10px] text-amber-600 italic">
+                            {item.actMeta.note}
+                          </p>
+                        )}
+                      </div>
+                    ))
                   ) : (
                     <p className="text-xs text-slate-400">
                       No specific acts recorded

@@ -1,0 +1,311 @@
+{
+  "meta": {
+    "version": "1.0",
+    "description": "Plain-language summaries and reference links for KSP crime analytics platform sections",
+    "indiacode_base": "https://www.indiacode.nic.in",
+    "indiankanoon_search": "https://indiankanoon.org/search/?formInput="
+  },
+  "acts": {
+    "IPC": {
+      "fullName": "Indian Penal Code, 1860",
+      "shortName": "IPC",
+      "note": "Replaced by Bharatiya Nyaya Sanhita (BNS) from 1 July 2024. Cases before that date continue under IPC.",
+      "indiacode_url": "https://www.indiacode.nic.in/handle/123456789/12850",
+      "kanoon_url": "https://indiankanoon.org/search/?formInput=Indian+Penal+Code",
+      "sections": {
+        "302": {
+          "title": "Murder",
+          "plain_language": "Causing the death of a person with intention to kill or with knowledge that the act is likely to cause death.",
+          "offence_category": "Violent / Against Person",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Death or Life Imprisonment + fine",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IPC+Section+302"
+        },
+        "307": {
+          "title": "Attempt to Murder",
+          "plain_language": "Attempting to cause the death of a person with intention to kill. The victim survives.",
+          "offence_category": "Violent / Against Person",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Up to 10 years + fine; Life imprisonment if hurt caused",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IPC+Section+307"
+        },
+        "323": {
+          "title": "Voluntarily Causing Hurt",
+          "plain_language": "Deliberately causing bodily pain, disease, or infirmity to another person (simple hurt, not grievous).",
+          "offence_category": "Violent / Against Person",
+          "cognizable": false,
+          "bailable": true,
+          "punishment": "Up to 1 year imprisonment or fine up to \u20b91,000, or both",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IPC+Section+323"
+        },
+        "324": {
+          "title": "Voluntarily Causing Hurt by Dangerous Weapon",
+          "plain_language": "Causing bodily hurt using a knife, fire, poison, or any instrument that can cause death or grievous hurt.",
+          "offence_category": "Violent / Against Person",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Up to 3 years imprisonment or fine, or both",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IPC+Section+324"
+        },
+        "354": {
+          "title": "Assault or Criminal Force on Woman (Outraging Modesty)",
+          "plain_language": "Using assault or criminal force against a woman with the intent to outrage or knowing it will outrage her modesty.",
+          "offence_category": "Against Women",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "1 to 5 years imprisonment + fine",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IPC+Section+354"
+        },
+        "376": {
+          "title": "Rape",
+          "plain_language": "Sexual intercourse by a man with a woman without her consent or under coercion/fraud/fear.",
+          "offence_category": "Against Women",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Minimum 7 years, up to Life Imprisonment + fine",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IPC+Section+376"
+        },
+        "379": {
+          "title": "Theft",
+          "plain_language": "Dishonestly taking movable property out of the possession of a person without their consent.",
+          "offence_category": "Property Offence",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Up to 3 years imprisonment or fine, or both",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IPC+Section+379"
+        },
+        "392": {
+          "title": "Robbery",
+          "plain_language": "Theft or extortion with the use of or threat of force \u2014 theft that escalates to use of violence.",
+          "offence_category": "Property Offence",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Up to 10 years + fine; 14 years if on highway",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IPC+Section+392"
+        },
+        "406": {
+          "title": "Criminal Breach of Trust",
+          "plain_language": "Dishonestly misappropriating or converting to one's own use property entrusted to them.",
+          "offence_category": "Financial / Fraud",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Up to 3 years imprisonment or fine, or both",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IPC+Section+406"
+        },
+        "420": {
+          "title": "Cheating and Dishonestly Inducing Delivery of Property",
+          "plain_language": "Deceiving a person and thereby dishonestly inducing them to hand over property or to alter/destroy a valuable document.",
+          "offence_category": "Financial / Fraud",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Up to 7 years imprisonment + fine",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IPC+Section+420"
+        },
+        "498A": {
+          "title": "Cruelty by Husband or Relatives of Husband",
+          "plain_language": "Subjecting a woman to cruelty by her husband or his relatives \u2014 includes physical/mental harassment and dowry-related coercion.",
+          "offence_category": "Against Women / Domestic Violence",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Up to 3 years imprisonment + fine",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IPC+Section+498A"
+        }
+      }
+    },
+    "NDPS": {
+      "fullName": "Narcotic Drugs and Psychotropic Substances Act, 1985",
+      "shortName": "NDPS",
+      "indiacode_url": "https://www.indiacode.nic.in/handle/123456789/1392",
+      "kanoon_url": "https://indiankanoon.org/search/?formInput=NDPS+Act",
+      "sections": {
+        "8": {
+          "title": "Prohibition of Certain Operations",
+          "plain_language": "Core prohibition section \u2014 makes it illegal to cultivate, produce, manufacture, possess, sell, purchase, transport, use or consume any narcotic drug or psychotropic substance.",
+          "offence_category": "Narcotics",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Varies by quantity (small / intermediate / commercial) \u2014 see Sections 15\u201322",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=NDPS+Section+8"
+        },
+        "20": {
+          "title": "Punishment for Contravention relating to Cannabis",
+          "plain_language": "Punishment for producing, possessing, selling, buying, transporting or using cannabis (ganja, charas, etc.).",
+          "offence_category": "Narcotics",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Small qty: up to 1 year; Intermediate: up to 10 years; Commercial qty: 10\u201320 years rigorous imprisonment",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=NDPS+Section+20"
+        },
+        "21": {
+          "title": "Punishment for Contravention relating to Manufactured Drugs",
+          "plain_language": "Punishment for offences related to manufactured drugs (e.g. heroin, morphine) and preparations containing them.",
+          "offence_category": "Narcotics",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Small qty: up to 1 year; Intermediate: up to 10 years; Commercial qty: 10\u201320 years rigorous imprisonment",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=NDPS+Section+21"
+        },
+        "22": {
+          "title": "Punishment for Contravention relating to Psychotropic Substances",
+          "plain_language": "Punishment for offences relating to psychotropic substances (e.g. amphetamines, LSD, certain prescription drugs misused).",
+          "offence_category": "Narcotics",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Small qty: up to 1 year; Intermediate: up to 10 years; Commercial qty: 10\u201320 years rigorous imprisonment",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=NDPS+Section+22"
+        }
+      }
+    },
+    "POCSO": {
+      "fullName": "Protection of Children from Sexual Offences Act, 2012",
+      "shortName": "POCSO",
+      "indiacode_url": "https://www.indiacode.nic.in/handle/123456789/2079",
+      "kanoon_url": "https://indiankanoon.org/search/?formInput=POCSO+Act",
+      "sections": {
+        "4": {
+          "title": "Punishment for Penetrative Sexual Assault",
+          "plain_language": "Punishment for penetrative sexual assault on a child (under 18). Covers acts defined under Section 3.",
+          "offence_category": "Child Sexual Offence",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Minimum 7 years up to Life Imprisonment + fine",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=POCSO+Section+4"
+        },
+        "6": {
+          "title": "Punishment for Aggravated Penetrative Sexual Assault",
+          "plain_language": "Aggravated form \u2014 offence committed by police, armed forces, public servant, or in a position of trust/authority; or on a child below 12.",
+          "offence_category": "Child Sexual Offence",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Minimum 20 years up to Life Imprisonment or Death + fine",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=POCSO+Section+6"
+        },
+        "8": {
+          "title": "Punishment for Sexual Assault",
+          "plain_language": "Sexual assault on a child (non-penetrative but with sexual intent \u2014 touching private parts, etc.).",
+          "offence_category": "Child Sexual Offence",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "3 to 5 years imprisonment + fine",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=POCSO+Section+8"
+        },
+        "10": {
+          "title": "Punishment for Aggravated Sexual Assault",
+          "plain_language": "Aggravated form of sexual assault \u2014 by police, armed forces, or persons in authority over the child.",
+          "offence_category": "Child Sexual Offence",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "5 to 7 years imprisonment + fine",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=POCSO+Section+10"
+        }
+      }
+    },
+    "ARMS": {
+      "fullName": "Arms Act, 1959",
+      "shortName": "ARMS",
+      "indiacode_url": "https://www.indiacode.nic.in/handle/123456789/1398",
+      "kanoon_url": "https://indiankanoon.org/search/?formInput=Arms+Act",
+      "sections": {
+        "25": {
+          "title": "Punishment for Certain Offences (Unlicensed Arms)",
+          "plain_language": "Possessing, carrying, or using firearms or ammunition without a valid license.",
+          "offence_category": "Arms / Weapons",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Up to 3 years imprisonment or fine, or both; enhanced for prohibited arms",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=Arms+Act+Section+25"
+        },
+        "27": {
+          "title": "Punishment for Using Arms, etc.",
+          "plain_language": "Using any firearm or imitation firearm in contravention of law \u2014 discharging a weapon in public or threatening with it.",
+          "offence_category": "Arms / Weapons",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Minimum 3 years up to 7 years imprisonment",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=Arms+Act+Section+27"
+        }
+      }
+    },
+    "MV": {
+      "fullName": "Motor Vehicles Act, 1988",
+      "shortName": "MV",
+      "indiacode_url": "https://www.indiacode.nic.in/handle/123456789/1798",
+      "kanoon_url": "https://indiankanoon.org/search/?formInput=Motor+Vehicles+Act",
+      "sections": {
+        "184": {
+          "title": "Driving Dangerously",
+          "plain_language": "Driving a motor vehicle at a speed or in a manner which is dangerous to the public, given road/traffic conditions.",
+          "offence_category": "Road Safety",
+          "cognizable": true,
+          "bailable": true,
+          "punishment": "First offence: up to 6 months or \u20b91,000\u20135,000; Second offence: up to 2 years or \u20b910,000",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=Motor+Vehicles+Act+Section+184"
+        },
+        "185": {
+          "title": "Driving by a Drunken Person or by a Person under the Influence of Drugs",
+          "plain_language": "Driving while blood alcohol content exceeds the legal limit (30 mg/100 ml) or under influence of drugs.",
+          "offence_category": "Road Safety",
+          "cognizable": true,
+          "bailable": true,
+          "punishment": "First offence: up to 6 months or \u20b910,000; Second offence: up to 2 years or \u20b915,000",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=Motor+Vehicles+Act+Section+185"
+        },
+        "196": {
+          "title": "Driving an Uninsured Vehicle",
+          "plain_language": "Driving a motor vehicle in a public place without a valid third-party insurance policy.",
+          "offence_category": "Road Safety / Documentation",
+          "cognizable": false,
+          "bailable": true,
+          "punishment": "Up to 3 months imprisonment or \u20b92,000 fine, or both",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=Motor+Vehicles+Act+Section+196"
+        }
+      }
+    },
+    "IT": {
+      "fullName": "Information Technology Act, 2000",
+      "shortName": "IT",
+      "indiacode_url": "https://www.indiacode.nic.in/handle/123456789/1999",
+      "kanoon_url": "https://indiankanoon.org/search/?formInput=Information+Technology+Act",
+      "sections": {
+        "66": {
+          "title": "Computer Related Offences",
+          "plain_language": "Dishonestly or fraudulently doing any act prohibited under Section 43 \u2014 includes hacking, unauthorized access, data theft, virus spreading.",
+          "offence_category": "Cybercrime",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Up to 3 years imprisonment or \u20b95 lakh fine, or both",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IT+Act+Section+66"
+        },
+        "66C": {
+          "title": "Punishment for Identity Theft",
+          "plain_language": "Fraudulently or dishonestly using another person's electronic signature, password, or unique identification feature.",
+          "offence_category": "Cybercrime",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Up to 3 years imprisonment + \u20b91 lakh fine",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IT+Act+Section+66C"
+        },
+        "66D": {
+          "title": "Punishment for Cheating by Personation using Computer Resource",
+          "plain_language": "Cheating someone by pretending to be another person using a computer, mobile, or communication device (e.g. fake profiles, phishing).",
+          "offence_category": "Cybercrime",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "Up to 3 years imprisonment + \u20b91 lakh fine",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IT+Act+Section+66D"
+        },
+        "67": {
+          "title": "Punishment for Publishing Obscene Material in Electronic Form",
+          "plain_language": "Publishing or transmitting obscene material (text, image, video) in electronic form that would deprave and corrupt readers/viewers.",
+          "offence_category": "Cybercrime / Obscenity",
+          "cognizable": true,
+          "bailable": false,
+          "punishment": "First: up to 3 years + \u20b95 lakh fine; Second: up to 5 years + \u20b910 lakh fine",
+          "kanoon_url": "https://indiankanoon.org/search/?formInput=IT+Act+Section+67"
+        }
+      }
+    }
+  }
+}

@@ -413,15 +413,33 @@ class SQLiteInvestigationRepository:
 
         with get_connection() as conn:
 
-            victims = conn.execute(
-                "SELECT COUNT(*) cnt FROM Victim WHERE CaseMasterID=?",
+            victim_rows = conn.execute(
+                """
+                SELECT
+                    VictimMasterID,
+                    VictimName,
+                    AgeYear,
+                    GenderID,
+                    VictimPolice
+                FROM Victim
+                WHERE CaseMasterID=?
+                """,
                 (case_id,),
-            ).fetchone()["cnt"]
+            ).fetchall()
 
-            accused = conn.execute(
-                "SELECT COUNT(*) cnt FROM Accused WHERE CaseMasterID=?",
+            accused_rows = conn.execute(
+                """
+                SELECT
+                    AccusedMasterID,
+                    AccusedName,
+                    AgeYear,
+                    GenderID,
+                    PersonID
+                FROM Accused
+                WHERE CaseMasterID=?
+                """,
                 (case_id,),
-            ).fetchone()["cnt"]
+            ).fetchall()
 
             acts = conn.execute(
                 """
@@ -435,8 +453,10 @@ class SQLiteInvestigationRepository:
             ).fetchall()
 
             return {
-                "victims": victims,
-                "accused": accused,
+                "victim_count": len(victim_rows),
+                "accused_count": len(accused_rows),
+                "victims": [dict(r) for r in victim_rows],
+                "accused": [dict(r) for r in accused_rows],
                 "acts": [dict(r) for r in acts],
             }
 
