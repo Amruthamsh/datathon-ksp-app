@@ -219,7 +219,7 @@ class SQLiteInvestigationRepository:
                     FROM Victim v
                     WHERE v.CaseMasterID = cm.CaseMasterID
                 ) AS VictimCount
-
+                
             FROM CaseMaster cm
 
             LEFT JOIN Unit u
@@ -333,7 +333,10 @@ class SQLiteInvestigationRepository:
 
                     csm.CaseStatusName,
 
-                    e.FirstName
+                    e.FirstName,
+
+                    CAST(julianday('now') - julianday(cm.CrimeRegisteredDate) AS INTEGER)
+                        AS AgeDays
 
                 FROM CaseMaster cm
 
@@ -363,7 +366,44 @@ class SQLiteInvestigationRepository:
                 (case_id,),
             ).fetchone()
 
-            return dict(row) if row else None
+            result = dict(row) if row else None
+
+            if result:
+                age = int(result["AgeDays"])
+                gravity = result.get("Gravity", "")
+
+                if gravity == "Heinous":
+                    priority = "CRITICAL"
+                elif age > 30:
+                    priority = "HIGH"
+                elif age > 15:
+                    priority = "MEDIUM"
+                else:
+                    priority = "LOW"
+
+                result["Priority"] = priority
+
+                reasons = []
+                if gravity == "Heinous" and result.get("CrimeGroupName"):
+                    reasons.append(
+                        f"Classified as {gravity} offence under {result['CrimeGroupName']}"
+                    )
+                if age > 30:
+                    months = age // 30
+                    days = age % 30
+                    reasons.append(
+                        f"Case age ({months} month{'s' if months > 1 else ''}, {days} day{'s' if days != 1 else ''}) exceeds 30-day threshold"
+                    )
+                elif age > 15:
+                    reasons.append(
+                        f"Case age ({age} days) exceeds 15-day threshold"
+                    )
+                if not reasons:
+                    reasons.append("Routine case — standard priority assigned")
+
+                result["priority_reasons"] = reasons
+
+            return result
 
     # ------------------------------------------------------------------
     # Intelligence
@@ -404,13 +444,8 @@ class SQLiteInvestigationRepository:
     # Similar Cases
     # ------------------------------------------------------------------
     def get_similar_cases(self, case_id: int):
-
         with get_connection() as conn:
-
-            # ---------------------------------------------------------
-            # Current case
-            # ---------------------------------------------------------
-
+            # First, quickly get the current case values to inject as query parameters
             current = conn.execute(
                 """
                 SELECT
@@ -420,12 +455,8 @@ class SQLiteInvestigationRepository:
                     cm.GravityOffenceID,
                     cm.PoliceStationID,
                     u.DistrictID
-
                 FROM CaseMaster cm
-
-                LEFT JOIN Unit u
-                    ON cm.PoliceStationID = u.UnitID
-
+                LEFT JOIN Unit u ON cm.PoliceStationID = u.UnitID
                 WHERE cm.CaseMasterID = ?
                 """,
                 (case_id,),
@@ -434,220 +465,121 @@ class SQLiteInvestigationRepository:
             if not current:
                 return []
 
-            # ---------------------------------------------------------
-            # Current case Act / Sections
-            # ---------------------------------------------------------
-
-            current_sections = {
-                (r["ActID"], r["SectionID"])
-                for r in conn.execute(
-                    """
-                    SELECT
-                        ActID,
-                        SectionID
-                    FROM ActSectionAssociation
-                    WHERE CaseMasterID = ?
-                    """,
-                    (case_id,),
-                ).fetchall()
-            }
-
-            # ---------------------------------------------------------
-            # Current accused
-            # ---------------------------------------------------------
-
-            current_persons = {
-                r["PersonID"]
-                for r in conn.execute(
-                    """
-                    SELECT PersonID
-                    FROM Accused
-                    WHERE CaseMasterID = ?
-                    AND PersonID IS NOT NULL
-                    """,
-                    (case_id,),
-                ).fetchall()
-            }
-
-            # ---------------------------------------------------------
-            # Candidate cases
-            # ---------------------------------------------------------
-
-            candidates = conn.execute(
-                """
-                SELECT
-
-                    cm.CaseMasterID,
-                    cm.CrimeNo,
-
-                    cm.CrimeMajorHeadID,
-                    cm.CrimeMinorHeadID,
-                    cm.GravityOffenceID,
-                    cm.PoliceStationID,
-
-                    u.UnitName,
-                    d.DistrictID,
-                    d.DistrictName,
-
-                    ch.CrimeGroupName,
-                    csh.CrimeHeadName,
-                    go.LookupValue AS Gravity
-
-                FROM CaseMaster cm
-
-                LEFT JOIN Unit u
-                    ON cm.PoliceStationID = u.UnitID
-
-                LEFT JOIN District d
-                    ON u.DistrictID = d.DistrictID
-
-                LEFT JOIN CrimeHead ch
-                    ON cm.CrimeMajorHeadID = ch.CrimeHeadID
-
-                LEFT JOIN CrimeSubHead csh
-                    ON cm.CrimeMinorHeadID = csh.CrimeSubHeadID
-
-                LEFT JOIN GravityOffence go
-                    ON cm.GravityOffenceID = go.GravityOffenceID
-
-                WHERE cm.CaseMasterID <> ?
-                """,
-                (case_id,),
-            ).fetchall()
-
-            results = []
-
-            # ---------------------------------------------------------
-            # Score every candidate
-            # ---------------------------------------------------------
-
-            for row in candidates:
-
-                row = dict(row)
-
-                score = 0
-                reasons = []
-
-                # ---------------- Crime Head ----------------
-
-                if row["CrimeMajorHeadID"] == current["CrimeMajorHeadID"]:
-                    score += 40
-                    reasons.append(
-                        f"Same Crime Head ({row['CrimeGroupName']})"
-                    )
-
-                # ---------------- Crime Sub Head ----------------
-
-                if row["CrimeMinorHeadID"] == current["CrimeMinorHeadID"]:
-                    score += 20
-                    reasons.append(
-                        f"Same Crime Sub Head ({row['CrimeHeadName']})"
-                    )
-
-                # ---------------- Gravity ----------------
-
-                if row["GravityOffenceID"] == current["GravityOffenceID"]:
-                    score += 10
-                    reasons.append(
-                        f"Same Gravity ({row['Gravity']})"
-                    )
-
-                # ---------------- District ----------------
-
-                if row["DistrictID"] == current["DistrictID"]:
-                    score += 5
-                    reasons.append(
-                        f"Occurred in the same district ({row['DistrictName']})"
-                    )
-
-                # ---------------- Police Station ----------------
-
-                if row["PoliceStationID"] == current["PoliceStationID"]:
-                    score += 5
-                    reasons.append(
-                        f"Registered at the same Police Station ({row['UnitName']})"
-                    )
-
-                # ---------------- Matching Act / Sections ----------------
-
-                candidate_sections = {
-                    (r["ActID"], r["SectionID"])
-                    for r in conn.execute(
-                        """
-                        SELECT
-                            ActID,
-                            SectionID
-                        FROM ActSectionAssociation
-                        WHERE CaseMasterID = ?
-                        """,
-                        (row["CaseMasterID"],),
-                    ).fetchall()
-                }
-
-                matching_sections = current_sections & candidate_sections
-
-                if matching_sections:
-
-                    score += 15 * len(matching_sections)
-
-                    readable = [
-                        f"{act} {section}"
-                        for act, section in matching_sections
-                    ]
-
-                    reasons.append(
-                        "Matching Act/Section: "
-                        + ", ".join(readable)
-                    )
-
-                # ---------------- Shared Accused ----------------
-
-                candidate_persons = {
-                    r["PersonID"]
-                    for r in conn.execute(
-                        """
-                        SELECT PersonID
-                        FROM Accused
-                        WHERE CaseMasterID = ?
-                        AND PersonID IS NOT NULL
-                        """,
-                        (row["CaseMasterID"],),
-                    ).fetchall()
-                }
-
-                common_persons = current_persons & candidate_persons
-
-                if common_persons:
-
-                    score += 30
-
-                    reasons.append(
-                        f"Shares {len(common_persons)} accused with this case"
-                    )
-
-                # Ignore weak matches
-
-                if score == 0:
-                    continue
-
-                row["similarity_score"] = score
-
-                if score >= 90:
-                    row["similarity"] = "Very High"
-                elif score >= 60:
-                    row["similarity"] = "High"
-                elif score >= 35:
-                    row["similarity"] = "Medium"
-                else:
-                    row["similarity"] = "Low"
-
-                row["reasons"] = reasons
-
-                results.append(row)
-
-            results.sort(
-                key=lambda x: x["similarity_score"],
-                reverse=True,
+            sql = """
+            WITH MatchingAccused AS (
+                -- Pre-count shared accused persons between target case and all other cases
+                SELECT c_acc.CaseMasterID, COUNT(*) as shared_count
+                FROM Accused c_acc
+                INNER JOIN Accused target_acc 
+                    ON c_acc.PersonID = target_acc.PersonID
+                WHERE target_acc.CaseMasterID = ? 
+                  AND c_acc.CaseMasterID <> ?
+                  AND c_acc.PersonID IS NOT NULL
+                GROUP BY c_acc.CaseMasterID
+            ),
+            MatchingActs AS (
+                -- Pre-count matching Act/Sections between target case and all other cases
+                SELECT c_act.CaseMasterID, COUNT(*) as match_count
+                FROM ActSectionAssociation c_act
+                INNER JOIN ActSectionAssociation target_act 
+                    ON c_act.ActID = target_act.ActID 
+                   AND c_act.SectionID = target_act.SectionID
+                WHERE target_act.CaseMasterID = ? 
+                  AND c_act.CaseMasterID <> ?
+                GROUP BY c_act.CaseMasterID
             )
+            SELECT 
+                cm.CaseMasterID,
+                cm.CrimeNo,
+                cm.CrimeMajorHeadID,
+                cm.CrimeMinorHeadID,
+                cm.GravityOffenceID,
+                cm.PoliceStationID,
+                u.UnitName,
+                d.DistrictID,
+                d.DistrictName,
+                ch.CrimeGroupName,
+                csh.CrimeHeadName,
+                go.LookupValue AS Gravity,
+                
+                -- Dynamic score calculations matching your specific logic weights
+                (
+                    (CASE WHEN cm.CrimeMajorHeadID = ? THEN 40 ELSE 0 END) +
+                    (CASE WHEN cm.CrimeMinorHeadID = ? THEN 20 ELSE 0 END) +
+                    (CASE WHEN cm.GravityOffenceID = ? THEN 10 ELSE 0 END) +
+                    (CASE WHEN d.DistrictID = ? THEN 5 ELSE 0 END) +
+                    (CASE WHEN cm.PoliceStationID = ? THEN 5 ELSE 0 END) +
+                    (CASE WHEN ma.shared_count > 0 THEN 30 ELSE 0 END) +
+                    (COALESCE(mact.match_count, 0) * 15)
+                ) AS similarity_score,
+                
+                COALESCE(ma.shared_count, 0) as shared_accused_count,
+                COALESCE(mact.match_count, 0) as shared_act_count
 
-            return results[:5]
+            FROM CaseMaster cm
+            LEFT JOIN Unit u ON cm.PoliceStationID = u.UnitID
+            LEFT JOIN District d ON u.DistrictID = d.DistrictID
+            LEFT JOIN CrimeHead ch ON cm.CrimeMajorHeadID = ch.CrimeHeadID
+            LEFT JOIN CrimeSubHead csh ON cm.CrimeMinorHeadID = csh.CrimeSubHeadID
+            LEFT JOIN GravityOffence go ON cm.GravityOffenceID = go.GravityOffenceID
+            LEFT JOIN MatchingAccused ma ON cm.CaseMasterID = ma.CaseMasterID
+            LEFT JOIN MatchingActs mact ON cm.CaseMasterID = mact.CaseMasterID
+            
+            WHERE cm.CaseMasterID <> ?
+              -- Filter out records with a similarity score of 0
+              AND similarity_score > 0
+              
+            ORDER BY similarity_score DESC
+            LIMIT 5
+            """
+            
+            # Inject parameters sequentially matching the positions above
+            params = [
+                case_id, case_id, # CTEs
+                case_id, case_id, # CTEs
+                current["CrimeMajorHeadID"],
+                current["CrimeMinorHeadID"],
+                current["GravityOffenceID"],
+                current["DistrictID"],
+                current["PoliceStationID"],
+                case_id           # Where clause restriction
+            ]
+            
+            rows = conn.execute(sql, params).fetchall()
+            results = []
+            
+            # Formulate human-readable reason strings and categorical ranking labels in Python
+            for row in rows:
+                item = dict(row)
+                score = item["similarity_score"]
+                reasons = []
+                
+                if item["CrimeMajorHeadID"] == current["CrimeMajorHeadID"]:
+                    reasons.append(f"Same Crime Head ({item['CrimeGroupName']})")
+                if item["CrimeMinorHeadID"] == current["CrimeMinorHeadID"]:
+                    reasons.append(f"Same Crime Sub Head ({item['CrimeHeadName']})")
+                if item["GravityOffenceID"] == current["GravityOffenceID"]:
+                    reasons.append(f"Same Gravity ({item['Gravity']})")
+                if item["DistrictID"] == current["DistrictID"]:
+                    reasons.append(f"Occurred in the same district ({item['DistrictName']})")
+                if item["PoliceStationID"] == current["PoliceStationID"]:
+                    reasons.append(f"Registered at the same Police Station ({item['UnitName']})")
+                if item["shared_accused_count"] > 0:
+                    reasons.append(f"Shares {item['shared_accused_count']} accused with this case")
+                if item["shared_act_count"] > 0:
+                    reasons.append(f"Matching Act/Section counts: {item['shared_act_count']}")
+                
+                # Assign labels matching the baseline thresholds
+                if score >= 90:
+                    item["similarity"] = "Very High"
+                elif score >= 60:
+                    item["similarity"] = "High"
+                elif score >= 35:
+                    item["similarity"] = "Medium"
+                else:
+                    item["similarity"] = "Low"
+                    
+                item["reasons"] = reasons
+                results.append(item)
+                
+            return results
