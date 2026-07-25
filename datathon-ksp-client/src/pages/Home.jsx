@@ -1,14 +1,23 @@
-import { ArrowUp, Paperclip, Mic, MicOff, Volume2 } from "lucide-react";
+import {
+  ArrowUp,
+  Paperclip,
+  Mic,
+  MicOff,
+  Volume2,
+  Copy,
+  ThumbsUp,
+  ThumbsDown,
+  RefreshCw,
+} from "lucide-react";
 import useSpeechRecognition from "../hooks/useSpeechRecognition";
 import useSpeechSynthesis from "../hooks/useSpeechSynthesis";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import AnalysisPanel from "../components/AnalysisPanel";
 import { useAuth } from "../auth/AuthContext";
-import { generateResponse, getConversation } from "../api/chat";
-import { useCallback } from "react";
+import { generateResponse, getConversation, sendFeedback } from "../api/chat";
 
 const GREETING = {
   role: "assistant",
@@ -25,14 +34,13 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [followUps, setFollowUps] = useState([]);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [activeAnalysis, setActiveAnalysis] = useState(null);
   const [conversationId, setConversationId] = useState(id || null);
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
-  const { speak, stop, isSpeaking } = useSpeechSynthesis();
+  const { speak, stop } = useSpeechSynthesis();
 
   const handleTranscript = useCallback((text) => {
     setInput(text);
@@ -110,19 +118,62 @@ export default function Home() {
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.response, analysis: data.analysis },
+        {
+          role: "assistant",
+          content: data.response,
+          analysis: data.analysis,
+          message_id: data.message_id,
+          created_at: data.created_at,
+          feedback: null,
+        },
       ]);
       setActiveAnalysis(data.analysis || null);
       setFollowUps(data.follow_up_questions || []);
-
-      if (voiceEnabled) {
-        speak(data.response);
-      }
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
+  };
+
+  const [copiedIndex, setCopiedIndex] = useState(null);
+  const [speakingIndex, setSpeakingIndex] = useState(null);
+
+  const handleCopy = async (text, index) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const handleFeedback = (index, value) => {
+    const msg = messages[index];
+    if (!msg || msg.role !== "assistant") return;
+
+    const newFeedback = msg.feedback === value ? null : value;
+
+    setMessages((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], feedback: newFeedback };
+      return updated;
+    });
+
+    if (conversationId && msg.created_at) {
+      sendFeedback(token, conversationId, msg.created_at, newFeedback).catch(
+        (err) => console.error("Failed to save feedback:", err),
+      );
+    }
+  };
+
+  const retryMessage = (index) => {
+    const userMsg = messages[index - 1];
+    if (!userMsg || userMsg.role !== "user") return;
+
+    setMessages((prev) => prev.slice(0, index));
+    sendMessage(userMsg.content);
   };
 
   return (
@@ -153,7 +204,7 @@ export default function Home() {
                 }`}
               >
                 <div
-                  className={`rounded-3xl px-5 py-4 shadow-sm text-[15px] leading-7 ${
+                  className={`rounded-3xl px-5 py-3 shadow-sm text-[15px] leading-7 ${
                     m.role === "user"
                       ? "bg-red-50 max-w-[78%]"
                       : "bg-slate-100 max-w-[84%]"
@@ -181,19 +232,19 @@ export default function Home() {
                       ),
 
                       p: ({ children }) => (
-                        <p className="mb-4 leading-8 text-slate-800">
+                        <p className="mb-2 leading-8 text-slate-800">
                           {children}
                         </p>
                       ),
 
                       ul: ({ children }) => (
-                        <ul className="list-disc pl-6 mb-4 space-y-2">
+                        <ul className="list-disc pl-6 mb-2 space-y-1">
                           {children}
                         </ul>
                       ),
 
                       ol: ({ children }) => (
-                        <ol className="list-decimal pl-6 mb-4 space-y-2">
+                        <ol className="list-decimal pl-6 mb-4 space-y-1">
                           {children}
                         </ol>
                       ),
@@ -224,11 +275,11 @@ export default function Home() {
                     {m.content}
                   </ReactMarkdown>
 
-                  {/* Button renders reliably on any response containing analysis data */}
+                  {/* Open Investigation button */}
                   {hasAnalysis && (
                     <button
                       onClick={() => setActiveAnalysis(m.analysis)}
-                      className={`mt-4 rounded-lg border px-4 py-2 text-sm transition cursor-pointer ${
+                      className={`rounded-lg border px-4 py-2 mb-2 text-sm transition cursor-pointer ${
                         isCurrentlyActive
                           ? "border-blue-500 bg-blue-50 text-blue-700 font-medium shadow-xs"
                           : "border-slate-300 bg-white hover:bg-slate-50 text-slate-700"
@@ -238,6 +289,78 @@ export default function Home() {
                         ? "Viewing Investigation"
                         : "Open Investigation"}
                     </button>
+                  )}
+
+                  {/* Action bar */}
+                  {m.role === "assistant" && m !== GREETING && (
+                    <div className="mt-1 flex items-center gap-0.5">
+                      <button
+                        onClick={() => handleCopy(m.content, i)}
+                        className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition cursor-pointer"
+                        title="Copy"
+                      >
+                        {copiedIndex === i ? (
+                          <span className="text-[10px] font-medium text-green-600">
+                            OK
+                          </span>
+                        ) : (
+                          <Copy size={12} />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (speakingIndex === i) {
+                            stop();
+                            setSpeakingIndex(null);
+                          } else {
+                            stop();
+                            speak(m.content);
+                            setSpeakingIndex(i);
+                          }
+                        }}
+                        className={`flex h-6 w-6 items-center justify-center rounded transition cursor-pointer ${
+                          speakingIndex === i
+                            ? "bg-red-100 text-red-600"
+                            : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                        }`}
+                        title={speakingIndex === i ? "Stop" : "Read aloud"}
+                      >
+                        <Volume2 size={12} />
+                      </button>
+
+                      <button
+                        onClick={() => handleFeedback(i, "up")}
+                        className={`flex h-6 w-6 items-center justify-center rounded transition cursor-pointer ${
+                          m.feedback === "up"
+                            ? "text-blue-600 bg-blue-100 hover:bg-blue-200"
+                            : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                        }`}
+                        title="Helpful"
+                      >
+                        <ThumbsUp size={12} />
+                      </button>
+
+                      <button
+                        onClick={() => handleFeedback(i, "down")}
+                        className={`flex h-6 w-6 items-center justify-center rounded transition cursor-pointer ${
+                          m.feedback === "down"
+                            ? "text-red-600 bg-red-100 hover:bg-red-200"
+                            : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                        }`}
+                        title="Not helpful"
+                      >
+                        <ThumbsDown size={12} />
+                      </button>
+
+                      <button
+                        onClick={() => retryMessage(i)}
+                        className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition cursor-pointer"
+                        title="Retry"
+                      >
+                        <RefreshCw size={12} />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -312,35 +435,13 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-            <div>
-              {isListening && (
-                <span className="text-red-500 font-medium">
-                  🎤 Listening...
-                </span>
-              )}
+          {isListening && (
+            <div className="mt-2">
+              <span className="text-xs text-red-500 font-medium">
+                🎤 Listening...
+              </span>
             </div>
-
-            <button
-              onClick={() => {
-                if (isSpeaking) {
-                  stop();
-                } else {
-                  setVoiceEnabled((v) => !v);
-                }
-              }}
-              className={`flex items-center gap-1 rounded-full px-3 py-1 transition cursor-pointer ${
-                isSpeaking
-                  ? "bg-red-100 text-red-700"
-                  : voiceEnabled
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-slate-100 text-slate-700"
-              }`}
-            >
-              <Volume2 size={14} />
-              {isSpeaking ? "Stop" : voiceEnabled ? "Voice On" : "Voice Off"}
-            </button>
-          </div>
+          )}
 
           {followUps.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">

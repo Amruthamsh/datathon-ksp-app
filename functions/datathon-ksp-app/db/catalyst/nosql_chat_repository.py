@@ -31,6 +31,7 @@ class ChatRepository:
         doc = {
             "conversation_id": conversation_id,
             "created_at": now,
+            "message_id": str(uuid.uuid4()),
             "role": role,
             "content": content,
         }
@@ -89,6 +90,30 @@ class ChatRepository:
         except Exception as err:
             print(f"Failed to get messages for {conversation_id}: {err}")
             return []
+
+    def update_message_feedback(
+        self,
+        conversation_id: str,
+        created_at: str,
+        feedback: Optional[str],
+    ) -> None:
+        try:
+            value = {"S": feedback} if feedback else {"NULL": True}
+            self.table.update_items({
+                "keys": {
+                    "conversation_id": {"S": conversation_id},
+                    "created_at": {"S": created_at},
+                },
+                "update_attributes": [
+                    {
+                        "operation_type": "PUT",
+                        "attribute_path": ["feedback"],
+                        "update_value": value,
+                    },
+                ],
+            })
+        except Exception as err:
+            print(f"Failed to update message feedback: {err}")
 
 
 class ConversationRepository:

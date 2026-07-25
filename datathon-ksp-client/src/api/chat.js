@@ -70,3 +70,19 @@ export async function deleteConversation(token, conversationId) {
   });
   return handleResponse(res);
 }
+
+export async function sendFeedback(token, conversationId, createdAt, feedback) {
+  const res = await fetch(`${BASE}/chat/feedback`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      conversation_id: conversationId,
+      created_at: createdAt,
+      feedback,
+    }),
+  });
+  return handleResponse(res);
+}

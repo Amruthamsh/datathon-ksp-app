@@ -9,7 +9,7 @@ from agents.sql_query_db.graph import graph
 from auth.dependencies import get_current_user
 from db.dependencies import get_chat_repository, get_conversation_repository
 from db.catalyst.nosql_chat_repository import ChatRepository, ConversationRepository
-from schemas.chat import ChatRequest, RenameConversationRequest
+from schemas.chat import ChatRequest, RenameConversationRequest, FeedbackRequest
 
 logger = logging.getLogger("fastapi_function")
 router = APIRouter(prefix="/chat", tags=["Chat"])
@@ -74,9 +74,10 @@ async def generate_response(
         if graph_error else ""
     )
 
+    assistant_msg = None
     if chat_repo and conversation_id:
         try:
-            chat_repo.save_message(
+            assistant_msg = chat_repo.save_message(
                 conversation_id,
                 "assistant",
                 response_text,
@@ -99,6 +100,8 @@ async def generate_response(
     return {
         "status": "success",
         "conversation_id": conversation_id,
+        "message_id": assistant_msg.get("message_id") if assistant_msg else None,
+        "created_at": assistant_msg.get("created_at") if assistant_msg else None,
         "response": response_text,
         "sql_query": result.get("sql_query"),
         "sql_result": result.get("sql_result", []),
@@ -186,6 +189,33 @@ async def delete_conversation(
     return {"status": "success", "conversation_id": conversation_id}
 
 
+@router.post("/feedback", status_code=200)
+async def submit_feedback(
+    body: FeedbackRequest,
+    current_user: dict = Depends(get_current_user),
+    chat_repo: Optional[ChatRepository] = Depends(get_chat_repository),
+):
+    if not chat_repo:
+        raise HTTPException(status_code=503, detail="Persistence unavailable.")
+
+    try:
+        chat_repo.update_message_feedback(
+            body.conversation_id,
+            body.created_at,
+            body.feedback,
+        )
+    except Exception as e:
+        logger.error(f"Failed to update feedback: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save feedback.")
+
+    return {
+        "status": "success",
+        "conversation_id": body.conversation_id,
+        "created_at": body.created_at,
+        "feedback": body.feedback,
+    }
+
+
 @router.get("/conversation/{conversation_id}", status_code=200)
 async def get_conversation(
     conversation_id: str,
@@ -211,6 +241,8 @@ async def get_conversation(
                 "content": m["content"],
                 "analysis": m.get("analysis"),
                 "created_at": m.get("created_at"),
+                "message_id": m.get("message_id"),
+                "feedback": m.get("feedback"),
             }
             for m in messages
         ],

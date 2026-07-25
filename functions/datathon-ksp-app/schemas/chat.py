@@ -17,3 +17,16 @@ class RenameConversationRequest(BaseModel):
         if not v:
             raise ValueError("title must not be empty")
         return v[:100]
+
+
+class FeedbackRequest(BaseModel):
+    conversation_id: str
+    created_at: str
+    feedback: Optional[str] = None
+
+    @field_validator("feedback")
+    @classmethod
+    def validate_feedback(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in ("up", "down"):
+            raise ValueError('feedback must be "up", "down", or null')
+        return v
