@@ -3,6 +3,8 @@ from fastapi import Request
 from db.sqlite.sqlite_metadata_repository import SQLiteMetadataRepository
 from db.sqlite.officer_repository import SQLiteOfficerRepository
 from db.sqlite.sqlite_investigation_repository import SQLiteInvestigationRepository
+from db.sqlite.crime_map_repository import CrimeMapRepository
+from db.sqlite.network_repository import NetworkRepository
 from db.catalyst.user_repository import CatalystUserRepository
 from db.catalyst.nosql_chat_repository import ChatRepository, ConversationRepository
 from db.catalyst.report_repository import CatalystReportRepository
@@ -45,6 +47,12 @@ def get_conversation_repository(request: Request):
     
 def get_investigation_repository():
     return SQLiteInvestigationRepository()
+
+def get_crime_map_repository():
+    return CrimeMapRepository()
+
+def get_network_repository():
+    return NetworkRepository()
 
 def get_report_repository(request: Request):
     try:

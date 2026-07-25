@@ -8,6 +8,8 @@ from routes.auth import router as auth_router
 from routes.chat import router as chat_router
 from routes.investigations import router as investigations_router
 from routes.reports import router as reports_router
+from routes.crime_map import router as crime_map_router
+from routes.network import router as network_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("fastapi_function")
@@ -28,6 +30,8 @@ app.include_router(chat_router)
 app.include_router(auth_router)
 app.include_router(investigations_router)
 app.include_router(reports_router)
+app.include_router(crime_map_router)
+app.include_router(network_router)
 
 @app.get("/health")
 async def health():

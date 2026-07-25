@@ -71,3 +71,9 @@ python3 generate_fir_data.py`
 - audit logs and traceability - who asked what and when, and what was the response. and how much did LLMs cost
 
 ## Sample Questions
+
+Investigations → Solve one case
+
+Criminal Networks → Understand criminal organisations and relationships
+
+Crime Intelligence Map → Decide where to deploy police resources. how to prevent the next crime.

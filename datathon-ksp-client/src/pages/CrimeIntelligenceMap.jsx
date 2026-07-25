@@ -1,157 +1,36 @@
-import React, { useState, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import DeckGL from "@deck.gl/react";
 import { Map } from "react-map-gl/maplibre";
 import { ScatterplotLayer, GeoJsonLayer } from "@deck.gl/layers";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
-  Search,
-  ChevronDown,
-  MapPin,
-  Filter,
-  Play,
-  Clock,
-  Building2,
-  AlertTriangle,
-  Sparkles,
-  MessageSquare,
-  Crosshair,
-  CloudRain,
-  ShieldAlert,
-  X,
+  MapPin, AlertTriangle,
+  Sparkles, X, Loader2,
+  Users, Route, Target, Activity, Eye,
 } from "lucide-react";
+import PropTypes from "prop-types";
+import { useAuth } from "../auth/AuthContext";
+import * as crimeMapApi from "../api/crimeMap";
 
-// ==========================================
-// MOCK SPATIAL DATASETS (Karnataka Focus)
-// ==========================================
-
-// Mock Crime Incidents: Centered around Hubballi, Belagavi, Bagalkot, and Bengaluru
-const MOCK_CRIME_POINTS = [
-  {
-    coordinates: [75.7139, 15.3173],
-    weight: 8,
-    type: "Property Crime",
-    id: "HS-442",
-    name: "Bagalkot Bus Stand",
-    peakTime: "20:00 - 23:00",
-    gravity: "Heinous",
-    repeatOffenders: 7,
-    rainPercent: "18%",
-  },
-  {
-    coordinates: [75.72, 15.325],
-    weight: 6,
-    type: "Property Crime",
-    id: "HS-443",
-    name: "Bagalkot Market Yard",
-    peakTime: "19:00 - 22:00",
-    gravity: "Simple",
-    repeatOffenders: 3,
-    rainPercent: "12%",
-  },
-  {
-    coordinates: [74.5089, 15.8497],
-    weight: 9,
-    type: "Violent Crime",
-    id: "HS-102",
-    name: "Belagavi Central",
-    peakTime: "22:00 - 02:00",
-    gravity: "Heinous",
-    repeatOffenders: 12,
-    rainPercent: "40%",
-  },
-  {
-    coordinates: [74.52, 15.86],
-    weight: 4,
-    type: "Economic Crime",
-    id: "HS-103",
-    name: "Belagavi Tech Zone",
-    peakTime: "11:00 - 15:00",
-    gravity: "Simple",
-    repeatOffenders: 2,
-    rainPercent: "5%",
-  },
-  {
-    coordinates: [77.5946, 12.9716],
-    weight: 10,
-    type: "Property Crime",
-    id: "HS-001",
-    name: "Bengaluru Majestic",
-    peakTime: "18:00 - 21:00",
-    gravity: "Heinous",
-    repeatOffenders: 15,
-    rainPercent: "22%",
-  },
-];
-
-// Mock POI Data (Banks, Transit Hubs)
-const MOCK_POI_POINTS = [
-  { coordinates: [75.711, 15.316], poiType: "ATM", name: "SBI ATM" },
-  { coordinates: [75.716, 15.319], poiType: "Bank", name: "HDFC Bank" },
-  {
-    coordinates: [74.505, 15.848],
-    poiType: "Transit",
-    name: "Belagavi Railway Station",
-  },
-];
-
-// Mock GeoJSON District Boundaries (Simplified bounding polygons)
-const MOCK_DISTRICTS_GEOJSON = {
-  type: "FeatureCollection",
-  features: [
-    {
-      type: "Feature",
-      properties: {
-        name: "Bagalkot Division",
-        crimeRate: "High",
-        color: [239, 68, 68, 40],
-      }, // Red alpha
-      geometry: {
-        type: "Polygon",
-        coordinates: [
-          [
-            [75.4, 15.1],
-            [76.0, 15.1],
-            [76.0, 15.6],
-            [75.4, 15.6],
-            [75.4, 15.1],
-          ],
-        ],
-      },
-    },
-    {
-      type: "Feature",
-      properties: {
-        name: "Belagavi Division",
-        crimeRate: "Medium",
-        color: [245, 158, 11, 40],
-      }, // Amber alpha
-      geometry: {
-        type: "Polygon",
-        coordinates: [
-          [
-            [74.2, 15.6],
-            [74.9, 15.6],
-            [74.9, 16.2],
-            [74.2, 16.2],
-            [74.2, 15.6],
-          ],
-        ],
-      },
-    },
-  ],
-};
+function formatNumber(num) {
+  if (num === null || num === undefined) return "—";
+  return num.toLocaleString();
+}
 
 export default function CrimeIntelligenceMap() {
-  const [selectedHotspot, setSelectedHotspot] = useState(null);
-  const [mapMode, setMapMode] = useState("Heatmap"); // Heatmap, Cluster, Administrative
-  const [layersVisibility, setLayersVisibility] = useState({
-    weather: true,
-    pois: true,
-    density: false,
-  });
+  const { token } = useAuth();
 
-  // Initial View State focused broadly over Karnataka region
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState({ summary: true, mapData: false, patrol: false });
+  const [viewMode, setViewMode] = useState("Heatmap");
+  const [selectedSpot, setSelectedSpot] = useState(null);
+  const [hotspotDetail, setHotspotDetail] = useState(null);
+  const [patrolData, setPatrolData] = useState([]);
+  const [showNetworks, setShowNetworks] = useState(false);
+  const [networkOverlay, setNetworkOverlay] = useState([]);
+  const [showPatrolPanel, setShowPatrolPanel] = useState(false);
+
   const [viewState, setViewState] = useState({
     longitude: 75.7139,
     latitude: 15.3173,
@@ -160,55 +39,233 @@ export default function CrimeIntelligenceMap() {
     bearing: 0,
   });
 
-  // Toggle handlers for layers
-  const handleLayerToggle = (layerKey) => {
-    setLayersVisibility((prev) => ({ ...prev, [layerKey]: !prev[layerKey] }));
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const [sRes, nRes] = await Promise.all([
+          crimeMapApi.getSummary(token),
+          crimeMapApi.getNetworkOverlay(token),
+        ]);
+        setSummary(sRes.data);
+        setNetworkOverlay(nRes.data || []);
+      } catch (e) {
+        console.error("Failed to load initial data", e);
+      } finally {
+        setLoading((prev) => ({ ...prev, summary: false }));
+      }
+    })();
+  }, [token]);
+
+  const handleGeneratePatrol = async () => {
+    setLoading((prev) => ({ ...prev, patrol: true }));
+    setShowPatrolPanel(true);
+    try {
+      const res = await crimeMapApi.getPatrolRecommendations(token);
+      setPatrolData(res.data || []);
+    } catch (e) {
+      console.error("Failed to generate patrol", e);
+    } finally {
+      setLoading((prev) => ({ ...prev, patrol: false }));
+    }
   };
 
-  // ==========================================
-  // DECK.GL LAYER COMPOSITION ENGINE
-  // ==========================================
+  return (
+    <div className="flex h-full bg-slate-50 text-slate-900 font-sans">
+      <main className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col p-6 overflow-hidden gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Crime Intelligence Map</h1>
+              <p className="text-sm text-slate-500 mt-0.5">
+                Decide where to deploy police resources
+              </p>
+            </div>
+            <button onClick={handleGeneratePatrol}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">
+              <Route className="h-4 w-4" /> Generate Patrol Plan
+            </button>
+          </div>
+
+          <div className="grid grid-cols-5 gap-3">
+            <MetricCard
+              title="Today's Risk"
+              value={summary?.today_risk || "—"}
+              highlight={summary?.today_risk === "HIGH" ? "text-red-600" : summary?.today_risk === "MEDIUM" ? "text-amber-600" : "text-green-600"}
+              loading={loading.summary}
+            />
+            <MetricCard
+              title="Patrol Recommendations"
+              value={formatNumber(summary?.patrol_recommendations)}
+              loading={loading.summary}
+            />
+            <MetricCard
+              title="Emerging Hotspots"
+              value={formatNumber(summary?.emerging_hotspots)}
+              highlight="text-amber-500"
+              loading={loading.summary}
+            />
+            <MetricCard
+              title="Repeat Offender Zones"
+              value={formatNumber(summary?.repeat_offender_areas)}
+              loading={loading.summary}
+            />
+            <MetricCard
+              title="Total Crimes (30d)"
+              value={formatNumber(summary?.active_hotspots)}
+              loading={loading.summary}
+            />
+          </div>
+
+          <div className="flex-1 flex gap-4 min-h-0 relative">
+            <div className="flex-1 bg-slate-200 rounded-xl border border-slate-200 relative overflow-hidden shadow-inner flex flex-col">
+              <MapView
+                viewState={viewState}
+                onViewStateChange={setViewState}
+                viewMode={viewMode}
+                showNetworks={showNetworks}
+                networkOverlay={networkOverlay}
+                onSelectSpot={setSelectedSpot}
+                onHotspotDetail={setHotspotDetail}
+                token={token}
+              />
+
+              <div className="absolute top-4 left-4 bg-white rounded-lg shadow-md border border-slate-200 p-1 flex flex-col gap-1 z-10 w-40">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">Map Layers</span>
+                {["Heatmap", "Clusters", "Administrative"].map((mode) => (
+                  <button key={mode}
+                    onClick={() => { setViewMode(mode); setSelectedSpot(null); setHotspotDetail(null); }}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md text-left transition-colors ${
+                      viewMode === mode ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50"
+                    }`}>
+                    {mode} View
+                  </button>
+                ))}
+                <div className="border-t border-slate-100 mt-1 pt-1">
+                  <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer">
+                    <input type="checkbox" checked={showNetworks}
+                      onChange={() => setShowNetworks(!showNetworks)}
+                      className="rounded border-slate-300 text-blue-600 w-3.5 h-3.5" />
+                    <span className="text-xs font-medium text-slate-700">
+                      <Users className="h-3 w-3 inline mr-1" /> Network Overlay
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <RightPanel
+              selectedSpot={selectedSpot}
+              hotspotDetail={hotspotDetail}
+              onClose={() => { setSelectedSpot(null); setHotspotDetail(null); }}
+              showPatrol={showPatrolPanel}
+              patrolData={patrolData}
+              loadingPatrol={loading.patrol}
+              onClosePatrol={() => setShowPatrolPanel(false)}
+            />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function MapView({ viewState, onViewStateChange, viewMode, showNetworks, networkOverlay, onSelectSpot, onHotspotDetail, token }) {
+  const [heatmapData, setHeatmapData] = useState([]);
+  const [clusterData, setClusterData] = useState([]);
+  const [districtData, setDistrictData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      setLoading(true);
+      try {
+        const [heatRes, clusterRes, districtRes] = await Promise.all([
+          crimeMapApi.getHeatmap(token),
+          crimeMapApi.getClusters(token),
+          crimeMapApi.getDistrictSummary(token),
+        ]);
+        setHeatmapData(heatRes.data || []);
+        setClusterData(clusterRes.data || []);
+        setDistrictData(districtRes.data || []);
+      } catch (e) {
+        console.error("Map fetch error", e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
+
+  const heatmapLayerData = useMemo(
+    () => heatmapData.map((d) => ({ coordinates: [d.lng, d.lat], weight: d.weight })),
+    [heatmapData],
+  );
+
+  const clusterLayerData = useMemo(
+    () => clusterData.map((d) => ({
+      coordinates: [d.center[1], d.center[0]],
+      crime_count: d.crime_count,
+      dominant_crime: d.dominant_crime,
+    })),
+    [clusterData],
+  );
+
+  const districtGeoJson = useMemo(() => {
+    if (!districtData.length) return null;
+    return {
+      type: "FeatureCollection",
+      features: districtData.map((d) => ({
+        type: "Feature",
+        properties: { name: d.district, cases: d.cases, change: d.change },
+        geometry: {
+          type: "Polygon",
+          coordinates: [[
+            [d.bounds.min_lng, d.bounds.min_lat],
+            [d.bounds.max_lng, d.bounds.min_lat],
+            [d.bounds.max_lng, d.bounds.max_lat],
+            [d.bounds.min_lng, d.bounds.max_lat],
+            [d.bounds.min_lng, d.bounds.min_lat],
+          ]],
+        },
+      })),
+    };
+  }, [districtData]);
+
   const layers = useMemo(() => {
     const activeLayers = [];
 
-    // 1. BASE LAYER: Administrative Boundary Mode (Choropleth map)
-    if (mapMode === "Administrative") {
+    if (viewMode === "Administrative" && districtGeoJson) {
       activeLayers.push(
         new GeoJsonLayer({
           id: "geojson-districts",
-          data: MOCK_DISTRICTS_GEOJSON,
+          data: districtGeoJson,
           pickable: true,
           stroked: true,
           filled: true,
           lineWidthMinPixels: 2,
-          getFillColor: (d) => d.properties.color,
-          getLineColor: [148, 163, 184, 255], // slate-400
+          getFillColor: (d) => {
+            const change = d.properties.change || 0;
+            if (change > 20) return [239, 68, 68, 40];
+            if (change > 5) return [245, 158, 11, 40];
+            return [34, 197, 94, 40];
+          },
+          getLineColor: [148, 163, 184, 255],
           onClick: (info) => {
             if (info.object) {
-              setSelectedHotspot({
-                id: "DIV-GEO",
-                name: info.object.properties.name,
-                type: "Administrative Boundary",
-                totalCrimes: 412,
-                trend: "+14%",
-                mostCommon: "Varies by Station",
-                peakTime: "18:00 - 00:00",
-                repeatOffenders: 34,
-                nearby: ["Multiple Jurisdictions Inside"],
-                weatherContext: "Correlated with monsoon cycles",
-              });
+              const p = info.object.properties;
+              onSelectSpot({ id: p.name, name: p.name, type: "District", totalCrimes: p.cases });
             }
           },
         }),
       );
     }
 
-    // 2. CORE MODE LAYER: Heatmap Generation Layer
-    if (mapMode === "Heatmap") {
+    if (viewMode === "Heatmap" && heatmapLayerData.length) {
       activeLayers.push(
         new HeatmapLayer({
           id: "crime-heatmap",
-          data: MOCK_CRIME_POINTS,
+          data: heatmapLayerData,
           getPosition: (d) => d.coordinates,
           getWeight: (d) => d.weight,
           radiusPixels: 60,
@@ -218,30 +275,53 @@ export default function CrimeIntelligenceMap() {
       );
     }
 
-    // 3. CORE MODE LAYER: Aggregated Incident / Cluster Representation Layer
-    if (mapMode === "Cluster") {
+    if (viewMode === "Clusters" && clusterLayerData.length) {
       activeLayers.push(
         new ScatterplotLayer({
           id: "crime-clusters",
-          data: MOCK_CRIME_POINTS,
+          data: clusterLayerData,
           getPosition: (d) => d.coordinates,
-          getRadius: (d) => d.weight * 1200, // Scaled for meter metrics
-          getFillColor: [220, 38, 38, 200], // red-600
+          getRadius: (d) => Math.min(d.crime_count * 500, 5000),
+          getFillColor: [220, 38, 38, 200],
           pickable: true,
           onClick: (info) => {
             if (info.object) {
-              const item = info.object;
-              setSelectedHotspot({
-                id: item.id,
-                name: item.name,
-                type: item.type,
-                totalCrimes: item.weight * 15,
-                trend: item.weight > 7 ? "+28%" : "+8%",
-                mostCommon: item.type,
-                peakTime: item.peakTime,
-                repeatOffenders: item.repeatOffenders,
-                nearby: ["3 Banks", "2 ATMs", "4 Bus Stops"],
-                weatherContext: `Rain during ${item.rainPercent} of incidents`,
+              const d = info.object;
+              onSelectSpot({
+                id: `CLS-${d.coordinates[1].toFixed(2)}-${d.coordinates[0].toFixed(2)}`,
+                name: `${d.dominant_crime} Cluster`,
+                type: "Cluster",
+                totalCrimes: d.crime_count,
+                lat: d.coordinates[1],
+                lng: d.coordinates[0],
+              });
+              if (d.coordinates) {
+                crimeMapApi.getHotspotDetail(token, d.coordinates[1], d.coordinates[0])
+                  .then((r) => onHotspotDetail(r.data))
+                  .catch(() => {});
+              }
+            }
+          },
+        }),
+      );
+    }
+
+    if (showNetworks && networkOverlay?.length) {
+      activeLayers.push(
+        new ScatterplotLayer({
+          id: "network-overlay",
+          data: networkOverlay.filter((n) => n.lat && n.lng),
+          getPosition: (d) => [d.lng || 75.7, d.lat || 15.3],
+          getRadius: (d) => Math.min(d.total_firs * 1000, 10000),
+          getFillColor: [168, 85, 247, 120],
+          pickable: true,
+          onClick: (info) => {
+            if (info.object) {
+              onSelectSpot({
+                id: info.object.network_name,
+                name: `Network: ${info.object.network_name}`,
+                type: "Criminal Network",
+                totalCrimes: info.object.total_firs,
               });
             }
           },
@@ -249,331 +329,240 @@ export default function CrimeIntelligenceMap() {
       );
     }
 
-    // 4. OVERLAY CONTEXT LAYER: Points of Interest Map (POIs)
-    if (layersVisibility.pois) {
-      activeLayers.push(
-        new ScatterplotLayer({
-          id: "poi-layer",
-          data: MOCK_POI_POINTS,
-          getPosition: (d) => d.coordinates,
-          getRadius: 400,
-          getFillColor: [37, 99, 235, 220], // blue-600
-          pickable: true,
-          stroked: true,
-          getLineColor: [255, 255, 255, 255],
-          lineWidthMinPixels: 1.5,
-        }),
-      );
-    }
-
     return activeLayers;
-  }, [mapMode, layersVisibility]);
+  }, [viewMode, heatmapLayerData, clusterLayerData, districtGeoJson, showNetworks, networkOverlay, onSelectSpot, onHotspotDetail, token]);
 
   return (
-    <div className="flex h-full bg-slate-50 text-slate-900 font-sans">
-      <main className="flex-1 flex flex-col min-w-0">
-        {/* CONTAINER PANELS MAP STRATA */}
-        <div className="flex-1 flex flex-col p-6 overflow-hidden gap-4">
-          {/* Workspace Titles */}
+    <DeckGL
+      viewState={viewState}
+      onViewStateChange={(e) => onViewStateChange(e.viewState)}
+      controller={true}
+      layers={layers}
+      getCursor={({ isHovering }) => (isHovering ? "pointer" : "default")}
+    >
+      <Map
+        reuseMaps
+        mapLib={import("maplibre-gl")}
+        mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+        preventStyleDiffing={true}
+      />
+    </DeckGL>
+  );
+}
+
+MapView.propTypes = {
+  viewState: PropTypes.object.isRequired,
+  onViewStateChange: PropTypes.func.isRequired,
+  viewMode: PropTypes.string.isRequired,
+  showNetworks: PropTypes.bool.isRequired,
+  networkOverlay: PropTypes.array,
+  onSelectSpot: PropTypes.func.isRequired,
+  onHotspotDetail: PropTypes.func.isRequired,
+  token: PropTypes.string,
+};
+
+function RightPanel({ selectedSpot, hotspotDetail, onClose, showPatrol, patrolData, loadingPatrol, onClosePatrol }) {
+  if (showPatrol) {
+    return (
+      <div className="w-96 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col">
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">
-              Crime Intelligence Map
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Analyze spatial patterns, real-world context overlays, and
-              strategic AI insights.
-            </p>
+            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Patrol Planner</span>
+            <h2 className="text-base font-bold text-slate-900 mt-0.5">Recommended Patrol Routes</h2>
           </div>
+          <button onClick={onClosePatrol} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {loadingPatrol ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
+            </div>
+          ) : patrolData.length > 0 ? (
+            patrolData.slice(0, 10).map((p, i) => (
+              <div key={i} className="bg-white border border-slate-200 rounded-lg p-3.5 hover:border-blue-200 transition-colors">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-bold text-sm text-slate-800">{p.station}</h3>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    p.priority_score >= 200 ? "bg-red-100 text-red-700" :
+                    p.priority_score >= 100 ? "bg-amber-100 text-amber-700" :
+                    "bg-green-100 text-green-700"
+                  }`}>
+                    Score: {p.priority_score}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-500 space-y-1">
+                  <p>{p.district} · Peak: {p.peak_time}</p>
+                  <p>Suggested: <strong>{p.suggested_units} units</strong></p>
+                  <div className="flex gap-3 mt-1.5 text-[10px]">
+                    <span className="bg-slate-100 px-1.5 py-0.5 rounded">{p.crime_density} crimes</span>
+                    <span className="bg-slate-100 px-1.5 py-0.5 rounded">{p.repeat_offenders} repeat</span>
+                    <span className="bg-slate-100 px-1.5 py-0.5 rounded">{p.gravity_cases} heinous</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1.5">
+                  {p.gravity_cases > 3 ? "High gravity offence concentration" :
+                   p.repeat_offenders > 5 ? "Repeat offender hotspot" :
+                   "Routine patrol coverage"}
+                </p>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-sm text-slate-400">
+              <Route className="h-8 w-8 mx-auto mb-2 text-slate-200" />
+              <p>No patrol recommendations available.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
-          {/* Metric Dashboard Stripe */}
-          <div className="grid grid-cols-5 gap-4">
-            <MetricCard
-              title="Total Crimes (Active Filter)"
-              value="1,432"
-              trend="-4%"
-            />
-            <MetricCard
-              title="Active Hotspots"
-              value="12"
-              highlight="text-red-600"
-            />
-            <MetricCard
-              title="Emerging Hotspots"
-              value="3"
-              highlight="text-amber-500"
-            />
-            <MetricCard title="Repeat Offender Areas" value="8" />
-            <MetricCard title="Weather Alerts" value="2" alert="Heavy Rain" />
-          </div>
-
-          {/* Filtering Array Controls */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <FilterButton label="Date Range" />
-            <FilterButton label="Crime Head" />
-            <FilterButton label="Gravity" />
-            <FilterButton label="District" />
-            <FilterButton label="Station" />
-            <FilterButton label="Time of Day" />
-            <div className="flex-1"></div>
-            <button className="text-sm text-blue-600 font-medium flex items-center gap-1 hover:underline">
-              <Sparkles size={14} /> AI Filter
+  return (
+    <div className={`w-96 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col transition-all duration-300 ${
+      selectedSpot ? "opacity-100" : "opacity-60 bg-slate-50/50 pointer-events-none"
+    }`}>
+      {selectedSpot ? (
+        <>
+          <div className="p-4 border-b border-slate-100 flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-bold text-slate-400">{selectedSpot.id || "Hotspot"}</span>
+                {selectedSpot.type === "Criminal Network" ? (
+                  <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-[10px] font-bold rounded flex items-center gap-1 border border-purple-100">
+                    <Users size={10} /> NETWORK
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 bg-red-50 text-red-700 text-[10px] font-bold rounded flex items-center gap-1 border border-red-100">
+                    <AlertTriangle size={10} /> HOTSPOT
+                  </span>
+                )}
+              </div>
+              <h2 className="text-base font-bold text-slate-900">{selectedSpot.name}</h2>
+              <p className="text-xs text-slate-500 flex items-center gap-1 mt-1 font-medium">
+                <MapPin size={12} className="text-slate-400" /> {selectedSpot.type || "Location"}
+              </p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100">
+              <X size={16} />
             </button>
           </div>
 
-          {/* SUB-WORKSPACE SPLIT WINDOW */}
-          <div className="flex-1 flex gap-4 min-h-0 relative">
-            {/* INTERACTIVE VECTOR WEB GL MAP JURISDICTION */}
-            <div className="flex-1 bg-slate-200 rounded-xl border border-slate-200 relative overflow-hidden shadow-inner flex flex-col">
-              <DeckGL
-                viewState={viewState}
-                onViewStateChange={(e) => setViewState(e.viewState)}
-                controller={true}
-                layers={layers}
-                getCursor={({ isHovering }) =>
-                  isHovering ? "pointer" : "default"
-                }
-              >
-                <Map
-                  reuseMaps
-                  mapLib={import("maplibre-gl")}
-                  mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-                  preventStyleDiffing={true}
-                />
-              </DeckGL>
-
-              {/* OVERLAY ENGINE PANEL: Top Left Map Configuration Controls */}
-              <div className="absolute top-4 left-4 bg-white rounded-lg shadow-md border border-slate-200 p-1 flex flex-col gap-1 z-10 w-36">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
-                  View Strategy
-                </span>
-                {["Heatmap", "Cluster", "Administrative"].map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setMapMode(mode)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md text-left transition-colors ${mapMode === mode ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50"}`}
-                  >
-                    {mode} View
-                  </button>
-                ))}
-              </div>
-
-              {/* OVERLAY ENGINE PANEL: Top Right Context Layer Swappers */}
-              <div className="absolute top-4 right-4 bg-white rounded-lg shadow-md border border-slate-200 p-2 z-10 flex flex-col gap-1.5 w-44">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">
-                  Context Layers
-                </span>
-
-                <LayerToggle
-                  checkboxId="weather"
-                  icon={<CloudRain size={13} />}
-                  label="Weather Cycles"
-                  active={layersVisibility.weather}
-                  onChange={() => handleLayerToggle("weather")}
-                />
-                <LayerToggle
-                  checkboxId="pois"
-                  icon={<Building2 size={13} />}
-                  label="POIs (Banks, ATMs)"
-                  active={layersVisibility.pois}
-                  onChange={() => handleLayerToggle("pois")}
-                />
-                <LayerToggle
-                  checkboxId="density"
-                  icon={<Clock size={13} />}
-                  label="Population Core"
-                  active={layersVisibility.density}
-                  onChange={() => handleLayerToggle("density")}
-                />
-              </div>
-
-              {/* TIME SERIES CONSOLE TRACKER - Lower Centered Bar */}
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-3/4 max-w-xl bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-slate-200 px-4 py-2 flex items-center gap-4 z-10">
-                <button className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200 text-slate-700 shrink-0">
-                  <Play size={14} fill="currentColor" />
-                </button>
-                <div className="flex-1 relative flex items-center h-8">
-                  <div className="absolute w-full h-1.5 bg-slate-200 rounded-full"></div>
-                  <div className="absolute w-1/3 h-1.5 bg-blue-500 rounded-full left-[20%]"></div>
-                  <div className="absolute w-4 h-4 bg-white border-2 border-blue-600 rounded-full left-[53%] -ml-2 shadow-md cursor-grab"></div>
-                </div>
-                <div className="text-xs font-bold text-slate-600 whitespace-nowrap px-1">
-                  Active Filter: June - July
-                </div>
-              </div>
-            </div>
-
-            {/* AI COPILOT JURISDICTION CONTEXT DRAWER */}
-            <div
-              className={`w-96 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col transition-all duration-300 z-10 ${selectedHotspot ? "opacity-100 translate-x-0" : "opacity-60 bg-slate-50/50 pointer-events-none"}`}
-            >
-              {selectedHotspot ? (
-                <>
-                  {/* Drawer Identification Header */}
-                  <div className="p-4 border-b border-slate-100 flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-slate-400">
-                          {selectedHotspot.id}
-                        </span>
-                        <span className="px-2 py-0.5 bg-red-50 text-red-700 text-[10px] font-bold rounded flex items-center gap-1 border border-red-100">
-                          <AlertTriangle size={10} /> CRITICAL HOTSPOT
-                        </span>
-                      </div>
-                      <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                        {selectedHotspot.name}
-                      </h2>
-                      <p className="text-xs text-slate-500 flex items-center gap-1 mt-1 font-medium">
-                        <MapPin size={12} className="text-slate-400" />{" "}
-                        {selectedHotspot.type}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setSelectedHotspot(null)}
-                      className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                      <X size={16} />
-                    </button>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {hotspotDetail ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="text-[10px] font-medium text-slate-500">Total Incidents</p>
+                    <p className="text-lg font-bold text-slate-900">{formatNumber(hotspotDetail.crime_count)}</p>
                   </div>
-
-                  {/* Operational Core Analytics Metrics */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-5">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <p className="text-[11px] font-medium text-slate-500">
-                          Total Incidents
-                        </p>
-                        <p className="text-lg font-bold text-slate-900 mt-0.5">
-                          {selectedHotspot.totalCrimes}{" "}
-                          <span className="text-xs text-red-600 font-medium ml-1">
-                            {selectedHotspot.trend}
-                          </span>
-                        </p>
-                      </div>
-                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <p className="text-[11px] font-medium text-slate-500">
-                          Peak Window
-                        </p>
-                        <p className="text-xs font-bold text-slate-900 mt-1.5 whitespace-nowrap">
-                          {selectedHotspot.peakTime}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* AI Reasoning Block Engine */}
-                    <div className="bg-blue-50/60 border border-blue-100 rounded-lg p-3.5 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <Sparkles size={14} className="text-blue-600" />
-                        <span className="text-[10px] font-bold text-blue-900 uppercase tracking-wider">
-                          AI Copilot Core Context
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                        Property crimes elevated by{" "}
-                        <span className="font-bold text-slate-900">
-                          {selectedHotspot.trend}
-                        </span>{" "}
-                        near{" "}
-                        <span className="font-semibold text-slate-800">
-                          {selectedHotspot.name}
-                        </span>
-                        . Anomalies track tightly post-sunset and occur within a
-                        500-meter vector of localized commercial venues during{" "}
-                        {selectedHotspot.weatherContext}.
-                      </p>
-                    </div>
-
-                    {/* Local Vector Context Listing */}
-                    <div className="space-y-3 pt-1">
-                      <ContextItem
-                        icon={<Crosshair size={14} />}
-                        label="Primary Offense Vector"
-                        value={selectedHotspot.mostCommon}
-                      />
-                      <ContextItem
-                        icon={<ShieldAlert size={14} />}
-                        label="Tracked Repeat Accused"
-                        value={`${selectedHotspot.repeatOffenders} Recidivists Flagged`}
-                      />
-                      <ContextItem
-                        icon={<Building2 size={14} />}
-                        label="Proximity Spatial POIs"
-                        value={selectedHotspot.nearby.join(" • ")}
-                      />
-                    </div>
-
-                    {/* Context Specific Guided Dynamic Inquiries */}
-                    <div className="pt-2">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                        Suggested Analytical Queries
-                      </p>
-                      <div className="space-y-1.5">
-                        <SuggestedQuestion text="Why are anomalies escalating here?" />
-                        <SuggestedQuestion text="Compare matrix with neighboring districts." />
-                        <SuggestedQuestion text="Show connected repeat offender networks." />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Formatted Control Base Drawer Footer */}
-                  <div className="p-4 border-t border-slate-100 flex flex-col gap-2 bg-white">
-                    <button className="w-full py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors shadow-sm">
-                      Deep Dive Spatial Analytics
-                    </button>
-                    <button className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 shadow-sm">
-                      <Sparkles size={13} /> Ask AI Contextually
-                    </button>
-                  </div>
-                </>
-              ) : (
-                /* Static Inactive Awaiting Selection State */
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-slate-50/50">
-                  <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center mb-3 text-blue-600 border border-blue-100">
-                    <Sparkles size={20} />
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-800 tracking-tight">
-                    Spatial Copilot Standby
-                  </h3>
-                  <p className="text-xs text-slate-400 max-w-[240px] mt-1 mb-5 leading-normal">
-                    Select an active map hotspot point or boundary region layer
-                    to anchor context analysis.
-                  </p>
-                  <div className="w-full space-y-2 text-left px-2">
-                    <SuggestedQuestion text="Where are property crimes emerging?" />
-                    <SuggestedQuestion text="Run macro analysis: Bagalkot vs Belagavi" />
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="text-[10px] font-medium text-slate-500">Peak Window</p>
+                    <p className="text-xs font-bold text-slate-900 mt-1.5">{hotspotDetail.peak_time}</p>
                   </div>
                 </div>
-              )}
-            </div>
+
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Crime Breakdown</p>
+                  <div className="space-y-1">
+                    {(hotspotDetail.top_crimes || []).slice(0, 5).map((c, i) => (
+                      <div key={i}
+                        className="flex items-center justify-between px-2.5 py-1.5 bg-white border border-slate-100 rounded-lg">
+                        <span className="text-xs font-semibold text-slate-700">{c.CrimeGroupName}</span>
+                        <span className="text-xs font-bold text-slate-900">{c.cnt}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {hotspotDetail.stations?.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Nearby Stations</p>
+                    <div className="flex flex-wrap gap-1">
+                      {hotspotDetail.stations.map((s) => (
+                        <span key={s.id}
+                          className="px-2 py-1 bg-slate-100 text-slate-700 text-[10px] font-semibold rounded-md">
+                          {s.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-blue-50/60 border border-blue-100 rounded-lg p-3.5 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Sparkles size={14} className="text-blue-600" />
+                    <span className="text-[10px] font-bold text-blue-900 uppercase tracking-wider">Why is this hotspot growing?</span>
+                  </div>
+                  <ul className="text-xs text-slate-700 space-y-1">
+                    {hotspotDetail.top_crimes?.[0] && (
+                      <li>• <strong>{hotspotDetail.top_crimes[0].CrimeGroupName}</strong> dominates ({hotspotDetail.top_crimes[0].cnt} incidents)</li>
+                    )}
+                    {hotspotDetail.stations?.length > 1 && (
+                      <li>• <strong>{hotspotDetail.stations.length} police stations</strong> reporting incidents</li>
+                    )}
+                    <li>• Peak activity at <strong>{hotspotDetail.peak_time}</strong></li>
+                    <li>• {hotspotDetail.crime_count > 10 ? "High crime density - patrol recommended" : "Moderate activity - monitor"}</li>
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-sm text-slate-400">
+                <Eye className="h-8 w-8 mx-auto mb-2 text-slate-200" />
+                <p>Click a cluster or district on the map to view hotspot intelligence.</p>
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 border-t border-slate-100 flex flex-col gap-2 bg-white">
+            <button className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">
+              <Target className="h-3.5 w-3.5 inline mr-1.5" /> Deep Dive Analysis
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-slate-50/50">
+          <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center mb-3 text-blue-600 border border-blue-100">
+            <Activity size={20} />
+          </div>
+          <h3 className="text-sm font-bold text-slate-800">Operational Intelligence</h3>
+          <p className="text-xs text-slate-400 max-w-[240px] mt-1 mb-5 leading-normal">
+            Select a hotspot, district, or network on the map to view intelligence and resource recommendations.
+          </p>
+          <div className="w-full space-y-2 text-left px-2">
+            <Suggestion text="Switch to Cluster view to see crime concentration areas" />
+            <Suggestion text="Enable Network Overlay to see criminal group territories" />
+            <Suggestion text="Generate Patrol Plan for resource allocation" />
           </div>
         </div>
-      </main>
+      )}
     </div>
   );
 }
 
-// ==========================================
-// SUBCOMPONENTS DECLARATIONS
-// ==========================================
+RightPanel.propTypes = {
+  selectedSpot: PropTypes.object,
+  hotspotDetail: PropTypes.object,
+  onClose: PropTypes.func.isRequired,
+  showPatrol: PropTypes.bool.isRequired,
+  patrolData: PropTypes.array,
+  loadingPatrol: PropTypes.bool,
+  onClosePatrol: PropTypes.func.isRequired,
+};
 
-function MetricCard({ title, value, trend, highlight, alert }) {
+function MetricCard({ title, value, highlight, alert, loading }) {
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm flex flex-col justify-between">
-      <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
-        {title}
-      </p>
+      <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">{title}</p>
       <div className="mt-2 flex items-end justify-between">
-        <span
-          className={`text-xl font-black tracking-tight ${highlight || "text-slate-900"}`}
-        >
-          {value}
-        </span>
-        {trend && (
-          <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
-            {trend}
-          </span>
+        {loading ? (
+          <div className="h-7 w-16 bg-slate-200 rounded animate-pulse" />
+        ) : (
+          <span className={`text-xl font-black tracking-tight ${highlight || "text-slate-900"}`}>{value}</span>
         )}
-        {alert && (
+        {alert && !loading && (
           <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded flex items-center gap-1 border border-amber-200">
             {alert}
           </span>
@@ -583,60 +572,20 @@ function MetricCard({ title, value, trend, highlight, alert }) {
   );
 }
 
-function FilterButton({ label }) {
-  return (
-    <button className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 shadow-sm whitespace-nowrap">
-      {label}
-      <ChevronDown size={14} className="text-slate-400" />
-    </button>
-  );
-}
+MetricCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  highlight: PropTypes.string,
+  alert: PropTypes.string,
+  loading: PropTypes.bool,
+};
 
-function LayerToggle({ icon, label, active, onChange, checkboxId }) {
+function Suggestion({ text }) {
   return (
-    <label
-      htmlFor={checkboxId}
-      className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer group select-none transition-colors"
-    >
-      <input
-        id={checkboxId}
-        type="checkbox"
-        checked={active}
-        onChange={onChange}
-        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
-      />
-      <span
-        className={`transition-colors ${active ? "text-blue-600" : "text-slate-400 group-hover:text-slate-500"}`}
-      >
-        {icon}
-      </span>
-      <span className="text-xs text-slate-700 font-semibold tracking-tight">
-        {label}
-      </span>
-    </label>
-  );
-}
-
-function ContextItem({ icon, label, value }) {
-  return (
-    <div className="flex gap-2.5 items-start">
-      <div className="mt-0.5 text-slate-400">{icon}</div>
-      <div>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-          {label}
-        </p>
-        <p className="text-xs font-semibold text-slate-800 mt-0.5 leading-snug">
-          {value}
-        </p>
-      </div>
+    <div className="w-full text-left px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-600 font-medium shadow-sm">
+      {text}
     </div>
   );
 }
 
-function SuggestedQuestion({ text }) {
-  return (
-    <button className="w-full text-left px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-600 font-medium hover:border-blue-300 hover:bg-blue-50/50 hover:text-blue-700 transition-all shadow-sm truncate">
-      {text}
-    </button>
-  );
-}
+Suggestion.propTypes = { text: PropTypes.string.isRequired };
