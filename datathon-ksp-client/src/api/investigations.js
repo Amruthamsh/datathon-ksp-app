@@ -38,7 +38,7 @@ function buildQueryString(params = {}) {
 export async function getSummary(token) {
   const res = await fetch(`${BASE}/investigations/summary`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
   });
   return handleResponse(res);
@@ -47,7 +47,7 @@ export async function getSummary(token) {
 export async function getFilters(token) {
   const res = await fetch(`${BASE}/investigations/filters`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
   });
   return handleResponse(res);
@@ -70,7 +70,7 @@ export async function getInvestigations(token, params = {}) {
 
   const res = await fetch(`${BASE}/investigations/${queryString}`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
   });
   return handleResponse(res);
@@ -79,7 +79,7 @@ export async function getInvestigations(token, params = {}) {
 export async function getCaseDetails(token, caseId) {
   const res = await fetch(`${BASE}/investigations/${caseId}`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
   });
   return handleResponse(res);
@@ -88,7 +88,7 @@ export async function getCaseDetails(token, caseId) {
 export async function getCaseIntel(token, caseId) {
   const res = await fetch(`${BASE}/investigations/${caseId}/intel`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
   });
   return handleResponse(res);
@@ -97,7 +97,7 @@ export async function getCaseIntel(token, caseId) {
 export async function getSimilarCases(token, caseId) {
   const res = await fetch(`${BASE}/investigations/${caseId}/similar`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
   });
   return handleResponse(res);

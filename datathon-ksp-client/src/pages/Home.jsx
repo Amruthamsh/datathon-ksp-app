@@ -418,7 +418,7 @@ export default function Home() {
               ref={textareaRef}
               value={input}
               placeholder={t("chat.inputPlaceholder")}
-              className="flex-1 resize-none bg-transparent text-[15px] leading-6 outline-none overflow-y-auto max-h-45 py-2 placeholder:text-slate-400"
+              className="flex-1 resize-none bg-transparent text-[15px] leading-6 outline-none overflow-y-auto max-h-45 min-h-6 py-2 placeholder:text-slate-400"
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {

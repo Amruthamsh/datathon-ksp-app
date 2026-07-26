@@ -1,0 +1,13 @@
+{
+  "cors": {
+    "allowed_origins": [
+      "https://datathon-ksp-client-ylravnfl.onslate.in",
+      "http://localhost:3001",
+      "http://localhost:3000"
+    ],
+    "allowed_headers": ["Content-Type", "Authorization"],
+    "allowed_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    "allow_credentials": true,
+    "max_age": 86400
+  }
+}

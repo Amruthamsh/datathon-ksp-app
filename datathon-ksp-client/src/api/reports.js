@@ -24,7 +24,7 @@ export async function saveReport(token, report) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
     body: JSON.stringify(report),
   });
@@ -35,7 +35,7 @@ export async function saveReport(token, report) {
 export async function listReports(token) {
   const res = await fetch(`${BASE}/reports`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
   });
 
@@ -45,7 +45,7 @@ export async function listReports(token) {
 export async function getReport(token, reportId) {
   const res = await fetch(`${BASE}/reports/${reportId}`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
   });
 
@@ -56,7 +56,7 @@ export async function deleteReport(token, reportId) {
   const res = await fetch(`${BASE}/reports/${reportId}`, {
     method: "DELETE",
     headers: {
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
   });
 
@@ -68,7 +68,7 @@ export async function executeReportQuery(sqlQuery, token) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
     body: JSON.stringify({ sql_query: sqlQuery }),
   });

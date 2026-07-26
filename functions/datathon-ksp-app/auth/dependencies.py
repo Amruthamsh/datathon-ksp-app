@@ -3,9 +3,8 @@ from auth.security import decode_token
 
 
 def get_current_user(request: Request) -> dict:
-    authorization = request.headers.get("Authorization", "")
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or not token:
+    token = request.headers.get("X-Auth-Token", "")
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing bearer token.",

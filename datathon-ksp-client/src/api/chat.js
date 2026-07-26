@@ -29,7 +29,7 @@ export async function generateResponse(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
     body: JSON.stringify({
       user_query: userQuery,
@@ -43,14 +43,14 @@ export async function generateResponse(
 
 export async function listConversations(token) {
   const res = await fetch(`${BASE}/chat/conversations`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { "X-Auth-Token": token },
   });
   return handleResponse(res);
 }
 
 export async function getConversation(token, conversationId) {
   const res = await fetch(`${BASE}/chat/conversation/${conversationId}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { "X-Auth-Token": token },
   });
   return handleResponse(res);
 }
@@ -60,7 +60,7 @@ export async function renameConversation(token, conversationId, title) {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
     body: JSON.stringify({ title }),
   });
@@ -70,7 +70,7 @@ export async function renameConversation(token, conversationId, title) {
 export async function deleteConversation(token, conversationId) {
   const res = await fetch(`${BASE}/chat/conversation/${conversationId}`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { "X-Auth-Token": token },
   });
   return handleResponse(res);
 }
@@ -80,7 +80,7 @@ export async function sendFeedback(token, conversationId, createdAt, feedback) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      "X-Auth-Token": token,
     },
     body: JSON.stringify({
       conversation_id: conversationId,
