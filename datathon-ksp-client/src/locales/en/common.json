@@ -59,7 +59,9 @@
     "notHelpful": "Not helpful",
     "retry": "Retry",
     "openInvestigation": "Open Investigation",
-    "viewingInvestigation": "Viewing Investigation"
+    "viewingInvestigation": "Viewing Investigation",
+    "fileAttached": "File attached",
+    "removeFile": "Remove file"
   },
   "analysis": {
     "workspace": "Analysis Workspace",

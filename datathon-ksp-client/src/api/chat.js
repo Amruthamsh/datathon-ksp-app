@@ -22,19 +22,40 @@ export async function generateResponse(
   userQuery,
   conversationId = null,
   language = "en",
+  files = [],
 ) {
-  const res = await fetch(`${BASE}/chat/generate`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      user_query: userQuery,
-      conversation_id: conversationId,
-      language,
-    }),
-  });
+  let res;
+
+  if (files.length > 0) {
+    const formData = new FormData();
+    formData.append("user_query", userQuery);
+    formData.append("language", language);
+    if (conversationId) formData.append("conversation_id", conversationId);
+    for (const file of files) {
+      formData.append("files", file);
+    }
+
+    res = await fetch(`${BASE}/chat/generate`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+  } else {
+    res = await fetch(`${BASE}/chat/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        user_query: userQuery,
+        conversation_id: conversationId,
+        language,
+      }),
+    });
+  }
 
   return handleResponse(res);
 }

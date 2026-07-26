@@ -2,14 +2,14 @@ import logging
 import traceback
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from langchain_core.messages import HumanMessage, AIMessage
 
 from agents.sql_query_db.graph import graph
 from auth.dependencies import get_current_user
 from db.dependencies import get_chat_repository, get_conversation_repository
 from db.catalyst.nosql_chat_repository import ChatRepository, ConversationRepository
-from schemas.chat import ChatRequest, RenameConversationRequest, FeedbackRequest
+from schemas.chat import RenameConversationRequest, FeedbackRequest
 
 logger = logging.getLogger("fastapi_function")
 router = APIRouter(prefix="/chat", tags=["Chat"])
@@ -28,13 +28,15 @@ def _build_state_messages(history: list, current_query: str) -> list:
 
 @router.post("/generate", status_code=200)
 async def generate_response(
-    request: ChatRequest,
+    user_query: str = Form(...),
+    conversation_id: str | None = Form(None),
+    language: str | None = Form(None),
+    files: list[UploadFile] = File(default=[]),
     current_user: dict = Depends(get_current_user),
     chat_repo: Optional[ChatRepository] = Depends(get_chat_repository),
     conv_repo: Optional[ConversationRepository] = Depends(get_conversation_repository),
 ):
     user_id = current_user["kgid"]
-    conversation_id = request.conversation_id
     history = []
 
     # Persistence is best-effort — never block the query on a Catalyst failure
@@ -46,7 +48,7 @@ async def generate_response(
                     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
                 history = chat_repo.get_messages(conversation_id)
             else:
-                conversation = conv_repo.create(user_id, request.user_query)
+                conversation = conv_repo.create(user_id, user_query)
                 conversation_id = conversation["conversation_id"]
         except HTTPException:
             raise
@@ -55,14 +57,18 @@ async def generate_response(
             conversation_id = conversation_id  # keep whatever was passed in
 
         try:
-            chat_repo.save_message(conversation_id, "user", request.user_query)
+            chat_repo.save_message(conversation_id, "user", user_query)
         except Exception as e:
             logger.warning(f"Failed to save user message (non-fatal): {e}")
 
+    if files:
+        for f in files:
+            logger.info(f"Received file upload: {f.filename} ({f.content_type})")
+
     state = {
-        "messages": _build_state_messages(history, request.user_query),
-        "language": request.language or "en",
-        "original_query": request.user_query,
+        "messages": _build_state_messages(history, user_query),
+        "language": language or "en",
+        "original_query": user_query,
         "translated_query": "",
     }
 
@@ -99,7 +105,7 @@ async def generate_response(
 
     if conv_repo and conversation_id:
         try:
-            conv_repo.touch(conversation_id, user_id, request.user_query)
+            conv_repo.touch(conversation_id, user_id, user_query)
         except Exception as e:
             logger.warning(f"Failed to touch conversation (non-fatal): {e}")
 

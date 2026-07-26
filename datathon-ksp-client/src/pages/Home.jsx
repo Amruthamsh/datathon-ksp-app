@@ -8,6 +8,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   RefreshCw,
+  File,
+  X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import useSpeechRecognition from "../hooks/useSpeechRecognition";
@@ -42,7 +44,10 @@ export default function Home() {
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
   const didConsumeInitialState = useRef(false);
+
+  const [attachedFiles, setAttachedFiles] = useState([]);
 
   const { speak, stop } = useSpeechSynthesis();
 
@@ -112,8 +117,47 @@ export default function Home() {
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [input]);
 
+  const handleFileSelect = (e) => {
+    const selected = Array.from(e.target.files || []);
+    if (!selected.length) return;
+
+    const allowed = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+    ];
+
+    const valid = [];
+    for (const file of selected) {
+      if (!allowed.includes(file.type)) {
+        alert(`"${file.name}" is unsupported. Upload PDF, Excel, Word, or image files.`);
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`"${file.name}" exceeds the 10 MB limit.`);
+        continue;
+      }
+      valid.push(file);
+    }
+
+    if (valid.length) {
+      setAttachedFiles((prev) => [...prev, ...valid]);
+    }
+    e.target.value = "";
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
   const sendMessage = async (message = input) => {
-    if (!message.trim() || loading) return;
+    if ((!message.trim() && !attachedFiles.length) || loading) return;
 
     stop();
 
@@ -125,12 +169,14 @@ export default function Home() {
       },
     ]);
 
+    const filesToSend = attachedFiles;
     setInput("");
+    setAttachedFiles([]);
     setLoading(true);
     setFollowUps([]);
 
     try {
-      const data = await generateResponse(token, message, id || null, i18n.language);
+      const data = await generateResponse(token, message, id || null, i18n.language, filesToSend);
       // If this was a new chat, refresh the sidebar and redirect
       if (!id && data.conversation_id) {
         refreshConversations();
@@ -423,7 +469,10 @@ export default function Home() {
         {/* Input Area */}
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4">
           <div className="flex items-end gap-2 rounded-[28px] border border-slate-300 bg-white px-3 py-2 shadow-sm focus-within:border-blue-500 transition">
-            <button className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 cursor-pointer"
+            >
               <Paperclip size={18} />
             </button>
 
@@ -466,6 +515,37 @@ export default function Home() {
               <ArrowUp size={18} />
             </button>
           </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            accept=".pdf,.xlsx,.xls,.doc,.docx,.png,.jpg,.jpeg,.gif"
+            onChange={handleFileSelect}
+          />
+
+          {attachedFiles.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {attachedFiles.map((file, idx) => (
+                <div
+                  key={`${file.name}-${idx}`}
+                  className="flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1 text-sm"
+                >
+                  <File size={13} className="text-slate-500 shrink-0" />
+                  <span className="truncate text-slate-700 max-w-[180px]">{file.name}</span>
+                  <span className="text-slate-400 shrink-0">{formatFileSize(file.size)}</span>
+                  <button
+                    onClick={() => setAttachedFiles((prev) => prev.filter((_, i) => i !== idx))}
+                    className="ml-0.5 shrink-0 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    title={t("chat.removeFile")}
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {isListening && (
             <div className="mt-2">

@@ -59,7 +59,9 @@
     "notHelpful": "ಸಹಾಯಕವಲ್ಲ",
     "retry": "ಮರುಪ್ರಯತ್ನಿಸಿ",
     "openInvestigation": "ತನಿಖೆ ತೆರೆಯಿರಿ",
-    "viewingInvestigation": "ತನಿಖೆ ವೀಕ್ಷಿಸಲಾಗುತ್ತಿದೆ"
+    "viewingInvestigation": "ತನಿಖೆ ವೀಕ್ಷಿಸಲಾಗುತ್ತಿದೆ",
+    "fileAttached": "ಫೈಲ್ ಲಗತ್ತಿಸಲಾಗಿದೆ",
+    "removeFile": "ಫೈಲ್ ತೆಗೆದುಹಾಕಿ"
   },
   "analysis": {
     "workspace": "ವಿಶ್ಲೇಷಣಾ ಕಾರ್ಯಕ್ಷೇತ್ರ",
