@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import * as networkApi from "../api/network";
 
@@ -86,6 +87,7 @@ function StarRating({ count, total = 5 }) {
 
 export default function CriminalNetworks() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { token } = useAuth();
   const [view, setView] = useState("landing");
   const [searchQuery, setSearchQuery] = useState("");
@@ -313,6 +315,16 @@ export default function CriminalNetworks() {
               <SummaryCard icon={<AlertTriangle className="h-5 w-5" />} label={t("networks.stats.highRiskNetworks")} value={nodeCounts.highRisk} color="text-red-700" bg="bg-red-100" />
             </div>
 
+            <div className="flex justify-end">
+              <button
+                onClick={() => navigate("/", { state: { initialMessage: `Analyze overall criminal network intelligence: ${nodeCounts.accused} repeat offenders, ${nodeCounts.groups} criminal groups, ${nodeCounts.bridges} bridge individuals, ${nodeCounts.highRisk} high risk networks. What are the key patterns, risk areas, and recommended investigation priorities?` } })}
+                className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white text-xs font-semibold rounded-lg hover:bg-amber-600 transition shadow-sm"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {t("networks.deepDive")}
+              </button>
+            </div>
+
             <div>
               <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">{t("networks.topNetworks")}</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -367,6 +379,18 @@ export default function CriminalNetworks() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <button
+                    onClick={() => {
+                      const names = bridgeIndividuals.slice(0, 5).map((b) => b.name).join(", ");
+                      navigate("/", { state: { initialMessage: `Analyze the bridge individuals in the criminal network: ${names}. These individuals connect different criminal groups across multiple stations. What patterns of cross-station and cross-district criminal activity do they facilitate? Which investigation paths should be prioritized?` } });
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white text-[11px] font-semibold rounded-lg hover:bg-amber-600 transition shadow-sm"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    {t("networks.deepDive")}
+                  </button>
                 </div>
               </div>
             )}
@@ -625,6 +649,18 @@ export default function CriminalNetworks() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={() => {
+                        const associateNames = associates.slice(0, 5).map((a) => a.name).join(", ");
+                        navigate("/", { state: { initialMessage: `Deep analysis of ${profile.person.name}'s criminal network: network score ${profile.person.network_score}/100, rank ${profile.person.network_rank}, ${profile.person.fir_count} associated FIRs, ${profile.person.known_associates} known associates (${associateNames}), ${profile.person.station_count} police stations, most common crime: ${profile.person.most_common_crime}. Analyze their role in the network, assess recidivism risk, and recommend investigation priorities.` } });
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white text-[11px] font-semibold rounded-lg hover:bg-amber-600 transition shadow-sm"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      {t("networks.deepDive")}
+                    </button>
                   </div>
                 </div>
               )}
