@@ -20,6 +20,7 @@ import {
   Zap,
   Download,
   FileText,
+  Sparkles,
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useAuth } from "../auth/AuthContext";
@@ -368,11 +369,11 @@ function MapView({
           intensity: 1.2,
           threshold: 0.05,
           colorRange: [
-            [99, 102, 241],
-            [168, 85, 247],
-            [239, 68, 68],
-            [220, 38, 38],
-            [127, 29, 29],
+            [255, 235, 59],
+            [255, 183, 77],
+            [255, 138, 101],
+            [244, 67, 54],
+            [183, 28, 28],
           ],
           aggregation: "SUM",
         }),
@@ -632,6 +633,7 @@ RightPanel.propTypes = {
 
 function DefaultPanel({ summary, onOpenPatrol }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const hp = summary?.highest_priority_district;
   return (
     <div className="flex-1 flex flex-col">
@@ -703,6 +705,23 @@ function DefaultPanel({ summary, onOpenPatrol }) {
               <Route className="h-3 w-3 inline mr-1.5" />{" "}
               {t("crimeMap.generatePatrolPlan")}
             </button>
+            <button
+              onClick={() => {
+                const risk = summary?.today_risk || "N/A";
+                const hotspots = summary?.emerging_hotspots ?? "N/A";
+                const repeat = summary?.repeat_offender_areas ?? "N/A";
+                const crimes = summary?.active_hotspots ?? "N/A";
+                const priority = hp?.name
+                  ? `${hp.name} — ${hp.reason}`
+                  : "None identified";
+                const msg = `Provide a comprehensive overview of current crime trends and emerging hotspots across Karnataka. Today's risk level: ${risk}. Emerging hotspots: ${hotspots}. Repeat offender areas: ${repeat}. Crimes in last 30 days: ${crimes}. Highest priority district: ${priority}. Highlight the most critical areas requiring immediate attention and recommend resource deployment strategies.`;
+                navigate("/", { state: { initialMessage: msg } });
+              }}
+              className="w-full text-left px-2.5 py-2 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-700 font-semibold shadow-sm hover:bg-amber-100 transition-colors"
+            >
+              <Sparkles className="h-3 w-3 inline mr-1.5" />{" "}
+              {t("crimeMap.askAI.deepDive")}
+            </button>
           </div>
         </div>
       </div>
@@ -719,6 +738,7 @@ DefaultPanel.propTypes = {
 
 function TrendPanel({ spot, onClose }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const isUp = spot.change_pct > 0;
   const isStable = Math.abs(spot.change_pct) < 5;
 
@@ -806,6 +826,20 @@ function TrendPanel({ spot, onClose }) {
           </ul>
         </div>
       </div>
+
+      <div className="p-4 border-t border-slate-100">
+        <button
+          onClick={() => {
+            const dir = isUp ? "increasing" : "decreasing";
+            const msg = `Provide a deep dive analysis of the crime trend at this location. The crime trend is ${dir} with a change of ${spot.change_pct}%. Current period incidents: ${spot.current_count}. Previous period incidents: ${spot.previous_count}. Identify factors driving this ${dir} trend and recommend targeted interventions to address it.`;
+            navigate("/", { state: { initialMessage: msg } });
+          }}
+          className="w-full py-2 bg-amber-50 border border-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+        >
+          <Sparkles className="h-3.5 w-3.5" />{" "}
+          {t("crimeMap.askAI.trendAnalysis")}
+        </button>
+      </div>
     </>
   );
 }
@@ -819,6 +853,7 @@ TrendPanel.propTypes = {
 
 function DistrictPanel({ spot, onClose, onOpenPatrol }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const riskColor =
     spot.risk_level === "CRITICAL"
       ? "text-red-600 bg-red-50 border-red-200"
@@ -941,6 +976,16 @@ function DistrictPanel({ spot, onClose, onOpenPatrol }) {
           <Route className="h-3.5 w-3.5 inline mr-1.5" />{" "}
           {t("crimeMap.generatePatrolPlan")} — {spot.name}
         </button>
+        <button
+          onClick={() => {
+            const msg = `Provide a deep dive analysis of crime in ${spot.name} district. Risk score: ${Math.round(spot.risk_score)} (${spot.risk_level}). Crime count: ${spot.crime_count}. Repeat offenders: ${spot.repeat_offenders}. Pending investigations: ${spot.pending_investigations}. Trend: ${(spot.change_pct || 0) > 0 ? "+" : ""}${spot.change_pct || 0}%. Top crime: ${spot.top_crime || "N/A"}. Rank: ${spot.rank || "N/A"} of 31 districts. Analyze the risk factors, identify patterns, and recommend targeted interventions and resource allocation strategies.`;
+            navigate("/", { state: { initialMessage: msg } });
+          }}
+          className="w-full py-2 bg-amber-50 border border-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+        >
+          <Sparkles className="h-3.5 w-3.5" />{" "}
+          {t("crimeMap.askAI.districtAnalysis")}
+        </button>
       </div>
     </>
   );
@@ -982,6 +1027,7 @@ RiskBar.propTypes = {
 
 function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   return (
     <>
       <PanelHeader
@@ -1115,6 +1161,25 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
           <Route className="h-3.5 w-3.5 inline mr-1.5" />{" "}
           {t("crimeMap.generatePatrolPlan")}
         </button>
+        {detail && (
+          <button
+            onClick={() => {
+              const topCrimes = (detail.top_crimes || [])
+                .map((c) => `${c.CrimeGroupName}: ${c.cnt}`)
+                .join(", ");
+              const stations = (detail.stations || [])
+                .map((s) => s.name)
+                .join(", ");
+              const risks = (detail.risk_factors || []).join("; ");
+              const msg = `Provide a deep dive analysis of this crime hotspot. Total incidents: ${detail.crime_count}. Peak time: ${detail.peak_time}. Repeat offenders: ${detail.repeat_offenders}. Linked investigations: ${detail.linked_investigations}. Active networks: ${detail.active_networks}. Top crimes: ${topCrimes || "N/A"}. Nearby stations: ${stations || "N/A"}. Risk factors: ${risks || "N/A"}. Identify patterns, correlations between risk factors, and recommend enforcement actions.`;
+              navigate("/", { state: { initialMessage: msg } });
+            }}
+            className="w-full py-2 bg-amber-50 border border-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          >
+            <Sparkles className="h-3.5 w-3.5" />{" "}
+            {t("crimeMap.askAI.clusterAnalysis")}
+          </button>
+        )}
       </div>
     </>
   );
@@ -1239,6 +1304,21 @@ function NetworkPanel({ spot, onClose }) {
           <Users className="h-3.5 w-3.5 inline mr-1.5" />{" "}
           {t("crimeMap.network.openInNetworks")}
         </button>
+        <button
+          onClick={() => {
+            const members = (spot.members || [])
+              .slice(0, 8)
+              .map((m) => `${m.name} (${m.firs} FIRs)`)
+              .join(", ");
+            const districts = (spot.districts || []).join(", ");
+            const msg = `Provide a deep dive analysis of the criminal network "${spot.network_name}". Members: ${spot.member_count}. Total FIRs: ${spot.total_firs}. Risk level: ${spot.risk}. Districts covered: ${districts || "N/A"}. Top members: ${members || "N/A"}. Identify key operatives, communication patterns, operational structure, and recommend disruption strategies.`;
+            navigate("/", { state: { initialMessage: msg } });
+          }}
+          className="w-full py-2 bg-amber-50 border border-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+        >
+          <Sparkles className="h-3.5 w-3.5" />{" "}
+          {t("crimeMap.askAI.networkAnalysis")}
+        </button>
       </div>
     </>
   );
@@ -1253,6 +1333,7 @@ NetworkPanel.propTypes = {
 
 function PatrolModal({ token, selectedSpot, onClose }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState("night");
   const [units, setUnits] = useState(6);
   const [crimeFocus, setCrimeFocus] = useState(null);
@@ -1571,11 +1652,30 @@ function PatrolModal({ token, selectedSpot, onClose }) {
                 {t("crimeMap.patrol.exportExcel")}
               </button>
               <button
+                onClick={() => {
+                  const timeLabel = getTimeOptions(t).find(
+                    (opt) => opt.value === timeRange,
+                  )?.label;
+                  const routeSummary = routes
+                    .map(
+                      (r) =>
+                        `${r.officer_label} at ${r.station} (${r.district}) — Score: ${r.priority_score}, Crimes: ${r.crime_density}, Repeat: ${r.repeat_offenders}, Heinous: ${r.gravity_cases}. Reason: ${r.reason}`,
+                    )
+                    .join("\n");
+                  const msg = `Analyze the following patrol plan and provide insights on deployment effectiveness, coverage gaps, and optimization recommendations.\n\nParameters: Time: ${timeLabel} | Units: ${units} | Area: ${area || "All Districts"} | Crime Focus: ${crimeFocus || "All Crimes"}\n\nGenerated Routes (${routes.length}):\n${routeSummary}\n\nAssess whether resource allocation is optimal, identify underserved areas, and suggest adjustments.`;
+                  navigate("/", { state: { initialMessage: msg } });
+                }}
+                className="flex-1 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+              >
+                <Sparkles className="h-3.5 w-3.5" />{" "}
+                {t("crimeMap.askAI.patrolInsights")}
+              </button>
+              {/* <button
                 onClick={onClose}
                 className="py-2.5 px-4 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors shadow-sm"
               >
                 {t("crimeMap.patrol.close")}
-              </button>
+              </button> */}
             </div>
           )}
         </div>

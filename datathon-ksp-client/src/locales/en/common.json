@@ -252,6 +252,14 @@
       "exportExcel": "Export Excel",
       "close": "Close"
     },
+    "askAI": {
+      "deepDive": "Ask AI for Deep Dive",
+      "trendAnalysis": "Analyze This Trend",
+      "districtAnalysis": "Analyze This District",
+      "clusterAnalysis": "Analyze This Hotspot",
+      "networkAnalysis": "Analyze This Network",
+      "patrolInsights": "AI Patrol Insights"
+    },
     "noData": "No data available.",
     "loadingCluster": "Loading cluster intelligence...",
     "selectPerson": "Select a person to view their network graph.",
