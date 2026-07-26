@@ -1,4 +1,6 @@
-const BASE = "/api";
+import { API_BASE } from "../config";
+
+const BASE = `${API_BASE}/server/datathon-ksp-app`;
 
 async function handleResponse(res) {
   if (res.status === 401) {

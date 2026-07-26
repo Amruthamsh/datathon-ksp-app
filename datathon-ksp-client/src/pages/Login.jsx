@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { API_BASE } from "../config";
 
 async function getErrorMessage(response, fallbackMessage) {
   try {
@@ -39,7 +40,7 @@ export default function Login() {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/signin", {
+      const response = await fetch(`${API_BASE}/server/datathon-ksp-app/auth/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Save, Download } from "lucide-react";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { API_BASE } from "../config";
 import * as XLSX from "xlsx";
 import { toBlob } from "html-to-image";
 
@@ -256,7 +257,7 @@ export default function AnalysisPanel({ analysis }) {
         }
       }
 
-      const response = await fetch(`/api/reports/export/${format}`, {
+      const response = await fetch(`${API_BASE}/server/datathon-ksp-app/reports/export/${format}`, {
         method: "POST",
         body: formData,
       });

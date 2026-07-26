@@ -1,3 +1,5 @@
+import io
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
@@ -20,6 +22,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3001",
+        "http://localhost:3000",
+        "https://datathon-ksp-client-ylravnfl.onslate.in",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -40,16 +44,24 @@ async def health():
 _wsgi_app = ASGIMiddleware(app)
  
  
+
 def handler(request):
     response_state = {}
- 
+
+    # Catalyst has already read the body into request.data —
+    # re-wrap it so ASGI middleware can read it again
+    body_bytes = request.data  # Flask request object gives you the raw bytes
+    environ = request.environ.copy()
+    environ["wsgi.input"] = io.BytesIO(body_bytes)
+    environ["CONTENT_LENGTH"] = str(len(body_bytes))
+
     def start_response(status, headers, exc_info=None):
         response_state["status"] = status
         response_state["headers"] = headers
- 
-    body_chunks = _wsgi_app(request.environ, start_response)
+
+    body_chunks = _wsgi_app(environ, start_response)
     body = b"".join(body_chunks)
- 
+
     status_code = int(response_state["status"].split(" ", 1)[0])
     return FlaskResponse(body, status=status_code, headers=response_state["headers"])
 

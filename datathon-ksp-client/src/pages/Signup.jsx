@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { API_BASE } from "../config";
 
 function formatErrorDetail(detail) {
   if (!detail) {
@@ -76,7 +77,7 @@ export default function Signup() {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/verify", {
+      const response = await fetch(`${API_BASE}/server/datathon-ksp-app/auth/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -110,7 +111,7 @@ export default function Signup() {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch(`${API_BASE}/server/datathon-ksp-app/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -128,7 +129,7 @@ export default function Signup() {
         );
       }
 
-      const signInResponse = await fetch("/api/auth/signin", {
+      const signInResponse = await fetch(`${API_BASE}/server/datathon-ksp-app/auth/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

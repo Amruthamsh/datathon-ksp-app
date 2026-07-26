@@ -157,3 +157,12 @@ def me(
             "district": user["district"],
         }
     }
+
+@router.post("/debug")
+async def debug(request: Request):
+    body = await request.body()
+
+    return {
+        "headers": dict(request.headers),
+        "body": body.decode(errors="ignore")
+    }
