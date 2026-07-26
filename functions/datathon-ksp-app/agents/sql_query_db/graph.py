@@ -52,9 +52,8 @@ builder.add_edge("planner", "fetch_column_values")
 builder.add_edge("fetch_column_values", "generate_sql")
 builder.add_edge("generate_sql", "execute_sql")
 builder.add_edge("execute_sql", "response")
-builder.add_edge("execute_sql", "chart")
+builder.add_edge("response", "chart")
 
-builder.add_edge("response", "finalize")
 builder.add_edge("chart", "finalize")
 builder.add_edge("chat", "finalize")
 

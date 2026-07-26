@@ -21,6 +21,7 @@ class ReportPayload(BaseModel):
     generated_at: str
     generated_by: str = "KSP Intelligence Platform"
     executive_summary: Optional[str] = None
+    analysis_response: Optional[str] = None
     sql: SQLDataSchema
     visualizations: List[VisualizationSchema] = Field(default_factory=list)
     follow_up_questions: List[str] = Field(default_factory=list)

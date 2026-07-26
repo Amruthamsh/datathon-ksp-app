@@ -87,6 +87,7 @@ async def generate_response(
                 "assistant",
                 response_text,
                 analysis={
+                    "response": response_text,
                     "sql_query": result.get("sql_query"),
                     "sql_result": result.get("sql_result", []),
                     "charts": result.get("charts", []),

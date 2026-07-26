@@ -197,7 +197,7 @@ export default function AnalysisPanel({ analysis }) {
   const rowCount = rows.length;
 
   const [saving, setSaving] = useState(false);
-  const { token } = useAuth();
+  const { token, officer } = useAuth();
 
   async function handleSaveReport() {
     try {
@@ -225,8 +225,11 @@ export default function AnalysisPanel({ analysis }) {
         generated_at: new Date().toLocaleString("en-IN", {
           timeZone: "Asia/Kolkata",
         }),
-        generated_by: "KSP Intelligence Officer",
+        generated_by: officer
+          ? `${officer.rank}, ${officer.full_name}`
+          : "KSP Intelligence Officer",
         executive_summary: analysis.response ?? "",
+        analysis_response: analysis.response ?? "",
         sql: {
           query: analysis.sql_query ?? "",
           row_count: analysis.sql_result?.length ?? 0,
@@ -300,7 +303,9 @@ export default function AnalysisPanel({ analysis }) {
               {t("analysis.workspace")}
             </p>
             <h2 className="mt-1 truncate text-xl font-semibold text-slate-900">
-              {charts[0]?.title || charts[0]?.intent || t("analysis.queryAnalysis")}
+              {charts[0]?.title ||
+                charts[0]?.intent ||
+                t("analysis.queryAnalysis")}
             </h2>
           </div>
           <div className="flex shrink-0 items-center gap-3">

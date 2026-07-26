@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import DeckGL from "@deck.gl/react";
 import { Map } from "react-map-gl/maplibre";
 import { ScatterplotLayer, GeoJsonLayer, LineLayer } from "@deck.gl/layers";
+import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
   AlertTriangle,
@@ -358,20 +359,41 @@ function MapView({
 
     if (viewMode === "Heatmap" && trendLayerData.length) {
       activeLayers.push(
+        new HeatmapLayer({
+          id: "trend-heatmap",
+          data: trendLayerData,
+          getPosition: (d) => d.coordinates,
+          getWeight: (d) => Math.max(1, Math.abs(d.change_pct)),
+          radiusPixels: 60,
+          intensity: 1.2,
+          threshold: 0.05,
+          colorRange: [
+            [99, 102, 241],
+            [168, 85, 247],
+            [239, 68, 68],
+            [220, 38, 38],
+            [127, 29, 29],
+          ],
+          aggregation: "SUM",
+        }),
+      );
+
+      activeLayers.push(
         new ScatterplotLayer({
           id: "trend-scatter",
           data: trendLayerData,
           getPosition: (d) => d.coordinates,
-          getRadius: (d) => Math.min(Math.abs(d.change_pct) * 150, 8000),
+          getRadius: 6,
           getFillColor: (d) => {
-            if (d.change_pct > 20) return [220, 38, 38, 200];
-            if (d.change_pct > 10) return [239, 88, 60, 180];
-            if (d.change_pct > 5) return [245, 158, 11, 160];
-            if (d.change_pct > 0) return [250, 204, 21, 140];
-            if (d.change_pct < -5) return [34, 197, 94, 120];
-            return [250, 204, 21, 100];
+            if (d.change_pct > 20) return [220, 38, 38, 255];
+            if (d.change_pct > 10) return [239, 88, 60, 255];
+            if (d.change_pct > 5) return [245, 158, 11, 255];
+            if (d.change_pct > 0) return [250, 204, 21, 255];
+            if (d.change_pct < -5) return [34, 197, 94, 255];
+            return [250, 204, 21, 200];
           },
-          radiusMinPixels: 12,
+          radiusMinPixels: 4,
+          radiusMaxPixels: 8,
           pickable: true,
           onClick: (info) => {
             if (info.object) {

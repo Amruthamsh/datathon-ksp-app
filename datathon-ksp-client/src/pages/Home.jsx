@@ -62,7 +62,14 @@ export default function Home() {
           setConversationId(id);
 
           const lastMsg = data.messages?.[data.messages.length - 1];
-          setActiveAnalysis(lastMsg?.analysis || null);
+          if (lastMsg?.analysis) {
+            setActiveAnalysis({
+              ...lastMsg.analysis,
+              response: lastMsg.analysis.response || lastMsg.content || "",
+            });
+          } else {
+            setActiveAnalysis(null);
+          }
         })
         .catch((err) => {
           console.error("Failed to load conversation:", err);
@@ -130,18 +137,26 @@ export default function Home() {
         navigate(`/chat/${data.conversation_id}`, { replace: true });
       }
 
+      const analysis = {
+        sql_query: data.sql_query,
+        sql_result: data.sql_result,
+        charts: data.charts,
+        response: data.response,
+        follow_up_questions: data.follow_up_questions,
+      };
+
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
           content: data.response,
-          analysis: data.analysis,
+          analysis,
           message_id: data.message_id,
           created_at: data.created_at,
           feedback: null,
         },
       ]);
-      setActiveAnalysis(data.analysis || null);
+      setActiveAnalysis(analysis);
       setFollowUps(data.follow_up_questions || []);
     } catch (e) {
       console.error(e);
@@ -292,7 +307,10 @@ export default function Home() {
                   {/* Open Investigation button */}
                   {hasAnalysis && (
                     <button
-                      onClick={() => setActiveAnalysis(m.analysis)}
+                      onClick={() => setActiveAnalysis({
+                        ...m.analysis,
+                        response: m.analysis.response || m.content || "",
+                      })}
                       className={`rounded-lg border px-4 py-2 mb-2 text-sm transition cursor-pointer ${
                         isCurrentlyActive
                           ? "border-blue-500 bg-blue-50 text-blue-700 font-medium shadow-xs"
