@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import logo from "../assets/Seal_of_Karnataka.svg";
+import { ShieldCheck } from "lucide-react";
 
 async function getErrorMessage(response, fallbackMessage) {
   try {
@@ -67,62 +69,120 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-950 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-8">
-        <div className="mb-6">
-          <p className="text-xs uppercase tracking-widest text-gray-500">
-            {t("auth.loginTitle")}
-          </p>
-          <h1 className="mt-1 text-2xl font-bold text-white">{t("auth.signIn")}</h1>
-          <p className="mt-2 text-sm text-gray-400">
+    <div className="flex min-h-screen bg-slate-50">
+      {/* Left branding panel */}
+      <div className="relative hidden w-[440px] shrink-0 overflow-hidden bg-red-700 lg:flex lg:flex-col lg:items-center lg:justify-between">
+        {/* Subtle grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+
+        {/* Top decorative line */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
+
+        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-12 text-center">
+          <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 backdrop-blur-sm">
+            <img src={logo} alt="Karnataka State Police" className="h-16 w-16" />
+          </div>
+          <h2 className="text-3xl font-bold tracking-tight text-white">
+            KSP CrimeLens
+          </h2>
+          <p className="mt-3 max-w-xs text-sm leading-relaxed text-red-100">
             {t("auth.loginSubtitle")}
           </p>
         </div>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label className="text-xs uppercase tracking-wide text-gray-400">
-              {t("auth.kgid")}
-            </label>
-            <input
-              className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 font-mono uppercase text-white focus:border-blue-500 focus:outline-none"
-              placeholder={t("auth.kgidPlaceholder")}
-              value={form.kgid}
-              onChange={set("kgid")}
-              autoComplete="username"
-            />
+        <div className="relative z-10 pb-10">
+          <p className="text-xs font-medium uppercase tracking-widest text-red-200">
+            {t("auth.loginTitle")}
+          </p>
+        </div>
+      </div>
+
+      {/* Right form panel */}
+      <div className="flex flex-1 items-center justify-center px-6 py-12">
+        <div className="w-full max-w-sm">
+          {/* Mobile-only branding */}
+          <div className="mb-8 flex flex-col items-center lg:hidden">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 ring-1 ring-red-100">
+              <img src={logo} alt="Karnataka State Police" className="h-10 w-10" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">
+              KSP CrimeLens
+            </h2>
           </div>
 
-          <div>
-            <label className="text-xs uppercase tracking-wide text-gray-400">
-              {t("auth.password")}
-            </label>
-            <input
-              type="password"
-              className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-white focus:border-blue-500 focus:outline-none"
-              value={form.password}
-              onChange={set("password")}
-              autoComplete="current-password"
-            />
+          {/* Card */}
+          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+            <div className="mb-8 flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
+                <ShieldCheck size={18} className="text-red-700" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-slate-900">
+                  {t("auth.signIn")}
+                </h1>
+              </div>
+            </div>
+
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <div>
+                <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  {t("auth.kgid")}
+                </label>
+                <input
+                  className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 font-mono text-sm uppercase text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition"
+                  placeholder={t("auth.kgidPlaceholder")}
+                  value={form.kgid}
+                  onChange={set("kgid")}
+                  autoComplete="username"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  {t("auth.password")}
+                </label>
+                <input
+                  type="password"
+                  className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition"
+                  value={form.password}
+                  onChange={set("password")}
+                  autoComplete="current-password"
+                />
+              </div>
+
+              {error && (
+                <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={!form.kgid || !form.password || loading}
+                className="w-full rounded-lg bg-red-700 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800 disabled:opacity-40 cursor-pointer"
+              >
+                {loading ? t("auth.signingIn") : t("auth.signIn")}
+              </button>
+            </form>
           </div>
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={!form.kgid || !form.password || loading}
-            className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:opacity-40"
-          >
-            {loading ? t("auth.signingIn") : t("auth.signIn")}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-gray-400">
-          {t("auth.needAccount")}{" "}
-          <Link to="/signup" className="text-blue-400 hover:text-blue-300">
-            {t("auth.createOne")}
-          </Link>
-        </p>
+          <p className="mt-6 text-center text-sm text-slate-500">
+            {t("auth.needAccount")}{" "}
+            <Link
+              to="/signup"
+              className="font-medium text-red-700 hover:text-red-800 transition"
+            >
+              {t("auth.createOne")}
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

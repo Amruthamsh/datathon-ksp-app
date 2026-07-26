@@ -1,8 +1,15 @@
 import sqlite3
 from contextlib import contextmanager
+from pathlib import Path
 import os
 from dotenv import load_dotenv
-load_dotenv()
+
+_dir = Path(__file__).resolve().parent
+for candidate in [_dir, *_dir.parents]:
+    env_file = candidate / ".env"
+    if env_file.exists():
+        load_dotenv(env_file)
+        break
 
 SQLITE_DATABASE_PATH = os.getenv("SQLITE_DATABASE_PATH")
 

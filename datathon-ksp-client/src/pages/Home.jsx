@@ -15,7 +15,7 @@ import useSpeechSynthesis from "../hooks/useSpeechSynthesis";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useParams, useNavigate, useOutletContext } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useOutletContext } from "react-router-dom";
 import AnalysisPanel from "../components/AnalysisPanel";
 import { useAuth } from "../auth/AuthContext";
 import { generateResponse, getConversation, sendFeedback } from "../api/chat";
@@ -23,6 +23,7 @@ import { generateResponse, getConversation, sendFeedback } from "../api/chat";
 export default function Home() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { token } = useAuth();
   const { refreshConversations } = useOutletContext();
   const { t, i18n } = useTranslation();
@@ -41,6 +42,7 @@ export default function Home() {
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const didConsumeInitialState = useRef(false);
 
   const { speak, stop } = useSpeechSynthesis();
 
@@ -79,6 +81,16 @@ export default function Home() {
       setFollowUps([]);
     }
   }, [id, token, navigate]); // Ensure navigate is in the dependency array
+
+  // Pre-fill input when navigating from Investigations with context
+  useEffect(() => {
+    if (didConsumeInitialState.current) return;
+    const initialMessage = location.state?.initialMessage;
+    if (initialMessage) {
+      didConsumeInitialState.current = true;
+      setInput(initialMessage);
+    }
+  }, [location.state]);
 
   // Auto-scroll to bottom
   useEffect(() => {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   ChevronDown,
@@ -37,6 +38,7 @@ import actSectionMeta from "../data/actSectionMetadata.json";
 export default function InvestigationsQueue() {
   const { token } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   // --- STATE ---
   const [summary, setSummary] = useState(null);
@@ -288,6 +290,53 @@ export default function InvestigationsQueue() {
       typeof a === "object" ? `${a.ActID} ${a.SectionID}`.trim() : String(a),
     );
   }, [caseIntel]);
+
+  // --- CONTEXT BUILDERS FOR AI NAVIGATION ---
+  const buildCaseContext = () => {
+    if (!selectedCase) return "";
+    const parts = [];
+
+    parts.push(`Case: ${selectedCase.CrimeNo || `#${selectedCase.CaseMasterID}`}`);
+    if (selectedCase.Priority) parts.push(`Priority: ${selectedCase.Priority}`);
+    if (selectedCase.CrimeHeadName) parts.push(`Crime Head: ${selectedCase.CrimeHeadName}`);
+    if (selectedCase.CrimeGroupName) parts.push(`Crime Group: ${selectedCase.CrimeGroupName}`);
+    if (selectedCase.Gravity) parts.push(`Gravity: ${selectedCase.Gravity}`);
+    if (selectedCase.CaseStatusName) parts.push(`Status: ${selectedCase.CaseStatusName}`);
+    if (selectedCase.UnitName || selectedCase.DistrictName) {
+      parts.push(`Location: ${selectedCase.UnitName || ""}${selectedCase.UnitName && selectedCase.DistrictName ? ", " : ""}${selectedCase.DistrictName || ""}`);
+    }
+    if (selectedCase.FirstName) parts.push(`IO: ${selectedCase.FirstName}`);
+    if (selectedCase.BriefFacts) parts.push(`Brief Facts: ${selectedCase.BriefFacts}`);
+    if (formattedActs.length > 0) parts.push(`Acts/Sections: ${formattedActs.join(", ")}`);
+    if (caseIntel?.accused?.length > 0) {
+      const names = caseIntel.accused.map((a) => a.AccusedName).join(", ");
+      parts.push(`Accused: ${names}`);
+    }
+    if (caseIntel?.victims?.length > 0) {
+      const names = caseIntel.victims.map((v) => v.VictimName).join(", ");
+      parts.push(`Victims: ${names}`);
+    }
+    if (similarCases.length > 0) {
+      const refs = similarCases.slice(0, 3).map((s) => s.CrimeNo).join(", ");
+      parts.push(`Similar Cases: ${refs}`);
+    }
+
+    return parts.join("\n");
+  };
+
+  const handleDeepDive = () => {
+    if (!selectedCase) return;
+    const context = buildCaseContext();
+    const msg = `Provide a deep dive analysis of the following FIR case. Identify patterns, key evidence gaps, and investigative leads:\n\n${context}`;
+    navigate("/", { state: { initialMessage: msg } });
+  };
+
+  const handleRecommendNextSteps = () => {
+    if (!selectedCase) return;
+    const context = buildCaseContext();
+    const msg = `Based on the following FIR case details, recommend the next investigative steps, prioritized actions, and any follow-up enquiries needed:\n\n${context}`;
+    navigate("/", { state: { initialMessage: msg } });
+  };
 
   const actSectionDetails = useMemo(() => {
     if (!caseIntel?.acts || !Array.isArray(caseIntel.acts)) return [];
@@ -1098,10 +1147,16 @@ export default function InvestigationsQueue() {
 
           {/* DRAWER FOOTER */}
           <div className="p-4 border-t border-slate-200 bg-white space-y-3">
-            <button className="w-full py-2 bg-slate-100 text-slate-700 font-medium text-sm rounded-md hover:bg-slate-200 transition">
+            <button
+              onClick={handleDeepDive}
+              className="w-full py-2 bg-slate-100 text-slate-700 font-medium text-sm rounded-md hover:bg-slate-200 transition"
+            >
               {t("investigations.actions2.deepDive")}
             </button>
-            <button className="w-full py-2 bg-blue-600 text-white font-medium text-sm rounded-md hover:bg-blue-700 flex justify-center items-center transition shadow-sm">
+            <button
+              onClick={handleRecommendNextSteps}
+              className="w-full py-2 bg-blue-600 text-white font-medium text-sm rounded-md hover:bg-blue-700 flex justify-center items-center transition shadow-sm"
+            >
               <Bot size={16} className="mr-2" />{" "}
               {t("investigations.actions2.askAIContextually")}
             </button>
