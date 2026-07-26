@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -32,10 +33,11 @@ function LoginRoute() {
 function SessionListener() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     function handleSessionExpired() {
-      toast.error("Your session has expired. Please sign in again.");
+      toast.error(t("app.sessionExpired"));
       signOut();
       navigate("/login", { replace: true });
     }
@@ -45,7 +47,7 @@ function SessionListener() {
     return () => {
       window.removeEventListener("session-expired", handleSessionExpired);
     };
-  }, [navigate, signOut]);
+  }, [navigate, signOut, t]);
 
   return null;
 }

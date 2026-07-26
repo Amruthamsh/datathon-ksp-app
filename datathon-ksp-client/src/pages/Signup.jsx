@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 function formatErrorDetail(detail) {
   if (!detail) {
@@ -57,6 +58,7 @@ export default function Signup() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
   const { signIn, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -86,7 +88,7 @@ export default function Signup() {
 
       if (!response.ok) {
         throw new Error(
-          await getErrorMessage(response, "Unable to verify officer"),
+          await getErrorMessage(response, t("auth.unableToVerify")),
         );
       }
 
@@ -95,7 +97,7 @@ export default function Signup() {
       setStep(2);
     } catch (err) {
       console.log(err.message);
-      const message = err.message || "Unable to verify officer";
+      const message = err.message || t("auth.unableToVerify");
       setError(message);
       toast.error(message);
     } finally {
@@ -122,7 +124,7 @@ export default function Signup() {
 
       if (!response.ok) {
         throw new Error(
-          await getErrorMessage(response, "Unable to create account"),
+          await getErrorMessage(response, t("auth.unableToCreate")),
         );
       }
 
@@ -139,7 +141,7 @@ export default function Signup() {
         throw new Error(
           await getErrorMessage(
             signInResponse,
-            "Account created, but sign in failed",
+            t("auth.accountCreatedSignInFailed"),
           ),
         );
       }
@@ -149,7 +151,7 @@ export default function Signup() {
       navigate("/", { replace: true });
     } catch (err) {
       console.log(err.message);
-      const message = err.message || "Unable to create account";
+      const message = err.message || t("auth.unableToCreate");
       setError(message);
       toast.error(message);
     } finally {
@@ -162,16 +164,16 @@ export default function Signup() {
       <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-8">
         <div className="mb-6">
           <p className="text-xs uppercase tracking-widest text-gray-500">
-            Karnataka State Police
+            {t("auth.signupTitle")}
           </p>
-          <h1 className="mt-1 text-2xl font-bold text-white">Create Account</h1>
+          <h1 className="mt-1 text-2xl font-bold text-white">{t("auth.signUp")}</h1>
           <p className="mt-2 text-sm text-gray-400">
-            Verify your identity first, then set your credentials.
+            {t("auth.signupSubtitle")}
           </p>
         </div>
 
         <div className="mb-6 flex gap-2">
-          {["Verify Identity", "Set Credentials"].map((label, index) => (
+          {[t("auth.verifyIdentity"), t("auth.setCredentials")].map((label, index) => (
             <div
               key={label}
               className={`h-1 flex-1 rounded-full ${step > index ? "bg-blue-500" : "bg-gray-700"}`}
@@ -184,18 +186,18 @@ export default function Signup() {
           <div className="space-y-4">
             <div>
               <label className="text-xs uppercase tracking-wide text-gray-400">
-                KGID
+                {t("auth.kgid")}
               </label>
               <input
                 className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 font-mono uppercase text-white focus:border-blue-500 focus:outline-none"
-                placeholder="KGIDxxxxxxxx"
+                placeholder={t("auth.kgidPlaceholder")}
                 value={form.kgid}
                 onChange={set("kgid")}
               />
             </div>
             <div>
               <label className="text-xs uppercase tracking-wide text-gray-400">
-                Date of Birth
+                {t("auth.dob")}
               </label>
               <input
                 type="date"
@@ -209,7 +211,7 @@ export default function Signup() {
               disabled={!form.kgid || !form.dob || loading}
               className="mt-2 w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:opacity-40"
             >
-              {loading ? "Verifying..." : "Verify Identity"}
+              {loading ? t("auth.verifying") : t("auth.verifyIdentity")}
             </button>
             {verifiedOfficer && (
               <p className="text-sm text-emerald-400">
@@ -217,9 +219,9 @@ export default function Signup() {
               </p>
             )}
             <p className="text-center text-sm text-gray-400">
-              Already have an account?{" "}
+              {t("auth.alreadyHaveAccount")}{" "}
               <Link to="/login" className="text-blue-400 hover:text-blue-300">
-                Sign in
+                {t("auth.signIn")}
               </Link>
             </p>
           </div>
@@ -229,7 +231,7 @@ export default function Signup() {
           <div className="space-y-4">
             <div>
               <label className="text-xs uppercase tracking-wide text-gray-400">
-                Password
+                {t("auth.password")}
               </label>
               <input
                 type="password"
@@ -240,8 +242,7 @@ export default function Signup() {
             </div>
             <div>
               <label className="text-xs uppercase tracking-wide text-gray-400">
-                Phone{" "}
-                <span className="normal-case text-gray-600">(optional)</span>
+                {t("auth.phone")}
               </label>
               <input
                 className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-white focus:border-blue-500 focus:outline-none"
@@ -252,8 +253,7 @@ export default function Signup() {
             </div>
             <div>
               <label className="text-xs uppercase tracking-wide text-gray-400">
-                Email{" "}
-                <span className="normal-case text-gray-600">(optional)</span>
+                {t("auth.email")}
               </label>
               <input
                 type="email"
@@ -270,21 +270,21 @@ export default function Signup() {
                 onClick={() => setStep(1)}
                 className="flex-1 rounded-lg bg-gray-800 py-3 text-gray-300 transition hover:bg-gray-700"
               >
-                Back
+                {t("auth.back")}
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={!form.password || loading}
                 className="flex-1 rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:opacity-40"
               >
-                {loading ? "Creating..." : "Create Account"}
+                {loading ? t("auth.creating") : t("auth.signUp")}
               </button>
             </div>
 
             <p className="text-center text-sm text-gray-400">
-              Already have an account?{" "}
+              {t("auth.alreadyHaveAccount")}{" "}
               <Link to="/login" className="text-blue-400 hover:text-blue-300">
-                Sign in
+                {t("auth.signIn")}
               </Link>
             </p>
           </div>

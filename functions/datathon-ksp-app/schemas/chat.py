@@ -5,6 +5,7 @@ from typing import Optional
 class ChatRequest(BaseModel):
     user_query: str
     conversation_id: Optional[str] = None
+    language: Optional[str] = None
 
 
 class RenameConversationRequest(BaseModel):

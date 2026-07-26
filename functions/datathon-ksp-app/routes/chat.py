@@ -59,7 +59,12 @@ async def generate_response(
         except Exception as e:
             logger.warning(f"Failed to save user message (non-fatal): {e}")
 
-    state = {"messages": _build_state_messages(history, request.user_query)}
+    state = {
+        "messages": _build_state_messages(history, request.user_query),
+        "language": request.language or "en",
+        "original_query": request.user_query,
+        "translated_query": "",
+    }
 
     graph_error = None
     try:

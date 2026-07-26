@@ -13,6 +13,7 @@ import {
   Copy,
   Trash,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import ChartRenderer from "../components/ChartRenderer.jsx";
 import { listReports, executeReportQuery, deleteReport } from "../api/reports";
@@ -21,6 +22,7 @@ import { useAuth } from "../auth/AuthContext";
 // ── SQL & Reasoning Details ───────────────────────────────────────────────────
 
 function SqlDetailsDrawer({ report, chartConfig }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -36,7 +38,7 @@ function SqlDetailsDrawer({ report, chartConfig }) {
       {chartConfig?.reason && (
         <div>
           <span className="font-bold text-slate-500 block mb-1 uppercase tracking-wider text-[10px]">
-            AI Reasoning
+            {t("reports.aiReasoning")}
           </span>
           <p className="bg-slate-950 text-blue-300 leading-relaxed p-2.5 rounded-lg border border-slate-700/60">
             {chartConfig.reason}
@@ -47,7 +49,7 @@ function SqlDetailsDrawer({ report, chartConfig }) {
         <div>
           <div className="flex items-center justify-between mb-1">
             <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">
-              Executed SQL
+              {t("reports.executedSql")}
             </span>
             <button
               onClick={handleCopy}
@@ -55,11 +57,11 @@ function SqlDetailsDrawer({ report, chartConfig }) {
             >
               {copied ? (
                 <>
-                  <Check className="w-3 h-3 text-green-400" /> Copied
+                  <Check className="w-3 h-3 text-green-400" /> {t("reports.copied")}
                 </>
               ) : (
                 <>
-                  <Copy className="w-3 h-3" /> Copy SQL
+                  <Copy className="w-3 h-3" /> {t("reports.copySql")}
                 </>
               )}
             </button>
@@ -76,6 +78,7 @@ function SqlDetailsDrawer({ report, chartConfig }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const Reports = () => {
+  const { t } = useTranslation();
   const { token } = useAuth();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -175,7 +178,7 @@ const Reports = () => {
       <div className="flex h-96 flex-col items-center justify-center space-y-3 text-slate-500">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         <span className="text-sm font-medium">
-          Executing queries and generating dashboard...
+          {t("reports.loading")}
         </span>
       </div>
     );
@@ -191,11 +194,10 @@ const Reports = () => {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 p-4 shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <LayoutGrid className="w-6 h-6 text-blue-600" /> Saved Analytics
-            Reports
+            <LayoutGrid className="w-6 h-6 text-blue-600" /> {t("reports.title")}
           </h1>
           <p className="text-sm text-slate-500">
-            View visualizations or inspect dynamic queries.
+            {t("reports.subtitle")}
           </p>
         </div>
         {hiddenWidgetIds.size > 0 && (
@@ -203,8 +205,7 @@ const Reports = () => {
             onClick={handleResetDashboard}
             className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5" /> Restore (
-            {hiddenWidgetIds.size}) Hidden Widgets
+            <RotateCcw className="w-3.5 h-3.5" /> {t("reports.restore", {count: hiddenWidgetIds.size})}
           </button>
         )}
       </div>
@@ -215,16 +216,16 @@ const Reports = () => {
           <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-2xl p-12 text-center bg-white">
             <BarChart2 className="w-12 h-12 text-slate-300 mb-3" />
             <h3 className="text-base font-semibold text-slate-700">
-              No active widgets
+              {t("reports.noActiveWidgets")}
             </h3>
             <p className="text-sm text-slate-500 mb-4">
-              All reports are hidden or no data was returned.
+              {t("reports.allHidden")}
             </p>
             <button
               onClick={handleResetDashboard}
               className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition cursor-pointer"
             >
-              Reset Dashboard
+              {t("reports.resetDashboard")}
             </button>
           </div>
         ) : (
@@ -244,28 +245,28 @@ const Reports = () => {
                     <div className="flex items-center gap-2 overflow-hidden pr-2">
                       <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                       <h2 className="truncate text-sm font-semibold text-slate-800">
-                        {report.title || "Untitled Report"}
+                        {report.title || t("reports.untitledReport")}
                       </h2>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => handleDelete(id)}
                         className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer"
-                        title="Delete Report"
+                        title={t("reports.actions.deleteReport")}
                       >
                         <Trash className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => toggleSet(setShowSqlWidgetIds, id)}
                         className={`p-1.5 rounded transition cursor-pointer ${isSqlVisible ? "bg-slate-200 text-blue-600" : "text-slate-400 hover:text-slate-600 hover:bg-slate-200/60"}`}
-                        title="View SQL & Reasoning"
+                        title={t("reports.actions.viewSql")}
                       >
                         <Code className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => toggleSet(setMinimizedWidgetIds, id)}
                         className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded transition cursor-pointer"
-                        title={isMinimized ? "Expand" : "Minimize"}
+                        title={isMinimized ? t("reports.actions.expand") : t("reports.actions.minimize")}
                       >
                         {isMinimized ? (
                           <ChevronDown className="w-4 h-4" />
@@ -276,7 +277,7 @@ const Reports = () => {
                       <button
                         onClick={() => setExpandedWidgetId(id)}
                         className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded transition cursor-pointer"
-                        title="Full Screen"
+                        title={t("reports.actions.fullScreen")}
                       >
                         <Maximize2 className="w-4 h-4" />
                       </button>
@@ -285,7 +286,7 @@ const Reports = () => {
                           setHiddenWidgetIds((prev) => new Set(prev).add(id))
                         }
                         className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer"
-                        title="Hide Widget"
+                        title={t("reports.actions.hideWidget")}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -343,7 +344,7 @@ const Reports = () => {
                       {report.title}
                     </h3>
                     <p className="text-xs text-slate-500">
-                      Detailed view and source query
+                      {t("reports.detailedView")}
                     </p>
                   </div>
                   <button

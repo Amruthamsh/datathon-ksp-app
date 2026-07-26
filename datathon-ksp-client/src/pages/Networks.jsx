@@ -6,6 +6,7 @@ import {
   AlertTriangle, X, Loader2, GitBranch, List,
 } from "lucide-react";
 import PropTypes from "prop-types";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import * as networkApi from "../api/network";
 
@@ -84,6 +85,7 @@ function StarRating({ count, total = 5 }) {
 }
 
 export default function CriminalNetworks() {
+  const { t } = useTranslation();
   const { token } = useAuth();
   const [view, setView] = useState("landing");
   const [searchQuery, setSearchQuery] = useState("");
@@ -232,23 +234,23 @@ export default function CriminalNetworks() {
     }
 
     return (
-      <div className="flex flex-col h-screen bg-slate-50">
+      <div className="flex flex-col h-full bg-slate-50">
         <header className="flex-shrink-0 bg-white border-b border-slate-200 px-8 py-5">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                  CRIMINAL NETWORK INTELLIGENCE
+                  {t("networks.title")}
                 </h1>
                 <p className="text-sm text-slate-500 mt-0.5">
-                  Identify key individuals, connections, and criminal organisations
+                  {t("networks.subtitle")}
                 </p>
               </div>
             </div>
             <form onSubmit={executeSearch} className="relative max-w-2xl">
               <input
                 type="text"
-                placeholder="Search Person Name, Crime Number, Police Station..."
+                placeholder={t("networks.searchPlaceholder")}
                 value={searchQuery}
                 onChange={handleSearchChange}
                 className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
@@ -261,20 +263,20 @@ export default function CriminalNetworks() {
                 <div className="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
                   {searchResults.people?.length > 0 && (
                     <div>
-                      <p className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50">People</p>
+                      <p className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50">{t("networks.tabs.people")}</p>
                       {searchResults.people.slice(0, 5).map((p, i) => (
                         <button key={i} onClick={() => selectSearchResult(p)}
                           className="w-full px-4 py-2 hover:bg-amber-50 flex items-center gap-2 text-sm">
                           <User className="h-4 w-4 text-amber-500" />
                           <span className="font-semibold text-slate-800">{p.name}</span>
-                          <span className="text-xs text-slate-400 ml-auto">{p.case_count} FIRs</span>
+                          <span className="text-xs text-slate-400 ml-auto">{t("networks.firs", {count: p.case_count})}</span>
                         </button>
                       ))}
                     </div>
                   )}
                   {searchResults.cases?.length > 0 && (
                     <div>
-                      <p className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50">Cases</p>
+                      <p className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50">{t("networks.tabs.cases")}</p>
                       {searchResults.cases.map((c, i) => (
                         <button key={i} onClick={() => selectSearchResult(c)}
                           className="w-full px-4 py-2 hover:bg-amber-50 flex items-center gap-2 text-sm">
@@ -286,7 +288,7 @@ export default function CriminalNetworks() {
                   )}
                   {searchResults.stations?.length > 0 && (
                     <div>
-                      <p className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50">Stations</p>
+                      <p className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50">{t("networks.tabs.stations")}</p>
                       {searchResults.stations.map((s, i) => (
                         <button key={i} onClick={() => selectSearchResult(s)}
                           className="w-full px-4 py-2 hover:bg-amber-50 flex items-center gap-2 text-sm">
@@ -305,14 +307,14 @@ export default function CriminalNetworks() {
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto p-8 space-y-8">
             <div className="grid grid-cols-4 gap-4">
-              <SummaryCard icon={<Users className="h-5 w-5" />} label="Repeat Offenders" value={nodeCounts.accused} color="text-amber-600" bg="bg-amber-50" />
-              <SummaryCard icon={<Network className="h-5 w-5" />} label="Criminal Groups" value={nodeCounts.groups} color="text-red-600" bg="bg-red-50" />
-              <SummaryCard icon={<GitBranch className="h-5 w-5" />} label="Bridge Individuals" value={nodeCounts.bridges} color="text-purple-600" bg="bg-purple-50" />
-              <SummaryCard icon={<AlertTriangle className="h-5 w-5" />} label="High Risk Networks" value={nodeCounts.highRisk} color="text-red-700" bg="bg-red-100" />
+              <SummaryCard icon={<Users className="h-5 w-5" />} label={t("networks.stats.repeatOffenders")} value={nodeCounts.accused} color="text-amber-600" bg="bg-amber-50" />
+              <SummaryCard icon={<Network className="h-5 w-5" />} label={t("networks.stats.criminalGroups")} value={nodeCounts.groups} color="text-red-600" bg="bg-red-50" />
+              <SummaryCard icon={<GitBranch className="h-5 w-5" />} label={t("networks.stats.bridgeIndividuals")} value={nodeCounts.bridges} color="text-purple-600" bg="bg-purple-50" />
+              <SummaryCard icon={<AlertTriangle className="h-5 w-5" />} label={t("networks.stats.highRiskNetworks")} value={nodeCounts.highRisk} color="text-red-700" bg="bg-red-100" />
             </div>
 
             <div>
-              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Top Criminal Networks</h2>
+              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">{t("networks.topNetworks")}</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {communities.slice(0, 6).map((net, i) => (
                   <button key={i} onClick={() => net.members?.[0] && selectPerson(net.members[0])}
@@ -326,30 +328,30 @@ export default function CriminalNetworks() {
                       }`}>{net.risk}</span>
                     </div>
                     <div className="flex gap-4 text-xs text-slate-500">
-                      <span><strong className="text-slate-700">{net.member_count}</strong> Members</span>
-                      <span><strong className="text-slate-700">{net.total_firs}</strong> FIRs</span>
-                      <span><strong className="text-slate-700">{net.stations_covered}</strong> Stations</span>
+                      <span><strong className="text-slate-700">{net.member_count}</strong> {t("networks.columns.members")}</span>
+                      <span><strong className="text-slate-700">{net.total_firs}</strong> {t("networks.columns.firs")}</span>
+                      <span><strong className="text-slate-700">{net.stations_covered}</strong> {t("networks.columns.stations")}</span>
                     </div>
                   </button>
                 ))}
                 {communities.length === 0 && (
-                  <p className="text-sm text-slate-400 col-span-3 text-center py-8">No networks identified yet. Search for a person to begin.</p>
+                  <p className="text-sm text-slate-400 col-span-3 text-center py-8">{t("networks.noNetworks")}</p>
                 )}
               </div>
             </div>
 
             {bridgeIndividuals.length > 0 && (
               <div>
-                <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Bridge Individuals</h2>
+                <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">{t("networks.bridgeIndividuals")}</h2>
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       <tr>
-                        <th className="text-left px-4 py-2">Name</th>
-                        <th className="text-left px-4 py-2">FIRs</th>
-                        <th className="text-left px-4 py-2">Associates</th>
-                        <th className="text-left px-4 py-2">Stations</th>
-                        <th className="text-left px-4 py-2">Districts</th>
+                        <th className="text-left px-4 py-2">{t("networks.table.name")}</th>
+                        <th className="text-left px-4 py-2">{t("networks.columns.firs")}</th>
+                        <th className="text-left px-4 py-2">{t("networks.table.associates")}</th>
+                        <th className="text-left px-4 py-2">{t("networks.columns.stations")}</th>
+                        <th className="text-left px-4 py-2">{t("networks.table.districts")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -377,11 +379,11 @@ export default function CriminalNetworks() {
   const counts = countByType(graphData);
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50">
+    <div className="flex flex-col h-full bg-slate-50">
       <header className="flex-shrink-0 h-14 bg-white border-b border-slate-200 px-6 flex items-center gap-4">
         <button onClick={() => { setView("landing"); setPersonName(null); setGraphData(null); }}
           className="text-xs font-semibold text-slate-400 hover:text-slate-600 mr-2">
-          ← Back
+          ← {t("networks.back")}
         </button>
         <form onSubmit={executeSearch} className="relative flex-1 max-w-md">
           <input
@@ -406,11 +408,11 @@ export default function CriminalNetworks() {
         <div className="flex items-center gap-2 ml-auto">
           <button onClick={() => setActiveTab("graph")}
             className={`px-3 py-1.5 text-xs font-medium rounded-md ${activeTab === "graph" ? "bg-amber-100 text-amber-800" : "text-slate-500 hover:bg-slate-100"}`}>
-            <List className="h-3.5 w-3.5 inline mr-1" /> Graph
+            <List className="h-3.5 w-3.5 inline mr-1" /> {t("networks.graph")}
           </button>
           <button onClick={() => setActiveTab("timeline")}
             className={`px-3 py-1.5 text-xs font-medium rounded-md ${activeTab === "timeline" ? "bg-amber-100 text-amber-800" : "text-slate-500 hover:bg-slate-100"}`}>
-            <Clock className="h-3.5 w-3.5 inline mr-1" /> Timeline
+            <Clock className="h-3.5 w-3.5 inline mr-1" /> {t("networks.timeline")}
           </button>
         </div>
       </header>
@@ -426,16 +428,50 @@ export default function CriminalNetworks() {
           {activeTab === "graph" ? (
             <>
               {graphData && (
-                <div className="absolute top-3 left-3 z-10 flex gap-2">
-                  <span className="bg-white px-2.5 py-1 rounded-md shadow-sm border text-xs font-semibold text-amber-700">
-                    <User className="h-3 w-3 inline mr-1" /> {counts.accused}
-                  </span>
-                  <span className="bg-white px-2.5 py-1 rounded-md shadow-sm border text-xs font-semibold text-red-600">
-                    <FileText className="h-3 w-3 inline mr-1" /> {counts.cases}
-                  </span>
-                  <span className="bg-white px-2.5 py-1 rounded-md shadow-sm border text-xs font-semibold text-green-600">
-                    <MapPin className="h-3 w-3 inline mr-1" /> {counts.stations}
-                  </span>
+                <div className="absolute bottom-4 left-4 z-10">
+                  <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-md border border-slate-200/80 px-4 py-3 w-max">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2.5">Legend</p>
+
+                    <div className="flex gap-5">
+                      <div className="space-y-1.5">
+                        <p className="text-[8px] font-bold text-slate-300 uppercase tracking-wider">Nodes</p>
+                        <div className="flex items-center gap-2">
+                          <span className="w-4 h-4 rounded-full bg-amber-500 shadow-sm ring-1 ring-white" />
+                          <span className="text-[10px] text-slate-600 font-medium">Accused ({counts.accused})</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4" viewBox="0 0 16 16"><polygon points="8,1 14.5,5 14.5,11 8,15 1.5,11 1.5,5" fill="#ef4444" stroke="white" strokeWidth="1"/></svg>
+                          <span className="text-[10px] text-slate-600 font-medium">FIR / Case ({counts.cases})</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-4 h-4 bg-emerald-500 shadow-sm rounded-[3px] ring-1 ring-white" />
+                          <span className="text-[10px] text-slate-600 font-medium">Station ({counts.stations})</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-4 h-3.5 bg-blue-500 shadow-sm rounded-[2px] ring-1 ring-white" />
+                          <span className="text-[10px] text-slate-600 font-medium">Officer ({counts.officers})</span>
+                        </div>
+                      </div>
+
+                      <div className="w-px bg-slate-100" />
+
+                      <div className="space-y-1.5">
+                        <p className="text-[8px] font-bold text-slate-300 uppercase tracking-wider">Edges</p>
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-0 border-t-[3px] border-slate-400 rounded-full" />
+                          <span className="text-[10px] text-slate-600 font-medium">Person link</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-0 border-t-[2px] border-emerald-300 rounded-full" />
+                          <span className="text-[10px] text-slate-600 font-medium">Station link</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-0 border-t-[1.5px] border-purple-400 rounded-full" />
+                          <span className="text-[10px] text-slate-600 font-medium">Semantic</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -471,7 +507,7 @@ export default function CriminalNetworks() {
             </>
           ) : (
             <div className="p-6 overflow-y-auto h-full">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Timeline</h3>
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">{t("networks.timeline")}</h3>
               {timeline.length > 0 ? (
                 <div className="relative pl-6 border-l-2 border-amber-200 space-y-6">
                   {timeline.map((evt, i) => (
@@ -503,77 +539,77 @@ export default function CriminalNetworks() {
           )}
         </div>
 
-        <aside className="w-[400px] bg-white border-l border-slate-200 flex flex-col overflow-y-auto">
+        <aside className="w-[480px] bg-white border-l border-slate-200 flex flex-col overflow-y-auto">
           {profile ? (
             <div className="p-5 space-y-5">
               <div>
-                <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Network Profile</h2>
+                <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{t("networks.profile.title")}</h2>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
                     <User className="h-5 w-5 text-amber-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-800">{profile.person.name}</h3>
-                    <p className="text-xs text-slate-500">Person</p>
+                    <p className="text-xs text-slate-500">{t("networks.profile.person")}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <MetricItem label="Network Score" value={`${profile.person.network_score}/100`} />
-                  <MetricItem label="Network Rank" value={profile.person.network_rank} />
-                  <MetricItem label="Associated FIRs" value={profile.person.fir_count} />
-                  <MetricItem label="Known Associates" value={profile.person.known_associates} />
-                  <MetricItem label="Police Stations" value={profile.person.station_count} />
-                  <MetricItem label="Districts" value={profile.person.district_count} />
-                  <MetricItem label="Most Common Crime" value={profile.person.most_common_crime} />
-                  <MetricItem label="Recent Activity" value={`${profile.person.recent_activity_60d} FIRs in 60d`} />
+                  <MetricItem label={t("networks.profile.networkScore")} value={`${profile.person.network_score}/100`} />
+                  <MetricItem label={t("networks.profile.networkRank")} value={profile.person.network_rank} />
+                  <MetricItem label={t("networks.profile.associatedFirs")} value={profile.person.fir_count} />
+                  <MetricItem label={t("networks.profile.knownAssociates")} value={profile.person.known_associates} />
+                  <MetricItem label={t("networks.profile.policeStations")} value={profile.person.station_count} />
+                  <MetricItem label={t("networks.table.districts")} value={profile.person.district_count} />
+                  <MetricItem label={t("networks.profile.mostCommonCrime")} value={profile.person.most_common_crime} />
+                  <MetricItem label={t("networks.profile.recentActivity")} value={`${profile.person.recent_activity_60d} FIRs in 60d`} />
                 </div>
               </div>
 
               <div>
-                <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Investigation Leads</h2>
+                <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">{t("networks.profile.investigationLeads")}</h2>
                 <div className="space-y-2">
                   <LeadCard
                     stars={5}
-                    title="Central figure"
-                    detail={`Appears in ${profile.person.fir_count} FIRs`}
+                    title={t("networks.insights.centralFigure")}
+                    detail={t("networks.insights.appearsInFirs", {count: profile.person.fir_count})}
                     active={true}
                   />
                   {associates.slice(0, 3).map((a, i) => (
                     <LeadCard
                       key={i}
                       stars={4}
-                      title={`Frequently arrested with ${a.name}`}
-                      detail={`${a.shared_firs} shared FIRs`}
+                      title={t("networks.insights.frequentlyArrestedWith", {name: a.name})}
+                      detail={`${a.shared_firs} ${t("networks.insights.sharedFirs")}`}
                       onClick={() => handleLeadClick(a.name)}
                     />
                   ))}
                   {profile.person.district_count > 1 && (
                     <LeadCard
                       stars={4}
-                      title={`Operates across ${profile.person.district_count} districts`}
+                      title={t("networks.insights.operatesAcrossDistricts", {count: profile.person.district_count})}
                       detail={profile.person.districts?.join(", ")}
                     />
                   )}
                   <LeadCard
                     stars={4}
-                    title={`Linked to ${profile.person.known_associates} repeat offenders`}
-                    detail="Associates with criminal history"
+                    title={t("networks.insights.linkedToRepeatOffenders", {count: profile.person.known_associates})}
+                    detail={t("networks.insights.associatesWithCriminalHistory")}
                   />
                 </div>
               </div>
 
               {analytics && (
                 <div>
-                  <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Network Analytics</h2>
+                  <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">{t("networks.analytics.title")}</h2>
                   <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
                     <table className="w-full text-xs">
                       <thead className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase">
                         <tr>
-                          <th className="text-left px-3 py-1.5">Associates</th>
-                          <th className="text-left px-3 py-1.5">Shared FIRs</th>
-                          <th className="text-left px-3 py-1.5">Shared Arrests</th>
-                          <th className="text-left px-3 py-1.5">Stations</th>
-                          <th className="text-left px-3 py-1.5">Last Seen</th>
+                          <th className="text-left px-3 py-1.5">{t("networks.table.associates")}</th>
+                          <th className="text-left px-3 py-1.5">{t("networks.columns.firs")}</th>
+                          <th className="text-left px-3 py-1.5">{t("networks.analytics.sharedArrests")}</th>
+                          <th className="text-left px-3 py-1.5">{t("networks.columns.stations")}</th>
+                          <th className="text-left px-3 py-1.5">{t("networks.analytics.lastSeen")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
@@ -597,7 +633,7 @@ export default function CriminalNetworks() {
             <div className="flex-1 flex items-center justify-center text-slate-400 p-6 text-center">
               <div>
                 <Users className="h-10 w-10 mx-auto mb-3 text-slate-200" />
-                <p className="text-sm">Select a person or network to view their intelligence profile.</p>
+                <p className="text-sm">{t("networks.empty")}</p>
               </div>
             </div>
           )}

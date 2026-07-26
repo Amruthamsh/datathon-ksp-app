@@ -9,6 +9,7 @@
 - **Dual Database Architecture**:
   - **SQLite** (`synthetic-data/fir_system.db`): Structured FIR crime data queried by the LangGraph SQL Agent for natural language analytics.
   - **Zoho Catalyst Datastore / NoSQL**: Handles user auth, chat/conversation history, and user reports.
+- **No test suite exists**. There are no `test/`, `tests/`, or `__tests__/` directories anywhere in the repo. No pytest or Jest config.
 
 ## Developer Commands
 
@@ -39,7 +40,18 @@
   - `SECRET_KEY`: Auth token signing key
 - **FastAPI WSGI Adapter**: `main.py` uses `a2wsgi.ASGIMiddleware` and `FlaskResponse` inside `handler(request)` to adapt FastAPI to Zoho Catalyst's execution handler format.
 - **Client API Routing**: `datathon-ksp-client/vite.config.js` proxies `/api` to `http://localhost:3000/server/datathon-ksp-app`.
-- **SQL Agent Graph**: Implemented in `functions/datathon-ksp-app/agents/sql_query_db/` using LangGraph (`Router` -> `Chat` OR `Planner` -> `Fetch Values` -> `Generate SQL` -> `Execute SQL` -> `Response` / `Chart` -> `Finalize`).
+- **SQL Agent Graph**: Implemented in `functions/datathon-ksp-app/agents/sql_query_db/` using LangGraph (`Language Detection` -> `Translate Query` -> `Router` -> `Chat` OR `Planner` -> `Fetch Values` -> `Generate SQL` -> `Execute SQL` -> `Response` / `Chart` -> `Finalize` -> `Translate Response`).
+
+## Multilingual Support (English / Kannada)
+
+- **Frontend i18n**: `react-i18next` with locale files at `src/locales/{en,kn}/common.json`. Language persisted in `localStorage("ksp-lang")`. The `LanguageSelector` component toggles via `i18n.changeLanguage()`.
+- **Backend Language Pipeline**: Three new LangGraph nodes run before/after the existing agent:
+  1. `language_detection_node` — Unicode range detection (>=30% Kannada chars = "kn")
+  2. `translate_query_node` — LLM translates Kannada query to canonical English using domain dictionaries
+  3. `translate_response_node` — LLM translates English analysis output back to natural Kannada
+- **Domain Dictionary**: `functions/datathon-ksp-app/config/domain_dictionary.py` maps Kannada terms to canonical English for: crime heads (5), sub-heads (21), districts (31 + aliases), case statuses, gravity, ranks, acts, genders, religions, and common query terms.
+- **Database stays English-only**: SQL generation always happens against English schema. Only input/output change language.
+- **Chat API**: `POST /chat/generate` accepts optional `language` field ("en" or "kn"). Frontend passes `i18n.language` from the selector.
 
 ## Frontend Design & UI Development
 

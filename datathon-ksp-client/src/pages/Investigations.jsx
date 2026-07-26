@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Search,
   ChevronDown,
@@ -35,6 +36,7 @@ import actSectionMeta from "../data/actSectionMetadata.json";
 
 export default function InvestigationsQueue() {
   const { token } = useAuth();
+  const { t } = useTranslation();
 
   // --- STATE ---
   const [summary, setSummary] = useState(null);
@@ -305,11 +307,23 @@ export default function InvestigationsQueue() {
 
   const metrics = summary
     ? [
-        { label: "Assigned", value: summary.assigned },
-        { label: "Chargesheet Pending", value: summary.chargesheet_pending },
-        { label: "Repeat Offenders", value: summary.repeat_offenders },
-        { label: "Arrests Pending", value: summary.arrests_pending },
-        { label: "Need Review Today", value: summary.review_today },
+        {
+          label: t("investigations.filters.assigned"),
+          value: summary.assigned,
+        },
+        {
+          label: t("investigations.filters.chargesheetPending"),
+          value: summary.chargesheet_pending,
+        },
+        {
+          label: t("investigations.filters.repeatOffenders"),
+          value: summary.repeat_offenders,
+        },
+        {
+          label: t("investigations.filters.arrestsPending"),
+          value: summary.arrests_pending,
+        },
+        // { label: t("investigations.filters.needReviewToday"), value: summary.review_today },
       ]
     : [];
 
@@ -322,27 +336,29 @@ export default function InvestigationsQueue() {
     if (priority.includes("CRITICAL")) {
       return (
         <span className="flex items-center px-2.5 py-1 bg-red-100 text-red-700 font-bold text-xs rounded border border-red-200">
-          <ShieldAlert size={12} className="mr-1" /> CRITICAL
+          <ShieldAlert size={12} className="mr-1" />{" "}
+          {t("investigations.priority.critical")}
         </span>
       );
     }
     if (priority.includes("HIGH")) {
       return (
         <span className="flex items-center px-2.5 py-1 bg-orange-100 text-orange-700 font-bold text-xs rounded border border-orange-200">
-          <AlertCircle size={12} className="mr-1" /> HIGH
+          <AlertCircle size={12} className="mr-1" />{" "}
+          {t("investigations.priority.high")}
         </span>
       );
     }
     if (priority.includes("MEDIUM")) {
       return (
         <span className="flex items-center px-2.5 py-1 bg-yellow-100 text-yellow-700 font-bold text-xs rounded border border-yellow-200">
-          MEDIUM
+          {t("investigations.priority.medium")}
         </span>
       );
     }
     return (
       <span className="flex items-center px-2.5 py-1 bg-slate-100 text-slate-600 font-bold text-xs rounded border border-slate-200">
-        LOW
+        {t("investigations.priority.low")}
       </span>
     );
   };
@@ -352,19 +368,19 @@ export default function InvestigationsQueue() {
       <div className="flex h-screen w-full items-center justify-center bg-slate-50">
         <div className="flex items-center space-x-2 text-slate-600">
           <Loader2 className="animate-spin" size={24} />
-          <span className="font-medium">Loading Investigations Queue...</span>
+          <span className="font-medium">{t("investigations.loading")}</span>
         </div>
       </div>
     );
   }
 
   const filterConfig = [
-    { label: "Status", key: "CaseStatusName" },
-    { label: "Gravity", key: "Gravity" },
-    { label: "Station", key: "UnitName" },
-    { label: "Officer", key: "FirstName" },
-    { label: "District", key: "DistrictName" },
-    { label: "Crime Head", key: "CrimeHeadName" },
+    { label: t("investigations.filters.status"), key: "CaseStatusName" },
+    { label: t("investigations.filters.gravity"), key: "Gravity" },
+    { label: t("investigations.filters.station"), key: "UnitName" },
+    { label: t("investigations.filters.officer"), key: "FirstName" },
+    { label: t("investigations.filters.district"), key: "DistrictName" },
+    { label: t("investigations.filters.crimeHead"), key: "CrimeHeadName" },
   ];
 
   return (
@@ -380,10 +396,10 @@ export default function InvestigationsQueue() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-2xl font-bold text-slate-800">
-                Investigations Queue
+                {t("investigations.title")}
               </h1>
               <p className="text-sm text-slate-500">
-                Prioritize, review, and execute based on active signals.
+                {t("investigations.subtitle")}
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -396,7 +412,7 @@ export default function InvestigationsQueue() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search CR No, station, district..."
+                  placeholder={t("investigations.searchPlaceholder")}
                   className="pl-9 pr-4 py-2 border border-slate-300 rounded-md text-sm w-72 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
                 {searchQuery && (
@@ -437,14 +453,16 @@ export default function InvestigationsQueue() {
               </span>
               <div className="flex space-x-2">
                 <button className="flex items-center px-3 py-1.5 text-sm bg-white border border-slate-300 rounded hover:bg-slate-50 text-slate-700 transition">
-                  <Activity size={14} className="mr-2 text-slate-500" /> Compare
+                  <Activity size={14} className="mr-2 text-slate-500" />{" "}
+                  {t("investigations.actions.compare")}
                 </button>
                 <button className="flex items-center px-3 py-1.5 text-sm bg-white border border-slate-300 rounded hover:bg-slate-50 text-slate-700 transition">
-                  <Target size={14} className="mr-2 text-slate-500" /> Common
-                  Suspects
+                  <Target size={14} className="mr-2 text-slate-500" />{" "}
+                  {t("investigations.actions.commonSuspects")}
                 </button>
                 <button className="flex items-center px-3 py-1.5 text-sm bg-blue-600 border border-blue-700 rounded hover:bg-blue-700 text-white shadow-sm transition ml-auto">
-                  <Bot size={14} className="mr-2" /> Ask AI
+                  <Bot size={14} className="mr-2" />{" "}
+                  {t("investigations.actions.askAI")}
                 </button>
               </div>
             </div>
@@ -476,7 +494,7 @@ export default function InvestigationsQueue() {
                             onClick={() => handleFilterSelect(key, "")}
                             className="w-full text-left px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-50"
                           >
-                            All {label}s
+                            {t("investigations.allLabel", { label })}
                           </button>
                           {options.map((opt) => (
                             <button
@@ -502,21 +520,25 @@ export default function InvestigationsQueue() {
                     onClick={clearFilters}
                     className="flex items-center px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded transition"
                   >
-                    <FilterX size={14} className="mr-1" /> Reset
+                    <FilterX size={14} className="mr-1" />{" "}
+                    {t("investigations.reset")}
                   </button>
                 )}
               </div>
 
               <div className="flex items-center text-sm">
                 <span className="text-slate-500 mr-2 text-xs uppercase tracking-wider font-semibold">
-                  Sort:
+                  {t("investigations.filters.sortPriority").split(":")[0]}:
                 </span>
                 <button
                   onClick={() => setSortAscending((prev) => !prev)}
                   className="flex items-center font-medium text-slate-800 hover:bg-slate-100 px-2 py-1 rounded"
                 >
                   <ShieldAlert size={14} className="mr-1 text-red-500" />{" "}
-                  Priority {sortAscending ? "▲" : "▼"}
+                  {t("investigations.filters.sortPriority")
+                    .split(":")[1]
+                    ?.trim() || "Priority"}{" "}
+                  {sortAscending ? "▲" : "▼"}
                 </button>
               </div>
             </div>
@@ -535,24 +557,25 @@ export default function InvestigationsQueue() {
                   />
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Priority
+                  {t("investigations.filters.sortPriority")
+                    .split(":")[1]
+                    ?.trim() || "Priority"}
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Crime No
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Station
+                  {t("investigations.filters.station")}
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Status
+                  {t("investigations.filters.status")}
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Gravity
+                  {t("investigations.filters.gravity")}
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Age
                 </th>
-
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -616,8 +639,7 @@ export default function InvestigationsQueue() {
                     colSpan={7}
                     className="py-12 text-center text-slate-400 text-sm"
                   >
-                    No investigations match the selected filters or search
-                    terms.
+                    {t("investigations.empty")}
                   </td>
                 </tr>
               )}
@@ -675,7 +697,7 @@ export default function InvestigationsQueue() {
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                   <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center">
                     <FileText size={14} className="mr-1.5 text-blue-600" />
-                    Case Summary
+                    {t("investigations.detail.caseSummary")}
                   </h3>
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
                     {selectedCase.BriefFacts}
@@ -684,66 +706,77 @@ export default function InvestigationsQueue() {
               )}
 
               {/* PRIORITY EXPLANATION */}
-              {selectedCase.priority_reasons && selectedCase.priority_reasons.length > 0 && (
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 relative">
-                  <div className="flex items-center text-slate-800 font-bold text-xs uppercase tracking-wider mb-3">
-                    <Info size={14} className="mr-1.5 text-slate-500" /> Why{" "}
-                    {selectedCase.Priority || "Priority"}?
+              {selectedCase.priority_reasons &&
+                selectedCase.priority_reasons.length > 0 && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 relative">
+                    <div className="flex items-center text-slate-800 font-bold text-xs uppercase tracking-wider mb-3">
+                      <Info size={14} className="mr-1.5 text-slate-500" /> Why{" "}
+                      {selectedCase.Priority || "Priority"}?
+                    </div>
+                    <ul className="space-y-2">
+                      {selectedCase.priority_reasons.map((reason, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-start text-sm text-slate-700"
+                        >
+                          <span className="text-slate-400 mr-2 mt-0.5">•</span>
+                          {reason}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <ul className="space-y-2">
-                    {selectedCase.priority_reasons.map((reason, idx) => (
-                      <li
-                        key={idx}
-                        className="flex items-start text-sm text-slate-700"
-                      >
-                        <span className="text-slate-400 mr-2 mt-0.5">•</span>
-                        {reason}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                )}
 
               {/* CASE DETAILS */}
               <div className="border-b border-slate-100 pb-4">
                 <h3 className="text-sm font-semibold text-slate-800 flex items-center mb-3">
                   <Building size={16} className="text-slate-400 mr-2" />
-                  Case Details
+                  {t("investigations.detail.caseDetails")}
                 </h3>
                 <div className="grid grid-cols-2 gap-y-2 text-xs pl-6">
                   <div>
-                    <span className="text-slate-400 block">Crime Group</span>
+                    <span className="text-slate-400 block">
+                      {t("investigations.detail.crimeGroup")}
+                    </span>
                     <span className="font-medium text-slate-700">
                       {selectedCase.CrimeGroupName || "-"}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">Crime Head</span>
+                    <span className="text-slate-400 block">
+                      {t("investigations.detail.crimeHead")}
+                    </span>
                     <span className="font-medium text-slate-700">
                       {selectedCase.CrimeHeadName || "-"}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">Gravity</span>
+                    <span className="text-slate-400 block">
+                      {t("investigations.detail.gravity")}
+                    </span>
                     <span className="font-medium text-slate-700">
                       {selectedCase.Gravity || "-"}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">District</span>
+                    <span className="text-slate-400 block">
+                      {t("investigations.detail.district")}
+                    </span>
                     <span className="font-medium text-slate-700">
                       {selectedCase.DistrictName || "-"}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block">Incident Date</span>
+                    <span className="text-slate-400 block">
+                      {t("investigations.detail.incidentDate")}
+                    </span>
                     <span className="font-medium text-slate-700">
                       {formatDate(selectedCase.IncidentFromDate)}
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-400 block">
-                      Registration Date
+                      {t("investigations.detail.registrationDate")}
                     </span>
                     <span className="font-medium text-slate-700">
                       {formatDate(selectedCase.CrimeRegisteredDate)}
@@ -756,14 +789,15 @@ export default function InvestigationsQueue() {
               <div className="border-b border-slate-100 pb-4">
                 <h3 className="text-sm font-semibold text-slate-800 flex items-center mb-3">
                   <Users size={16} className="text-slate-400 mr-2" />
-                  People
+                  {t("investigations.detail.people")}
                 </h3>
                 <div className="space-y-3 text-sm pl-6 text-slate-700">
                   {/* ACCUSED */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        Accused ({caseIntel?.accused_count ?? caseIntel?.accused ?? 0})
+                        {t("investigations.detail.accused")} (
+                        {caseIntel?.accused_count ?? caseIntel?.accused ?? 0})
                       </span>
                     </div>
                     {caseIntel?.accused && caseIntel.accused.length > 0 ? (
@@ -777,13 +811,20 @@ export default function InvestigationsQueue() {
                               {p.AccusedName}
                             </span>
                             <span className="text-xs text-slate-500">
-                              {p.AgeYear}y · {p.GenderID === "M" ? "Male" : p.GenderID === "F" ? "Female" : p.GenderID}
+                              {p.AgeYear}y ·{" "}
+                              {p.GenderID === "M"
+                                ? "Male"
+                                : p.GenderID === "F"
+                                  ? "Female"
+                                  : p.GenderID}
                             </span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-slate-400 italic">None recorded</p>
+                      <p className="text-xs text-slate-400 italic">
+                        {t("investigations.detail.noneRecorded")}
+                      </p>
                     )}
                   </div>
 
@@ -791,10 +832,13 @@ export default function InvestigationsQueue() {
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        Victims ({caseIntel?.victim_count ?? caseIntel?.victims ?? 0})
+                        {t("investigations.detail.victims")} (
+                        {caseIntel?.victim_count ?? caseIntel?.victims ?? 0})
                       </span>
                     </div>
-                    {caseIntel?.victims && Array.isArray(caseIntel.victims) && caseIntel.victims.length > 0 ? (
+                    {caseIntel?.victims &&
+                    Array.isArray(caseIntel.victims) &&
+                    caseIntel.victims.length > 0 ? (
                       <div className="space-y-1">
                         {caseIntel.victims.map((p) => (
                           <div
@@ -804,17 +848,26 @@ export default function InvestigationsQueue() {
                             <span className="font-medium text-slate-800">
                               {p.VictimName}
                               {p.VictimPolice ? (
-                                <span className="ml-1.5 px-1 py-0.5 bg-blue-100 text-blue-600 rounded text-[10px] font-semibold">POLICE</span>
+                                <span className="ml-1.5 px-1 py-0.5 bg-blue-100 text-blue-600 rounded text-[10px] font-semibold">
+                                  POLICE
+                                </span>
                               ) : null}
                             </span>
                             <span className="text-xs text-slate-500">
-                              {p.AgeYear}y · {p.GenderID === "M" ? "Male" : p.GenderID === "F" ? "Female" : p.GenderID}
+                              {p.AgeYear}y ·{" "}
+                              {p.GenderID === "M"
+                                ? "Male"
+                                : p.GenderID === "F"
+                                  ? "Female"
+                                  : p.GenderID}
                             </span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-slate-400 italic">None recorded</p>
+                      <p className="text-xs text-slate-400 italic">
+                        {t("investigations.detail.noneRecorded")}
+                      </p>
                     )}
                   </div>
 
@@ -836,7 +889,7 @@ export default function InvestigationsQueue() {
               <div className="border-b border-slate-100 pb-4">
                 <h3 className="text-sm font-semibold text-slate-800 flex items-center mb-3">
                   <Gavel size={16} className="text-slate-400 mr-2" />
-                  Acts & Sections
+                  {t("investigations.detail.actsAndSections")}
                 </h3>
                 <div className="pl-6 space-y-3">
                   {actSectionDetails.length > 0 ? (
@@ -871,8 +924,8 @@ export default function InvestigationsQueue() {
                               }`}
                             >
                               {item.sectionMeta.bailable
-                                ? "Bailable"
-                                : "Non-Bailable"}
+                                ? t("investigations.detail.bailable")
+                                : t("investigations.detail.nonBailable")}
                             </span>
                           )}
                           {item.sectionMeta?.punishment && (
@@ -883,26 +936,34 @@ export default function InvestigationsQueue() {
                         </div>
 
                         <div className="flex items-center gap-3 pt-0.5">
-                          {(item.sectionMeta?.indiacode_url || item.actMeta?.indiacode_url) && (
+                          {(item.sectionMeta?.indiacode_url ||
+                            item.actMeta?.indiacode_url) && (
                             <a
-                              href={item.sectionMeta?.indiacode_url || item.actMeta?.indiacode_url}
+                              href={
+                                item.sectionMeta?.indiacode_url ||
+                                item.actMeta?.indiacode_url
+                              }
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-[10px] text-blue-600 hover:underline font-medium flex items-center"
                             >
                               <ExternalLink size={10} className="mr-1" />
-                              IndiaCode
+                              {t("investigations.detail.indiaCode")}
                             </a>
                           )}
-                          {(item.sectionMeta?.kanoon_url || item.actMeta?.kanoon_url) && (
+                          {(item.sectionMeta?.kanoon_url ||
+                            item.actMeta?.kanoon_url) && (
                             <a
-                              href={item.sectionMeta?.kanoon_url || item.actMeta?.kanoon_url}
+                              href={
+                                item.sectionMeta?.kanoon_url ||
+                                item.actMeta?.kanoon_url
+                              }
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-[10px] text-blue-600 hover:underline font-medium flex items-center"
                             >
                               <ExternalLink size={10} className="mr-1" />
-                              Indian Kanoon
+                              {t("investigations.detail.indianKanoon")}
                             </a>
                           )}
                         </div>
@@ -927,7 +988,7 @@ export default function InvestigationsQueue() {
                 <div className="border-b border-slate-100 pb-4">
                   <h3 className="text-sm font-semibold text-slate-800 flex items-center mb-2">
                     <Share2 size={16} className="text-slate-400 mr-2" />
-                    Cross Investigation Intel
+                    {t("investigations.intel.crossInvestigation")}
                   </h3>
                   <p className="text-sm text-slate-600 pl-6">
                     {caseIntel.summary}
@@ -938,7 +999,10 @@ export default function InvestigationsQueue() {
               {/* SIMILAR CASES BREAKDOWN */}
               <div className="border border-slate-200 rounded-lg p-4">
                 <div className="flex items-center justify-between text-slate-800 font-semibold text-xs uppercase tracking-wider mb-2">
-                  <span>Similar Cases ({similarCases.length})</span>
+                  <span>
+                    {t("investigations.intel.similarCases")} (
+                    {similarCases.length})
+                  </span>
                 </div>
                 {similarCases.length > 0 ? (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -956,19 +1020,23 @@ export default function InvestigationsQueue() {
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-x-3 text-slate-500">
-                          {sim.CrimeHeadName && <span>{sim.CrimeHeadName}</span>}
+                          {sim.CrimeHeadName && (
+                            <span>{sim.CrimeHeadName}</span>
+                          )}
                           {sim.Gravity && <span>{sim.Gravity}</span>}
                           {sim.DistrictName && <span>{sim.DistrictName}</span>}
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {sim.shared_accused_count > 0 && (
                             <span className="px-1.5 py-0.5 bg-red-50 text-red-600 rounded font-medium">
-                              {sim.shared_accused_count} shared accused
+                              {sim.shared_accused_count}{" "}
+                              {t("investigations.intel.sharedAccused")}
                             </span>
                           )}
                           {sim.shared_act_count > 0 && (
                             <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded font-medium">
-                              {sim.shared_act_count} shared acts
+                              {sim.shared_act_count}{" "}
+                              {t("investigations.intel.sharedActs")}
                             </span>
                           )}
                         </div>
@@ -991,17 +1059,21 @@ export default function InvestigationsQueue() {
               <div className="border-b border-slate-100 pb-4">
                 <h3 className="text-sm font-semibold text-slate-800 flex items-center mb-2">
                   <Map size={16} className="text-slate-400 mr-2" />
-                  Location
+                  {t("investigations.detail.district")}
                 </h3>
                 <div className="text-xs text-slate-600 pl-6 space-y-1">
                   <p>
-                    <span className="text-slate-400">Station ID:</span>{" "}
+                    <span className="text-slate-400">
+                      {t("investigations.location.stationId")}:
+                    </span>{" "}
                     {selectedCase.PoliceStationID ||
                       selectedCase.UnitName ||
                       "N/A"}
                   </p>
                   <p>
-                    <span className="text-slate-400">District:</span>{" "}
+                    <span className="text-slate-400">
+                      {t("investigations.detail.district")}:
+                    </span>{" "}
                     {selectedCase.DistrictName || "N/A"}
                   </p>
                   {selectedCase.latitude && selectedCase.longitude && (
@@ -1012,8 +1084,9 @@ export default function InvestigationsQueue() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center text-blue-600 font-medium hover:underline text-xs"
                       >
-                        <ExternalLink size={12} className="mr-1" /> View on Map
-                        ({selectedCase.latitude.toFixed(4)},{" "}
+                        <ExternalLink size={12} className="mr-1" />{" "}
+                        {t("investigations.location.viewOnMap")}(
+                        {selectedCase.latitude.toFixed(4)},{" "}
                         {selectedCase.longitude.toFixed(4)})
                       </a>
                     </div>
@@ -1026,10 +1099,11 @@ export default function InvestigationsQueue() {
           {/* DRAWER FOOTER */}
           <div className="p-4 border-t border-slate-200 bg-white space-y-3">
             <button className="w-full py-2 bg-slate-100 text-slate-700 font-medium text-sm rounded-md hover:bg-slate-200 transition">
-              Deep Dive
+              {t("investigations.actions2.deepDive")}
             </button>
             <button className="w-full py-2 bg-blue-600 text-white font-medium text-sm rounded-md hover:bg-blue-700 flex justify-center items-center transition shadow-sm">
-              <Bot size={16} className="mr-2" /> Ask AI Contextually
+              <Bot size={16} className="mr-2" />{" "}
+              {t("investigations.actions2.askAIContextually")}
             </button>
           </div>
         </div>

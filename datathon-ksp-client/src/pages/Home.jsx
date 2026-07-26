@@ -9,6 +9,7 @@ import {
   ThumbsDown,
   RefreshCw,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import useSpeechRecognition from "../hooks/useSpeechRecognition";
 import useSpeechSynthesis from "../hooks/useSpeechSynthesis";
 import ReactMarkdown from "react-markdown";
@@ -19,16 +20,17 @@ import AnalysisPanel from "../components/AnalysisPanel";
 import { useAuth } from "../auth/AuthContext";
 import { generateResponse, getConversation, sendFeedback } from "../api/chat";
 
-const GREETING = {
-  role: "assistant",
-  content: "Hello! Ask me anything about the crime database.",
-};
-
 export default function Home() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
   const { refreshConversations } = useOutletContext();
+  const { t, i18n } = useTranslation();
+
+  const GREETING = {
+    role: "assistant",
+    content: t("chat.greeting"),
+  };
 
   const [messages, setMessages] = useState([GREETING]);
   const [input, setInput] = useState("");
@@ -109,7 +111,7 @@ export default function Home() {
     setFollowUps([]);
 
     try {
-      const data = await generateResponse(token, message, id || null);
+      const data = await generateResponse(token, message, id || null, i18n.language);
       // If this was a new chat, refresh the sidebar and redirect
       if (!id && data.conversation_id) {
         refreshConversations();
@@ -286,8 +288,8 @@ export default function Home() {
                       }`}
                     >
                       {isCurrentlyActive
-                        ? "Viewing Investigation"
-                        : "Open Investigation"}
+                        ? t("chat.viewingInvestigation")
+                        : t("chat.openInvestigation")}
                     </button>
                   )}
 
@@ -297,11 +299,11 @@ export default function Home() {
                       <button
                         onClick={() => handleCopy(m.content, i)}
                         className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition cursor-pointer"
-                        title="Copy"
+                        title={t("chat.copy")}
                       >
                         {copiedIndex === i ? (
                           <span className="text-[10px] font-medium text-green-600">
-                            OK
+                            {t("chat.copied")}
                           </span>
                         ) : (
                           <Copy size={12} />
@@ -324,7 +326,7 @@ export default function Home() {
                             ? "bg-red-100 text-red-600"
                             : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
                         }`}
-                        title={speakingIndex === i ? "Stop" : "Read aloud"}
+                        title={speakingIndex === i ? t("chat.stop") : t("chat.readAloud")}
                       >
                         <Volume2 size={12} />
                       </button>
@@ -336,7 +338,7 @@ export default function Home() {
                             ? "text-blue-600 bg-blue-100 hover:bg-blue-200"
                             : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
                         }`}
-                        title="Helpful"
+                        title={t("chat.helpful")}
                       >
                         <ThumbsUp size={12} />
                       </button>
@@ -348,7 +350,7 @@ export default function Home() {
                             ? "text-red-600 bg-red-100 hover:bg-red-200"
                             : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
                         }`}
-                        title="Not helpful"
+                        title={t("chat.notHelpful")}
                       >
                         <ThumbsDown size={12} />
                       </button>
@@ -356,7 +358,7 @@ export default function Home() {
                       <button
                         onClick={() => retryMessage(i)}
                         className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition cursor-pointer"
-                        title="Retry"
+                        title={t("chat.retry")}
                       >
                         <RefreshCw size={12} />
                       </button>
@@ -415,7 +417,7 @@ export default function Home() {
             <textarea
               ref={textareaRef}
               value={input}
-              placeholder="Ask a question or provide instructions..."
+              placeholder={t("chat.inputPlaceholder")}
               className="flex-1 resize-none bg-transparent text-[15px] leading-6 outline-none overflow-y-auto max-h-45 py-2 placeholder:text-slate-400"
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -438,7 +440,7 @@ export default function Home() {
           {isListening && (
             <div className="mt-2">
               <span className="text-xs text-red-500 font-medium">
-                🎤 Listening...
+                🎤 {t("chat.listening")}
               </span>
             </div>
           )}

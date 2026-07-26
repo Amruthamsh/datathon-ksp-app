@@ -246,3 +246,86 @@ async def get_network_overlay(
         logger.error(e)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to fetch network overlay.")
+
+
+# ------------------------------------------------------------------
+# Intelligence Map — new endpoints
+# ------------------------------------------------------------------
+
+@router.get("/heatmap-trends", status_code=status.HTTP_200_OK)
+async def get_heatmap_trends(
+    current_user: dict = Depends(get_current_user),
+    repo: CrimeMapRepository = Depends(get_crime_map_repository),
+):
+    try:
+        data = repo.get_heatmap_trends()
+        return {"status": "success", "data": data}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch heatmap trends.")
+
+
+@router.get("/district-risk", status_code=status.HTTP_200_OK)
+async def get_district_risk(
+    current_user: dict = Depends(get_current_user),
+    repo: CrimeMapRepository = Depends(get_crime_map_repository),
+):
+    try:
+        data = repo.get_district_risk_summary()
+        return {"status": "success", "data": data}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch district risk data.")
+
+
+@router.get("/cluster-intel", status_code=status.HTTP_200_OK)
+async def get_cluster_intel(
+    lat: float = Query(...),
+    lng: float = Query(...),
+    current_user: dict = Depends(get_current_user),
+    repo: CrimeMapRepository = Depends(get_crime_map_repository),
+):
+    try:
+        data = repo.get_cluster_intel(lat, lng)
+        return {"status": "success", "data": data}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch cluster intelligence.")
+
+
+@router.get("/patrol-plan", status_code=status.HTTP_200_OK)
+async def get_patrol_plan(
+    time_range: str = Query("night"),
+    units: int = Query(6),
+    crime_focus: int = Query(None),
+    area: str = Query(None),
+    current_user: dict = Depends(get_current_user),
+    repo: CrimeMapRepository = Depends(get_crime_map_repository),
+):
+    try:
+        data = repo.get_patrol_plan(
+            time_range=time_range, units=units,
+            crime_focus=crime_focus, area=area,
+        )
+        return {"status": "success", "data": data}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to generate patrol plan.")
+
+
+@router.get("/network-overlay-enhanced", status_code=status.HTTP_200_OK)
+async def get_network_overlay_enhanced(
+    current_user: dict = Depends(get_current_user),
+    repo: CrimeMapRepository = Depends(get_crime_map_repository),
+):
+    try:
+        data = repo.get_network_overlay_enhanced()
+        return {"status": "success", "data": data}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch enhanced network overlay.")

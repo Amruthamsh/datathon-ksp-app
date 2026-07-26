@@ -1,4 +1,5 @@
 import { useState } from "react";
+import i18n from "../i18n";
 
 export default function useSpeechSynthesis() {
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -11,7 +12,7 @@ export default function useSpeechSynthesis() {
 
     const utterance = new SpeechSynthesisUtterance(text);
 
-    utterance.lang = "en-IN";
+    utterance.lang = i18n.language === "kn" ? "kn-IN" : "en-IN";
     utterance.rate = 1;
     utterance.pitch = 1;
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Save, Download } from "lucide-react";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx";
 import { toBlob } from "html-to-image";
 
@@ -14,6 +15,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useMemo } from "react";
 
 function DataTable({ rows = [], columns = [], filename = "export_data" }) {
+  const { t } = useTranslation();
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
   const [filter, setFilter] = useState("");
@@ -85,7 +87,7 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
           />
           <input
             type="text"
-            placeholder="Filter rows…"
+            placeholder={t("analysis.filterRows")}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-8 pr-8 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
@@ -105,7 +107,7 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
           className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         >
           <Download size={14} className="text-slate-500" />
-          <span>Export Excel</span>
+          <span>{t("analysis.exportExcel")}</span>
         </button>
       </div>
 
@@ -172,8 +174,8 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
                     colSpan={Math.max(columns.length, 1)}
                   >
                     {filter
-                      ? "No rows match the filter."
-                      : "No result rows were returned."}
+                      ? t("analysis.noRowsMatch")
+                      : t("analysis.noResultRows")}
                   </td>
                 </tr>
               )}
@@ -188,6 +190,7 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function AnalysisPanel({ analysis }) {
+  const { t } = useTranslation();
   const rows = Array.isArray(analysis?.sql_result) ? analysis.sql_result : [];
   const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
   const charts = Array.isArray(analysis?.charts) ? analysis.charts : [];
@@ -205,10 +208,10 @@ export default function AnalysisPanel({ analysis }) {
         charts: analysis.charts,
         summary: analysis.response || "",
       });
-      alert("Report added.");
+      alert(t("analysis.reportAdded"));
     } catch (err) {
       console.error(err);
-      alert("Unable to save report.");
+      alert(t("analysis.unableToSaveReport"));
     } finally {
       setSaving(false);
     }
@@ -270,7 +273,7 @@ export default function AnalysisPanel({ analysis }) {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Export error:", err);
-      alert("Export failed. Please check backend logs or try again.");
+      alert(t("analysis.exportFailed"));
     }
   }
 
@@ -280,8 +283,7 @@ export default function AnalysisPanel({ analysis }) {
   ) {
     return (
       <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/80 px-8 text-center text-slate-500 shadow-sm">
-        Pick a response with analysis to inspect the visualization and query
-        data.
+        {t("analysis.pickResponse")}
       </div>
     );
   }
@@ -295,10 +297,10 @@ export default function AnalysisPanel({ analysis }) {
         <div className="flex items-center justify-between gap-6">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-              Analysis Workspace
+              {t("analysis.workspace")}
             </p>
             <h2 className="mt-1 truncate text-xl font-semibold text-slate-900">
-              {charts[0]?.title || charts[0]?.intent || "Query Analysis"}
+              {charts[0]?.title || charts[0]?.intent || t("analysis.queryAnalysis")}
             </h2>
           </div>
           <div className="flex shrink-0 items-center gap-3">
@@ -306,7 +308,7 @@ export default function AnalysisPanel({ analysis }) {
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               {hasCharts
                 ? `${charts.length} chart${charts.length > 1 ? "s" : ""}`
-                : "Table"}
+                : t("analysis.table")}
             </div>
             <button
               onClick={handleSaveReport}
@@ -314,11 +316,11 @@ export default function AnalysisPanel({ analysis }) {
               className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm hover:bg-slate-50 cursor-pointer"
             >
               <Save size={15} />
-              {saving ? "Adding..." : "Add to Reports"}
+              {saving ? t("analysis.adding") : t("analysis.addToReports")}
             </button>
             <div className="relative group">
               <button className="flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700 cursor-pointer">
-                <Download size={15} /> Export
+                <Download size={15} /> {t("analysis.export")}
               </button>
               <div className="absolute right-0 top-full z-50 pt-2 hidden w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-xl group-hover:block">
                 <button
@@ -331,7 +333,7 @@ export default function AnalysisPanel({ analysis }) {
                   onClick={() => exportAnalysis("docx")}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 cursor-pointer"
                 >
-                  Word
+                  {t("analysis.word")}
                 </button>
               </div>
             </div>
@@ -371,10 +373,10 @@ export default function AnalysisPanel({ analysis }) {
             open
           >
             <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900">
-              SQL Results
+              {t("analysis.sqlResults")}
               {rowCount > 0 && (
                 <span className="ml-2 text-xs font-normal text-slate-500">
-                  ({rowCount} rows)
+                  {t("analysis.rows", { count: rowCount })}
                 </span>
               )}
             </summary>
@@ -388,11 +390,11 @@ export default function AnalysisPanel({ analysis }) {
             open
           >
             <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900">
-              SQL Query
+              {t("analysis.sqlQuery")}
             </summary>
             <div className="mt-4">
               <pre className="overflow-x-hidden whitespace-pre-wrap wrap-break-word rounded-2xl border border-slate-200 bg-slate-950 px-4 py-4 text-xs leading-6 text-slate-100 shadow-inner">
-                {analysis?.sql_query || "No query available."}
+                {analysis?.sql_query || t("analysis.noQueryAvailable")}
               </pre>
             </div>
           </details>

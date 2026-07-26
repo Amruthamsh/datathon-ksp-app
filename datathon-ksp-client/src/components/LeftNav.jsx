@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   SquarePen,
   PanelLeftClose,
@@ -14,10 +15,11 @@ import {
 import { menuItems } from "../data/leftNavMenu.js";
 
 const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(
-    conv.title || conv.last_message || "Untitled",
+    conv.title || conv.last_message || t("nav.untitled"),
   );
   const inputRef = useRef(null);
   const menuRef = useRef(null);
@@ -41,7 +43,7 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
     const trimmed = draftTitle.trim();
     if (
       trimmed &&
-      trimmed !== (conv.title || conv.last_message || "Untitled")
+      trimmed !== (conv.title || conv.last_message || t("nav.untitled"))
     ) {
       onRename(conv.conversation_id, trimmed);
     }
@@ -50,7 +52,7 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
 
   const cancelRename = (e) => {
     e.stopPropagation();
-    setDraftTitle(conv.title || conv.last_message || "Untitled");
+    setDraftTitle(conv.title || conv.last_message || t("nav.untitled"));
     setEditing(false);
   };
 
@@ -98,7 +100,7 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
               className={`mt-0.5 shrink-0 ${isActive ? "text-blue-600" : "text-slate-400"}`}
             />
             <span className="min-w-0 flex-1 truncate text-sm leading-5">
-              {conv.title || conv.last_message || "Untitled"}
+              {conv.title || conv.last_message || t("nav.untitled")}
             </span>
           </button>
 
@@ -127,7 +129,7 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50"
                 >
-                  <Pencil size={13} className="text-slate-500" /> Rename
+                  <Pencil size={13} className="text-slate-500" /> {t("nav.rename")}
                 </button>
                 <button
                   onClick={(e) => {
@@ -137,7 +139,7 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                 >
-                  <Trash2 size={13} /> Delete
+                  <Trash2 size={13} /> {t("nav.delete")}
                 </button>
               </div>
             )}
@@ -158,13 +160,20 @@ const LeftNav = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
+  const menuKeys = ["investigations", "crimeIntelligenceMap", "criminalNetworks", "reports"];
   const routeMap = {
-    Investigations: "/investigations",
-    "Crime Intelligence Map": "/crime-intelligence-map",
-    "Criminal Networks": "/networks",
-    Reports: "/reports",
+    [t("nav.investigations")]: "/investigations",
+    [t("nav.crimeIntelligenceMap")]: "/crime-intelligence-map",
+    [t("nav.criminalNetworks")]: "/networks",
+    [t("nav.reports")]: "/reports",
   };
+
+  const translatedMenuItems = menuItems.map((item, i) => ({
+    ...item,
+    title: t(`nav.${menuKeys[i]}`),
+  }));
 
   return (
     <aside
@@ -182,7 +191,7 @@ const LeftNav = ({
               className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-100 transition cursor-pointer"
             >
               <SquarePen size={18} />
-              New Chat
+              {t("nav.newChat")}
             </button>
           )}
 
@@ -201,8 +210,7 @@ const LeftNav = ({
 
       <nav className="flex-1 overflow-y-auto">
         <div className="px-2 py-3 space-y-1">
-          {/* Use (menuItems || []) to prevent crashing if import is broken */}
-          {(menuItems || []).map((item) => {
+          {(translatedMenuItems || []).map((item) => {
             const Icon = item.icon;
             const targetPath = routeMap[item.title];
             const isActive = location.pathname === targetPath;
@@ -232,12 +240,11 @@ const LeftNav = ({
             <div className="mx-3 my-2 border-t border-slate-200" />
             <div className="px-3">
               <p className="mb-2 pl-2 text-sm font-semibold tracking-wide text-blue-700">
-                Recent Chats
+                {t("nav.recentChats")}
               </p>
 
               <div className="space-y-1">
                 {Array.isArray(conversations) &&
-                  // Create a copy, sort by updated_at (newest first), then map
                   [...conversations]
                     .sort(
                       (a, b) => new Date(b.updated_at) - new Date(a.updated_at),

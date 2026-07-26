@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import i18n from "../i18n";
 
 export default function useSpeechRecognition(onTranscript) {
   const recognitionRef = useRef(null);
@@ -26,7 +27,7 @@ export default function useSpeechRecognition(onTranscript) {
 
     const recognition = new SpeechRecognition();
 
-    recognition.lang = "en-IN";
+    recognition.lang = i18n.language === "kn" ? "kn-IN" : "en-IN";
     recognition.continuous = false;
     recognition.interimResults = true;
 
@@ -61,6 +62,10 @@ export default function useSpeechRecognition(onTranscript) {
   const startListening = () => {
     console.log("Start clicked");
 
+    // Update language dynamically before each listen
+    if (recognitionRef.current) {
+      recognitionRef.current.lang = i18n.language === "kn" ? "kn-IN" : "en-IN";
+    }
     recognitionRef.current?.start();
   };
 

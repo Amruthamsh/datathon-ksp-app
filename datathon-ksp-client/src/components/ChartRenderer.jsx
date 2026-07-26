@@ -26,6 +26,8 @@ import {
   Label,
 } from "recharts";
 
+import { useTranslation } from "react-i18next";
+
 import {
   aggregateData,
   resolveChartLayout,
@@ -113,10 +115,12 @@ function HeatmapChart({ data, xKey, yKey, valueKey }) {
 // ── Main renderer ─────────────────────────────────────────────────────────────
 
 export default function ChartRenderer({ rawConfig, rawRows, compact = false }) {
+  const { t } = useTranslation();
+
   if (!rawConfig || !Array.isArray(rawRows) || rawRows.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-slate-400 text-sm">
-        No data available.
+        {t("chart.noData")}
       </div>
     );
   }
@@ -131,7 +135,7 @@ export default function ChartRenderer({ rawConfig, rawRows, compact = false }) {
   if (!data || data.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-slate-400 text-sm">
-        No data available.
+        {t("chart.noData")}
       </div>
     );
   }
@@ -140,7 +144,7 @@ export default function ChartRenderer({ rawConfig, rawRows, compact = false }) {
   if (!layout) {
     return (
       <div className="flex h-full items-center justify-center text-slate-400 text-sm">
-        No visualization available for this result.
+        {t("chart.noVisualization")}
       </div>
     );
   }
@@ -402,7 +406,7 @@ export default function ChartRenderer({ rawConfig, rawRows, compact = false }) {
 
   return (
     <div className="flex h-full items-center justify-center text-slate-400 text-sm">
-      No visualization available for this result.
+      {t("chart.noVisualization")}
     </div>
   );
 }

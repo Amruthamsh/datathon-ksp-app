@@ -125,3 +125,40 @@ export async function getRepeatOffenderZones(token) {
   });
   return handleResponse(res);
 }
+
+export async function getHeatmapTrends(token) {
+  const res = await fetch(`${BASE}/crime-map/heatmap-trends`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function getDistrictRisk(token) {
+  const res = await fetch(`${BASE}/crime-map/district-risk`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function getClusterIntel(token, lat, lng) {
+  const qs = buildQueryString({ lat, lng });
+  const res = await fetch(`${BASE}/crime-map/cluster-intel${qs}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function getPatrolPlan(token, params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/crime-map/patrol-plan${qs}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function getNetworkOverlayEnhanced(token) {
+  const res = await fetch(`${BASE}/crime-map/network-overlay-enhanced`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}

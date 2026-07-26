@@ -21,6 +21,7 @@ export async function generateResponse(
   token,
   userQuery,
   conversationId = null,
+  language = "en",
 ) {
   const res = await fetch(`${BASE}/chat/generate`, {
     method: "POST",
@@ -31,6 +32,7 @@ export async function generateResponse(
     body: JSON.stringify({
       user_query: userQuery,
       conversation_id: conversationId,
+      language,
     }),
   });
 

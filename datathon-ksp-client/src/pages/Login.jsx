@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 async function getErrorMessage(response, fallbackMessage) {
   try {
@@ -19,6 +20,7 @@ export default function Login() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
   const { signIn, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -48,7 +50,7 @@ export default function Login() {
 
       if (!response.ok) {
         throw new Error(
-          await getErrorMessage(response, "Unable to sign in right now"),
+          await getErrorMessage(response, t("auth.unableToSignIn")),
         );
       }
 
@@ -56,7 +58,7 @@ export default function Login() {
       signIn(data.access_token, data.officer);
       navigate("/", { replace: true });
     } catch (err) {
-      const message = err?.message || "Unable to sign in right now";
+      const message = err?.message || t("auth.unableToSignIn");
       setError(message);
       toast.error(message);
     } finally {
@@ -69,22 +71,22 @@ export default function Login() {
       <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-8">
         <div className="mb-6">
           <p className="text-xs uppercase tracking-widest text-gray-500">
-            Karnataka State Police
+            {t("auth.loginTitle")}
           </p>
-          <h1 className="mt-1 text-2xl font-bold text-white">Sign In</h1>
+          <h1 className="mt-1 text-2xl font-bold text-white">{t("auth.signIn")}</h1>
           <p className="mt-2 text-sm text-gray-400">
-            Access the intelligence workspace with your KGID and password.
+            {t("auth.loginSubtitle")}
           </p>
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label className="text-xs uppercase tracking-wide text-gray-400">
-              KGID
+              {t("auth.kgid")}
             </label>
             <input
               className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 font-mono uppercase text-white focus:border-blue-500 focus:outline-none"
-              placeholder="KGIDxxxxxxxx"
+              placeholder={t("auth.kgidPlaceholder")}
               value={form.kgid}
               onChange={set("kgid")}
               autoComplete="username"
@@ -93,7 +95,7 @@ export default function Login() {
 
           <div>
             <label className="text-xs uppercase tracking-wide text-gray-400">
-              Password
+              {t("auth.password")}
             </label>
             <input
               type="password"
@@ -111,14 +113,14 @@ export default function Login() {
             disabled={!form.kgid || !form.password || loading}
             className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:opacity-40"
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? t("auth.signingIn") : t("auth.signIn")}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-400">
-          Need an account?{" "}
+          {t("auth.needAccount")}{" "}
           <Link to="/signup" className="text-blue-400 hover:text-blue-300">
-            Create one
+            {t("auth.createOne")}
           </Link>
         </p>
       </div>

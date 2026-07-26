@@ -1,0 +1,344 @@
+{
+  "app": {
+    "title": "ಕೆಎಸ್‌ಪಿ ಇಂಟೆಲಿಜೆನ್ಸ್ ಫ್ರೇಮ್‌ವರ್ಕ್",
+    "sessionExpired": "ನಿಮ್ಮ ಸೆಶನ್ ಅವಧಿ ಮುಗಿದಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಸೈನ್ ಇನ್ ಮಾಡಿ."
+  },
+  "auth": {
+    "kgid": "ಕೆಜಿಐಡಿ",
+    "password": "ಪಾಸ್‌ವರ್ಡ್",
+    "dob": "ಹುಟ್ಟಿದ ದಿನಾಂಕ",
+    "phone": "ಫೋನ್ (ಐಚ್ಛಿಕ)",
+    "email": "ಇಮೇಲ್ (ಐಚ್ಛಿಕ)",
+    "kgidPlaceholder": "ಕೆಜಿಐಡಿxxxxxxxx",
+    "signIn": "ಸೈನ್ ಇನ್",
+    "signUp": "ಖಾತೆ ರಚಿಸಿ",
+    "signOut": "ಸೈನ್ ಔಟ್",
+    "verifying": "ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ...",
+    "signingIn": "ಸೈನ್ ಇನ್ ಆಗುತ್ತಿದೆ...",
+    "creating": "ರಚಿಸಲಾಗುತ್ತಿದೆ...",
+    "needAccount": "ಖಾತೆ ಬೇಕೇ?",
+    "createOne": "ಒಂದನ್ನು ರಚಿಸಿ",
+    "alreadyHaveAccount": "ಈಗಾಗಲೇ ಖಾತೆ ಇದೆಯೇ?",
+    "loginTitle": "ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪೊಲೀಸ್",
+    "loginSubtitle": "ನಿಮ್ಮ ಕೆಜಿಐಡಿ ಮತ್ತು ಪಾಸ್‌ವರ್ಡ್ ಮೂಲಕ ಇಂಟೆಲಿಜೆನ್ಸ್ ಕಾರ್ಯಕ್ಷೇತ್ರಕ್ಕೆ ಪ್ರವೇಶಿಸಿ.",
+    "signupTitle": "ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪೊಲೀಸ್",
+    "signupSubtitle": "ಮೊದಲು ನಿಮ್ಮ ಗುರುತನ್ನು ಪರಿಶೀಲಿಸಿ, ನಂತರ ನಿಮ್ಮ ರುಜುವಾತುಗಳನ್ನು ಹೊಂದಿಸಿ.",
+    "verifyIdentity": "ಗುರುತು ಪರಿಶೀಲಿಸಿ",
+    "setCredentials": "ರುಜುವಾತುಗಳನ್ನು ಹೊಂದಿಸಿ",
+    "back": "ಹಿಂದೆ",
+    "createAccount": "ಖಾತೆ ರಚಿಸಿ",
+    "unableToVerify": "ಅಧಿಕಾರಿಯನ್ನು ಪರಿಶೀಲಿಸಲು ಸಾಧ್ಯವಾಗಿಲ್ಲ",
+    "accountCreatedSignInFailed": "ಖಾತೆ ರಚಿಸಲಾಗಿದೆ, ಆದರೆ ಸೈನ್ ಇನ್ ವಿಫಲವಾಗಿದೆ",
+    "unableToCreate": "ಖಾತೆಯನ್ನು ರಚಿಸಲು ಸಾಧ್ಯವಾಗಿಲ್ಲ",
+    "unableToSignIn": "ಈಗ ಸೈನ್ ಇನ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ"
+  },
+  "nav": {
+    "newChat": "ಹೊಸ ಚಾಟ್",
+    "recentChats": "ಇತ್ತೀಚಿನ ಚಾಟ್‌ಗಳು",
+    "rename": "ಮರುಹೆಸರಿಸಿ",
+    "delete": "ಅಳಿಸಿ",
+    "untitled": "ಹೆಸರಿಲ್ಲದ",
+    "investigations": "ತನಿಖೆಗಳು",
+    "crimeIntelligenceMap": "ಅಪರಾಧ ಇಂಟೆಲಿಜೆನ್ಸ್ ನಕ್ಷೆ",
+    "criminalNetworks": "ಅಪರಾಧಿ ಜಾಲಗಳು",
+    "reports": "ವರದಿಗಳು"
+  },
+  "header": {
+    "searchPlaceholder": "ಎಫ್‌ಐಆರ್‌ಗಳು, ಆರೋಪಿಗಳು, ಬಾಧಿತರು, ಸ್ಥಳಗಳನ್ನು ಹುಡುಕಿ...",
+    "unknownUser": "ಅಜ್ಞಾತ ಬಳಕೆದಾರ"
+  },
+  "chat": {
+    "greeting": "ನಮಸ್ಕಾರ! ಅಪರಾಧ ಡೇಟಾಬೇಸ್ ಬಗ್ಗೆ ಏನು ಬೇಕಾದರೂ ಕೇಳಿ.",
+    "inputPlaceholder": "ಪ್ರಶ್ನೆ ಕೇಳಿ ಅಥವಾ ಸೂಚನೆಗಳನ್ನು ನೀಡಿ...",
+    "listening": "ಕೇಳಲಾಗುತ್ತಿದೆ...",
+    "stop": "ನಿಲ್ಲಿಸಿ",
+    "readAloud": "ಓದಿ",
+    "copy": "ಕಾಪಿ ಮಾಡಿ",
+    "copied": "ಸರಿ",
+    "helpful": "ಸಹಾಯಕ",
+    "notHelpful": "ಸಹಾಯಕವಲ್ಲ",
+    "retry": "ಮರುಪ್ರಯತ್ನಿಸಿ",
+    "openInvestigation": "ತನಿಖೆ ತೆರೆಯಿರಿ",
+    "viewingInvestigation": "ತನಿಖೆ ವೀಕ್ಷಿಸಲಾಗುತ್ತಿದೆ"
+  },
+  "analysis": {
+    "workspace": "ವಿಶ್ಲೇಷಣಾ ಕಾರ್ಯಕ್ಷೇತ್ರ",
+    "queryAnalysis": "ಪ್ರಶ್ನೆ ವಿಶ್ಲೇಷಣೆ",
+    "charts": "ಚಾರ್ಟ್‌ಗಳು",
+    "table": "ಟೇಬಲ್",
+    "addToReports": "ವರದಿಗಳಿಗೆ ಸೇರಿಸಿ",
+    "adding": "ಸೇರಿಸಲಾಗುತ್ತಿದೆ...",
+    "export": "ರಫ್ತು",
+    "pdf": "ಪಿಡಿಎಫ್",
+    "word": "ವರ್ಡ್",
+    "sqlResults": "ಎಸ್‌ಕ್ಯೂಎಲ್ ಫಲಿತಾಂಶಗಳು",
+    "rows": "({{count}} ಸಾಲುಗಳು)",
+    "sqlQuery": "ಎಸ್‌ಕ್ಯೂಎಲ್ ಪ್ರಶ್ನೆ",
+    "noQueryAvailable": "ಪ್ರಶ್ನೆ ಲಭ್ಯವಿಲ್ಲ.",
+    "filterRows": "ಸಾಲುಗಳನ್ನು ಫಿಲ್ಟರ್ ಮಾಡಿ...",
+    "noRowsMatch": "ಯಾವುದೇ ಸಾಲುಗಳು ಫಿಲ್ಟರ್‌ಗೆ ಹೊಂದಿಕೆಯಾಗುತ್ತಿಲ್ಲ.",
+    "noResultRows": "ಯಾವುದೇ ಫಲಿತಾಂಶ ಸಾಲುಗಳು ಹಿಂತಿರುಗಿಸಲಾಗಿಲ್ಲ.",
+    "exportExcel": "ಎಕ್ಸೆಲ್ ರಫ್ತು",
+    "reportAdded": "ವರದಿ ಸೇರಿಸಲಾಗಿದೆ.",
+    "unableToSaveReport": "ವರದಿಯನ್ನು ಉಳಿಸಲು ಸಾಧ್ಯವಾಗಿಲ್ಲ.",
+    "exportFailed": "ರಫ್ತು ವಿಫಲವಾಗಿದೆ.",
+    "pickResponse": "ವಿಶ್ಲೇಷಣೆಯೊಂದಿಗೆ ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ...",
+    "noData": "ಡೇಟಾ ಲಭ್ಯವಿಲ್ಲ.",
+    "noVisualization": "ಈ ಫಲಿತಾಂಶಕ್ಕಾಗಿ ಯಾವುದೇ ದೃಶ್ಯೀಕರಣ ಲಭ್ಯವಿಲ್ಲ."
+  },
+  "chart": {
+    "noData": "ಡೇಟಾ ಲಭ್ಯವಿಲ್ಲ.",
+    "noVisualization": "ಈ ಫಲಿತಾಂಶಕ್ಕಾಗಿ ಯಾವುದೇ ದೃಶ್ಯೀಕರಣ ಲಭ್ಯವಿಲ್ಲ.",
+    "low": "ಕಡಿಮೆ",
+    "high": "ಹೆಚ್ಚು",
+    "row": "ಸಾಲು {{count}}"
+  },
+  "home": {
+    "greeting": "ನಮಸ್ಕಾರ! ಅಪರಾಧ ಡೇಟಾಬೇಸ್ ಬಗ್ಗೆ ಏನು ಬೇಕಾದರೂ ಕೇಳಿ.",
+    "openInvestigation": "ತನಿಖೆ ತೆರೆಯಿರಿ",
+    "viewingInvestigation": "ತನಿಖೆ ವೀಕ್ಷಿಸಲಾಗುತ್ತಿದೆ"
+  },
+  "investigations": {
+    "title": "ತನಿಖೆಗಳ ಸರತಿ",
+    "subtitle": "ಸಕ್ರಿಯ ಸಂಕೇತಗಳ ಆಧಾರದ ಮೇಲೆ ಆದ್ಯತೆ, ಪರಿಶೀಲನೆ ಮತ್ತು ಕಾರ್ಯನಿರ್ವಹಣೆ.",
+    "searchPlaceholder": "ಸಿಆರ್ ನಂ, ಠಾಣೆ, ಜಿಲ್ಲೆ ಹುಡುಕಿ...",
+    "filters": {
+      "assigned": "ನಿಯೋಜಿತ",
+      "chargesheetPending": "ಚಾರ್ಜ್‌ಶೀಟ್ ಬಾಕಿ",
+      "repeatOffenders": "ಪುನರಾವರ್ತಿತ ಅಪರಾಧಿಗಳು",
+      "arrestsPending": "ಬಂಧನ ಬಾಕಿ",
+      "needReviewToday": "ಇಂದು ಪರಿಶೀಲನೆ ಬೇಕು",
+      "status": "ಸ್ಥಿತಿ",
+      "gravity": "ತೀವ್ರತೆ",
+      "station": "ಠಾಣೆ",
+      "officer": "ಅಧಿಕಾರಿ",
+      "district": "ಜಿಲ್ಲೆ",
+      "crimeHead": "ಅಪರಾಧ ವಿಭಾಗ",
+      "sortPriority": "ವಿಂಗಡಣೆ: ಆದ್ಯತೆ"
+    },
+    "priority": {
+      "critical": "ಗಂಭೀರ",
+      "high": "ಹೆಚ್ಚು",
+      "medium": "ಮಧ್ಯಮ",
+      "low": "ಕಡಿಮೆ"
+    },
+    "actions": {
+      "compare": "ಹೋಲಿಸಿ",
+      "commonSuspects": "ಸಾಮಾನ್ಯ ಆರೋಪಿಗಳು",
+      "askAI": "ಎಐ ಕೇಳಿ"
+    },
+    "detail": {
+      "caseSummary": "ಪ್ರಕರಣ ಸಾರಾಂಶ",
+      "caseDetails": "ಪ್ರಕರಣ ವಿವರಗಳು",
+      "crimeGroup": "ಅಪರಾಧ ಗುಂಪು",
+      "crimeHead": "ಅಪರಾಧ ವಿಭಾಗ",
+      "gravity": "ತೀವ್ರತೆ",
+      "district": "ಜಿಲ್ಲೆ",
+      "incidentDate": "ಘಟನೆ ದಿನಾಂಕ",
+      "registrationDate": "ನೋಂದಣಿ ದಿನಾಂಕ",
+      "people": "ವ್ಯಕ್ತಿಗಳು",
+      "accused": "ಆರೋಪಿಗಳು",
+      "victims": "ಬಾಧಿತರು",
+      "noneRecorded": "ಯಾವುದೇ ದಾಖಲಿಸಲಾಗಿಲ್ಲ",
+      "actsAndSections": "ಕಾಯ್ದೆಗಳು ಮತ್ತು ವಿಭಾಗಗಳು",
+      "bailable": "ಜಾಮೀನು ಅರ್ಹ",
+      "nonBailable": "ಜಾಮೀನು ಅರ್ಹವಲ್ಲ",
+      "indiaCode": "ಇಂಡಿಯಾಕೋಡ್",
+      "indianKanoon": "ಇಂಡಿಯನ್ ಕನೂನ್"
+    },
+    "intel": {
+      "crossInvestigation": "ಕ್ರಾಸ್ ತನಿಖಾ ಇಂಟೆಲ್",
+      "similarCases": "ಇದೇ ರೀತಿಯ ಪ್ರಕರಣಗಳು",
+      "sharedAccused": "ಹಂಚಿಕೊಂಡ ಆರೋಪಿಗಳು",
+      "sharedActs": "ಹಂಚಿಕೊಂಡ ಕಾಯ್ದೆಗಳು"
+    },
+    "location": {
+      "stationId": "ಠಾಣೆ ಐಡಿ",
+      "viewOnMap": "ನಕ್ಷೆಯಲ್ಲಿ ವೀಕ್ಷಿಸಿ"
+    },
+    "actions2": {
+      "deepDive": "ಆಳ ವಿಶ್ಲೇಷಣೆ",
+      "askAIContextually": "ಸಂದರ್ಭಾನುಸಾರ ಎಐ ಕೇಳಿ"
+    },
+    "empty": "ಆಯ್ಕೆ ಮಾಡಿದ ಫಿಲ್ಟರ್‌ಗಳು ಅಥವಾ ಹುಡುಕು ಪದಗಳಿಗೆ ಹೊಂದಿಕೆಯಾಗುವ ತನಿಖೆಗಳು ಇಲ್ಲ.",
+    "loading": "ತನಿಖೆಗಳ ಸರತಿ ಲೋಡ್ ಆಗುತ್ತಿದೆ...",
+    "allLabel": "ಎಲ್ಲಾ {{label}}ಗಳು",
+    "reset": "ಮರುಹೊಂದಿಸಿ"
+  },
+  "crimeMap": {
+    "title": "ಅಪರಾಧ ಇಂಟೆಲಿಜೆನ್ಸ್ ನಕ್ಷೆ",
+    "subtitle": "ಪೊಲೀಸ್ ಸಂಪನ್ಮೂಲಗಳನ್ನು ಎಲ್ಲಿ ನಿಯೋಜಿಸಬೇಕು ಎಂಬುದನ್ನು ನಿರ್ಧರಿಸಿ",
+    "generatePatrolPlan": "ಗಸ್ತು ಯೋಜನೆ ರಚಿಸಿ",
+    "layers": {
+      "title": "ನಕ್ಷೆ ಪದರಗಳು",
+      "trendHeatmap": "ಪ್ರವೃತ್ತಿ ಹೀಟ್‌ಮ್ಯಾಪ್",
+      "clusterView": "ಗುಂಪು ವೀಕ್ಷಣೆ",
+      "districtRisk": "ಜಿಲ್ಲಾ ಅಪಾಯ",
+      "networkOverlay": "ಜಾಲ ಓವರ್‌ಲೇ"
+    },
+    "summary": {
+      "operationalSummary": "ಕಾರ್ಯಾಚರಣೆ ಸಾರಾಂಶ",
+      "todaysHighestPriority": "ಇಂದಿನ ಅತ್ಯಧಿಕ ಆದ್ಯತೆ",
+      "todaysRisk": "ಇಂದಿನ ಅಪಾಯ",
+      "emergingHotspots": "ಹೊರಹೊಮ್ಮುತ್ತಿರುವ ಹಾಟ್‌ಸ್ಪಾಟ್‌ಗಳು",
+      "repeatOffenders": "ಪುನರಾವರ್ತಿತ ಅಪರಾಧಿಗಳು",
+      "crimes30d": "ಅಪರಾಧಗಳು (30 ದಿನ)",
+      "quickActions": "ತ್ವರಿತ ಕ್ರಿಯೆಗಳು",
+      "switchToCluster": "ಗುಂಪು ವೀಕ್ಷಣೆಗೆ ಬದಲಾಯಿಸಿ...",
+      "enableNetwork": "ಜಾಲ ಓವರ್‌ಲೇ ಸಕ್ರಿಯಗೊಳಿಸಿ..."
+    },
+    "heatmap": {
+      "change": "ಬದಲಾವಣೆ",
+      "direction": "ದಿಕ್ಕು",
+      "increasing": "ಅಪರಾಧ ಹೆಚ್ಚಳ",
+      "stable": "ಸ್ಥಿರ",
+      "decreasing": "ಅಪರಾಧ ಕಡಿಮೆ",
+      "currentPeriod": "ಪ್ರಸ್ತುತ ಅವಧಿ",
+      "previousPeriod": "ಹಿಂದಿನ ಅವಧಿ",
+      "trendIncreasing": "ಅಪರಾಧ ಪ್ರವೃತ್ತಿ -- ಹೆಚ್ಚಳ",
+      "trendDecreasing": "ಅಪರಾಧ ಪ್ರವೃತ್ತಿ -- ಕಡಿಮೆ"
+    },
+    "district": {
+      "operationalRisk": "ಕಾರ್ಯಾಚರಣೆ ಅಪಾಯ",
+      "crimeCount": "ಅಪರಾಧ ಎಣಿಕೆ",
+      "pendingInvestigations": "ಬಾಕಿ ತನಿಖೆಗಳು",
+      "trend": "ಪ್ರವೃತ್ತಿ",
+      "riskBreakdown": "ಅಪಾಯ ವಿಭಜನೆ",
+      "crimeVolume": "ಅಪರಾಧ ಪ್ರಮಾಣ",
+      "pendingCases": "ಬಾಕಿ ಪ್ರಕರಣಗಳು",
+      "emergingTrend": "ಹೊರಹೊಮ್ಮುತ್ತಿರುವ ಪ್ರವೃತ್ತಿ"
+    },
+    "cluster": {
+      "totalIncidents": "ಒಟ್ಟು ಘಟನೆಗಳು",
+      "peakWindow": "ಗರಿಷ್ಠ ಸಮಯ",
+      "linkedCases": "ಸಂಬಂಧಿತ ಪ್ರಕರಣಗಳು",
+      "networks": "ಜಾಲಗಳು",
+      "crimeBreakdown": "ಅಪರಾಧ ವಿಭಜನೆ",
+      "nearbyStations": "ಹತ್ತಿರದ ಠಾಣೆಗಳು",
+      "whyGrowing": "ಈ ಹಾಟ್‌ಸ್ಪಾಟ್ ಏಕೆ ಬೆಳೆಯುತ್ತಿದೆ?"
+    },
+    "network": {
+      "members": "ಸದಸ್ಯರು",
+      "totalFirs": "ಒಟ್ಟು ಎಫ್‌ಐಆರ್‌ಗಳು",
+      "networkRisk": "ಜಾಲ ಅಪಾಯ",
+      "districtsCovered": "ಆವರಿಸಿದ ಜಿಲ್ಲೆಗಳು",
+      "topMembers": "ಪ್ರಮುಖ ಸದಸ್ಯರು",
+      "openInNetworks": "ಅಪರಾಧಿ ಜಾಲಗಳಲ್ಲಿ ತೆರೆಯಿರಿ"
+    },
+    "patrol": {
+      "title": "ಗಸ್ತು ಯೋಜನಾಕಾರ",
+      "subtitle": "ನಿಯೋಜನಾ ಮಾರ್ಗಗಳನ್ನು ರಚಿಸಿ",
+      "timeOfDay": "ದಿನದ ಸಮಯ",
+      "morning": "ಬೆಳಿಗ್ಗೆ",
+      "afternoon": "ಮಧ್ಯಾಹ್ನ",
+      "evening": "ಸಂಜೆ",
+      "night": "ರಾತ್ರಿ",
+      "unitsAvailable": "ಲಭ್ಯವಿರುವ ಘಟಕಗಳು",
+      "crimeFocus": "ಅಪರಾಧ ಗಮನ",
+      "allCrimes": "ಎಲ್ಲಾ ಅಪರಾಧಗಳು",
+      "crimesAgainstBody": "ದೈಹಿಕ ಅಪರಾಧಗಳು",
+      "crimesAgainstProperty": "ಆಸ್ತಿ ಅಪರಾಧಗಳು",
+      "crimesAgainstWomen": "ಮಹಿಳಾ ಅಪರಾಧಗಳು",
+      "crimesAgainstPublicOrder": "ಸಾರ್ವಜನಿಕ ಸುವ್ಯವಸ್ಥೆ ಅಪರಾಧಗಳು",
+      "economicOffences": "ಆರ್ಥಿಕ ಅಪರಾಧಗಳು",
+      "area": "ಪ್ರದೇಶ",
+      "allDistricts": "ಎಲ್ಲಾ ಜಿಲ್ಲೆಗಳು",
+      "generating": "ರಚಿಸಲಾಗುತ್ತಿದೆ...",
+      "reconfigure": "ಮರುಹೊಂದಿಸಿ",
+      "routesGenerated": "ಮಾರ್ಗಗಳು ರಚಿಸಲಾಗಿದೆ",
+      "score": "ಅಂಕ: {{count}}",
+      "shift": "ಪಾಳಿ",
+      "exportPdf": "ಪಿಡಿಎಫ್ ರಫ್ತು",
+      "exportExcel": "ಎಕ್ಸೆಲ್ ರಫ್ತು",
+      "close": "ಮುಚ್ಚಿ"
+    },
+    "noData": "ಡೇಟಾ ಲಭ್ಯವಿಲ್ಲ.",
+    "loadingCluster": "ಗುಂಪು ಇಂಟೆಲ್ ಲೋಡ್ ಆಗುತ್ತಿದೆ...",
+    "selectPerson": "ನಿಮ್ಮ ಜಾಲ ಗ್ರಾಫ್ ವೀಕ್ಷಿಸಲು ವ್ಯಕ್ತಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+    "noTimeline": "ಯಾವುದೇ ಟೈಮ್‌ಲೈನ್ ಡೇಟಾ ಲಭ್ಯವಿಲ್ಲ.",
+    "selectPersonNetwork": "ನಿಮ್ಮ ಇಂಟೆಲಿಜೆನ್ಸ್ ಪ್ರೊಫೈಲ್ ವೀಕ್ಷಿಸಲು ವ್ಯಕ್ತಿ ಅಥವಾ ಜಾಲವನ್ನು ಆಯ್ಕೆಮಾಡಿ."
+  },
+  "networks": {
+    "title": "ಅಪರಾಧಿ ಜಾಲ ಇಂಟೆಲಿಜೆನ್ಸ್",
+    "subtitle": "ಪ್ರಮುಖ ವ್ಯಕ್ತಿಗಳು, ಸಂಪರ್ಕಗಳು ಮತ್ತು ಅಪರಾಧಿ ಸಂಘಟನೆಗಳನ್ನು ಗುರುತಿಸಿ",
+    "searchPlaceholder": "ವ್ಯಕ್ತಿ ಹೆಸರು, ಅಪರಾಧ ಸಂಖ್ಯೆ, ಪೊಲೀಸ್ ಠಾಣೆ ಹುಡುಕಿ...",
+    "tabs": {
+      "people": "ವ್ಯಕ್ತಿಗಳು",
+      "cases": "ಪ್ರಕರಣಗಳು",
+      "stations": "ಠಾಣೆಗಳು"
+    },
+    "firs": "{{count}} ಎಫ್‌ಐಆರ್‌ಗಳು",
+    "stats": {
+      "repeatOffenders": "ಪುನರಾವರ್ತಿತ ಅಪರಾಧಿಗಳು",
+      "criminalGroups": "ಅಪರಾಧಿ ಗುಂಪುಗಳು",
+      "bridgeIndividuals": "ಸೇತುವೆ ವ್ಯಕ್ತಿಗಳು",
+      "highRiskNetworks": "ಹೆಚ್ಚಿನ ಅಪಾಯದ ಜಾಲಗಳು"
+    },
+    "topNetworks": "ಪ್ರಮುಖ ಅಪರಾಧಿ ಜಾಲಗಳು",
+    "columns": {
+      "members": "ಸದಸ್ಯರು",
+      "firs": "ಎಫ್‌ಐಆರ್‌ಗಳು",
+      "stations": "ಠಾಣೆಗಳು"
+    },
+    "noNetworks": "ಇನ್ನೂ ಯಾವುದೇ ಜಾಲಗಳು ಗುರುತಿಸಲಾಗಿಲ್ಲ. ಪ್ರಾರಂಭಿಸಲು ವ್ಯಕ್ತಿಯನ್ನು ಹುಡುಕಿ.",
+    "bridgeIndividuals": "ಸೇತುವೆ ವ್ಯಕ್ತಿಗಳು",
+    "table": {
+      "name": "ಹೆಸರು",
+      "associates": "ಸಹಚರರು",
+      "districts": "ಜಿಲ್ಲೆಗಳು"
+    },
+    "back": "ಹಿಂದೆ",
+    "graph": "ಗ್ರಾಫ್",
+    "timeline": "ಟೈಮ್‌ಲೈನ್",
+    "profile": {
+      "title": "ಜಾಲ ಪ್ರೊಫೈಲ್",
+      "person": "ವ್ಯಕ್ತಿ",
+      "networkScore": "ಜಾಲ ಅಂಕ",
+      "networkRank": "ಜಾಲ ಶ್ರೇಣಿ",
+      "associatedFirs": "ಸಂಬಂಧಿತ ಎಫ್‌ಐಆರ್‌ಗಳು",
+      "knownAssociates": "ತಿಳಿದ ಸಹಚರರು",
+      "policeStations": "ಪೊಲೀಸ್ ಠಾಣೆಗಳು",
+      "mostCommonCrime": "ಅತ್ಯಂತ ಸಾಮಾನ್ಯ ಅಪರಾಧ",
+      "recentActivity": "ಇತ್ತೀಚಿನ ಚಟುವಟಿಕೆ",
+      "investigationLeads": "ತನಿಖಾ ಮಾರ್ಗದರ್ಶನ"
+    },
+    "insights": {
+      "centralFigure": "ಕೇಂದ್ರ ವ್ಯಕ್ತಿ",
+      "appearsInFirs": "{{count}} ಎಫ್‌ಐಆರ್‌ಗಳಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತಾರೆ",
+      "frequentlyArrestedWith": "{{name}} ಅವರೊಂದಿಗೆ ಆಗಾಗ ಬಂಧನ",
+      "sharedFirs": "ಹಂಚಿಕೊಂಡ ಎಫ್‌ಐಆರ್‌ಗಳು",
+      "operatesAcrossDistricts": "{{count}} ಜಿಲ್ಲೆಗಳಲ್ಲಿ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತಾರೆ",
+      "linkedToRepeatOffenders": "{{count}} ಪುನರಾವರ್ತಿತ ಅಪರಾಧಿಗಳೊಂದಿಗೆ ಸಂಬಂಧ",
+      "associatesWithCriminalHistory": "ಅಪರಾಧಿ ಇತಿಹಾಸವಿರುವ ಸಹಚರರು"
+    },
+    "analytics": {
+      "title": "ಜಾಲ ವಿಶ್ಲೇಷಣೆ",
+      "sharedArrests": "ಹಂಚಿಕೊಂಡ ಬಂಧನಗಳು",
+      "lastSeen": "ಕೊನೆಯ ಬಾರಿ ಕಂಡುಬಂದಿದ್ದು"
+    },
+    "empty": "ನಿಮ್ಮ ಇಂಟೆಲಿಜೆನ್ಸ್ ಪ್ರೊಫೈಲ್ ವೀಕ್ಷಿಸಲು ವ್ಯಕ್ತಿ ಅಥವಾ ಜಾಲವನ್ನು ಆಯ್ಕೆಮಾಡಿ."
+  },
+  "reports": {
+    "title": "ಉಳಿಸಿದ ವಿಶ್ಲೇಷಣಾ ವರದಿಗಳು",
+    "subtitle": "ದೃಶ್ಯೀಕರಣಗಳನ್ನು ವೀಕ್ಷಿಸಿ ಅಥವಾ ಡೈನಾಮಿಕ್ ಪ್ರಶ್ನೆಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.",
+    "restore": "({{count}}) ಮರೆಮಾಡಿದ ವಿಜೆಟ್‌ಗಳನ್ನು ಮರುಸ್ಥಾಪಿಸಿ",
+    "noActiveWidgets": "ಸಕ್ರಿಯ ವಿಜೆಟ್‌ಗಳಿಲ್ಲ",
+    "allHidden": "ಎಲ್ಲಾ ವರದಿಗಳು ಮರೆಮಾಡಲಾಗಿದೆ ಅಥವಾ ಯಾವುದೇ ಡೇಟಾ ಹಿಂತಿರುಗಿಸಲಾಗಿಲ್ಲ.",
+    "resetDashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಮರುಹೊಂದಿಸಿ",
+    "untitledReport": "ಹೆಸರಿಲ್ಲದ ವರದಿ",
+    "actions": {
+      "deleteReport": "ವರದಿ ಅಳಿಸಿ",
+      "viewSql": "ಎಸ್‌ಕ್ಯೂಎಲ್ ಮತ್ತು ತರ್ಕ ವೀಕ್ಷಿಸಿ",
+      "expand": "ವಿಸ್ತರಿಸಿ",
+      "minimize": "ಚಿಕ್ಕದಾಗಿಸಿ",
+      "fullScreen": "ಪೂರ್ಣ ಪರದೆ",
+      "hideWidget": "ವಿಜೆಟ್ ಮರೆಮಾಡಿ"
+    },
+    "aiReasoning": "ಎಐ ತರ್ಕ",
+    "executedSql": "ಕಾರ್ಯಗತಗೊಳಿಸಿದ ಎಸ್‌ಕ್ಯೂಎಲ್",
+    "copySql": "ಎಸ್‌ಕ್ಯೂಎಲ್ ಕಾಪಿ ಮಾಡಿ",
+    "copied": "ಕಾಪಿ ಮಾಡಲಾಗಿದೆ",
+    "detailedView": "ವಿವರವಾದ ವೀಕ್ಷಣೆ ಮತ್ತು ಮೂಲ ಪ್ರಶ್ನೆ",
+    "loading": "ಪ್ರಶ್ನೆಗಳನ್ನು ಕಾರ್ಯಗತಗೊಳಿಸಿ ಮತ್ತು ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ರಚಿಸಲಾಗುತ್ತಿದೆ..."
+  }
+}
