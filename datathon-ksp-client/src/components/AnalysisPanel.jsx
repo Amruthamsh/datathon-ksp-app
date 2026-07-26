@@ -196,16 +196,17 @@ export default function AnalysisPanel({ analysis }) {
   const charts = Array.isArray(analysis?.charts) ? analysis.charts : [];
   const rowCount = rows.length;
 
-  const [saving, setSaving] = useState(false);
+  const [savingIdx, setSavingIdx] = useState(null);
   const { token, officer } = useAuth();
 
-  async function handleSaveReport() {
+  async function handleSaveChart(chartIdx) {
     try {
-      setSaving(true);
+      setSavingIdx(chartIdx);
+      const chart = charts[chartIdx];
       await saveReport(token, {
-        title: charts[0]?.title || charts[0]?.intent || "Query Analysis",
+        title: chart?.title || chart?.intent || "Query Analysis",
         sql_query: analysis.sql_query,
-        charts: analysis.charts,
+        charts: [chart],
         summary: analysis.response || "",
       });
       alert(t("analysis.reportAdded"));
@@ -213,7 +214,7 @@ export default function AnalysisPanel({ analysis }) {
       console.error(err);
       alert(t("analysis.unableToSaveReport"));
     } finally {
-      setSaving(false);
+      setSavingIdx(null);
     }
   }
 
@@ -315,14 +316,6 @@ export default function AnalysisPanel({ analysis }) {
                 ? `${charts.length} chart${charts.length > 1 ? "s" : ""}`
                 : t("analysis.table")}
             </div>
-            <button
-              onClick={handleSaveReport}
-              disabled={saving}
-              className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm hover:bg-slate-50 cursor-pointer"
-            >
-              <Save size={15} />
-              {saving ? t("analysis.adding") : t("analysis.addToReports")}
-            </button>
             <div className="relative group">
               <button className="flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700 cursor-pointer">
                 <Download size={15} /> {t("analysis.export")}
@@ -358,10 +351,18 @@ export default function AnalysisPanel({ analysis }) {
                   id={`chart-${idx}`}
                   className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
                 >
-                  <div className="mb-3">
+                  <div className="mb-3 flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-slate-800">
                       {chartConfig.title}
                     </h3>
+                    <button
+                      onClick={() => handleSaveChart(idx)}
+                      disabled={savingIdx !== null}
+                      className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <Save size={13} />
+                      {savingIdx === idx ? t("analysis.adding") : t("analysis.addToReports")}
+                    </button>
                   </div>
                   <div
                     style={{ height: containerHeight }}
