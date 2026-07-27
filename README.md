@@ -1,4 +1,4 @@
-# KSP Intelligence Framework
+# KSP CrimeLens Intelligence Framework
 
 **A full-stack AI-powered crime intelligence platform for the Karnataka State Police.**
 
@@ -16,7 +16,7 @@ Karnataka's police force manages tens of thousands of FIRs across 31 districts. 
 
 ## Solution
 
-KSP Intelligence Framework connects five operational modules through a shared AI backbone:
+KSP CrimeLens Intelligence Framework connects five operational modules through a shared AI backbone:
 
 | Module | Purpose | Key Interaction |
 |---|---|---|
