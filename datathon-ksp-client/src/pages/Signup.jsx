@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import logo from "../assets/Seal_of_Karnataka.svg";
 import { UserPlus, CheckCircle2 } from "lucide-react";
+import { API_BASE } from "../api/config";
 
 function formatErrorDetail(detail) {
   if (!detail) {
@@ -77,7 +78,7 @@ export default function Signup() {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/verify", {
+      const response = await fetch(`${API_BASE}/auth/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -110,7 +111,7 @@ export default function Signup() {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch(`${API_BASE}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -128,7 +129,7 @@ export default function Signup() {
         );
       }
 
-      const signInResponse = await fetch("/api/auth/signin", {
+      const signInResponse = await fetch(`${API_BASE}/auth/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,4 +1,4 @@
-# KSP Intelligence Framework
+# KSP CrimeLens Intelligence Framework
 
 **A full-stack AI-powered crime intelligence platform for the Karnataka State Police.**
 
@@ -16,7 +16,7 @@ Karnataka's police force manages tens of thousands of FIRs across 31 districts. 
 
 ## Solution
 
-KSP Intelligence Framework connects five operational modules through a shared AI backbone:
+KSP CrimeLens Intelligence Framework connects five operational modules through a shared AI backbone:
 
 | Module | Purpose | Key Interaction |
 |---|---|---|
@@ -174,7 +174,7 @@ datathon-ksp-app/
 ├── synthetic-data/               # Data generation pipeline
 │   ├── generate_fir_data.py      # Faker-based 50K case generator
 │   ├── csv_to_sqlite.py          # CSV → SQLite loader (22 tables, 24 indexes)
-│   └── fir_system.db             # Generated SQLite database
+│   └── fir_system.db             # SQLite database (lives in backend bundle)
 │
 └── perf-testing/                 # Performance testing suite
     ├── locustfile.py             # 33-endpoint load test (4 user types)
@@ -238,7 +238,7 @@ Set in `functions/datathon-ksp-app/.env`:
 
 | Variable | Description |
 |---|---|
-| `SQLITE_DATABASE_PATH` | Absolute path to `synthetic-data/fir_system.db` |
+| `SQLITE_DATABASE_PATH` | Path to `fir_system.db` (defaults to backend bundle; override with absolute path) |
 | `GROQ_API_KEY` | Groq LLM API key (fallback provider) |
 | `SECRET_KEY` | Token signing key for authentication |
 
@@ -258,7 +258,7 @@ The data pipeline generates **50,000 FIR cases** across **22 relational tables**
 ```bash
 cd synthetic-data
 python3 generate_fir_data.py    # Generates CSVs with Faker
-python3 csv_to_sqlite.py        # Loads into fir_system.db
+python3 csv_to_sqlite.py        # Loads into functions/datathon-ksp-app/fir_system.db
 ```
 
 ---

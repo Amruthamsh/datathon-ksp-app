@@ -7,7 +7,7 @@
   - `functions/datathon-ksp-app/`: Python 3.13 FastAPI backend deployed as a Zoho Catalyst Advanced I/O function (`main.py`).
   - `synthetic-data/`: Synthetic FIR crime data generators, SQLite loader, and Catalyst datastore seeders.
 - **Dual Database Architecture**:
-  - **SQLite** (`synthetic-data/fir_system.db`): Structured FIR crime data queried by the LangGraph SQL Agent for natural language analytics.
+  - **SQLite** (`functions/datathon-ksp-app/fir_system.db`): Structured FIR crime data queried by the LangGraph SQL Agent for natural language analytics.
   - **Zoho Catalyst Datastore / NoSQL**: Handles user auth, chat/conversation history, and user reports.
 - **No test suite exists**. There are no `test/`, `tests/`, or `__tests__/` directories anywhere in the repo. No pytest or Jest config.
 
@@ -29,13 +29,13 @@
 
 ### Synthetic Data Pipeline (`synthetic-data/`)
 - **Generate CSVs**: `python3 generate_fir_data.py` (requires `pip install faker`)
-- **Build SQLite DB**: `python3 csv_to_sqlite.py` (generates `fir_system.db`)
+- **Build SQLite DB**: `python3 csv_to_sqlite.py` (generates `fir_system.db` in the backend bundle)
 - **Seed Catalyst Datastore**: `python3 push_to_catalyst.py`
 
 ## Operational & Framework Quirks
 
 - **Environment Configuration**: `functions/datathon-ksp-app/.env` requires:
-  - `SQLITE_DATABASE_PATH`: Absolute path to `synthetic-data/fir_system.db`
+  - `SQLITE_DATABASE_PATH`: Path to `fir_system.db` (defaults to backend bundle; override with absolute path)
   - `GROQ_API_KEY`: Groq LLM API key
   - `SECRET_KEY`: Auth token signing key
 - **FastAPI WSGI Adapter**: `main.py` uses `a2wsgi.ASGIMiddleware` and `FlaskResponse` inside `handler(request)` to adapt FastAPI to Zoho Catalyst's execution handler format.

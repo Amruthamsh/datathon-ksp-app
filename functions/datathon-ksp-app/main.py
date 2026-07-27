@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+import io
 import logging
 from flask import Response as FlaskResponse
 from a2wsgi import ASGIMiddleware
@@ -16,16 +16,6 @@ logger = logging.getLogger("fastapi_function")
 
 app = FastAPI(title="Datathon KSP App", version="1.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3001",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 app.include_router(chat_router)
 app.include_router(auth_router)
 app.include_router(investigations_router)
@@ -35,21 +25,28 @@ app.include_router(network_router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "version": "1.0.0"}
 
 _wsgi_app = ASGIMiddleware(app)
  
  
 def handler(request):
     response_state = {}
- 
+
+    environ = request.environ
+
+    if hasattr(request, "get_data"):
+        raw_body = request.get_data()
+        environ["wsgi.input"] = io.BytesIO(raw_body)
+        environ["CONTENT_LENGTH"] = str(len(raw_body))
+
     def start_response(status, headers, exc_info=None):
         response_state["status"] = status
         response_state["headers"] = headers
- 
-    body_chunks = _wsgi_app(request.environ, start_response)
+
+    body_chunks = _wsgi_app(environ, start_response)
     body = b"".join(body_chunks)
- 
+
     status_code = int(response_state["status"].split(" ", 1)[0])
     return FlaskResponse(body, status=status_code, headers=response_state["headers"])
 

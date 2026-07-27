@@ -1,4 +1,4 @@
-const BASE = "/api";
+import { API_BASE as BASE } from "./config";
 
 async function handleResponse(res) {
   if (res.status === 401) {
@@ -15,7 +15,7 @@ async function handleResponse(res) {
 
 export async function getNetworkSummary(token) {
   const res = await fetch(`${BASE}/network/summary`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { "X-Auth-Token": token },
   });
   return handleResponse(res);
 }
@@ -23,7 +23,7 @@ export async function getNetworkSummary(token) {
 export async function searchNetwork(token, q) {
   const res = await fetch(
     `${BASE}/network/search?q=${encodeURIComponent(q)}`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    { headers: { "X-Auth-Token": token } },
   );
   return handleResponse(res);
 }
@@ -31,7 +31,7 @@ export async function searchNetwork(token, q) {
 export async function getPersonProfile(token, personName) {
   const res = await fetch(
     `${BASE}/network/person/${encodeURIComponent(personName)}/profile`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    { headers: { "X-Auth-Token": token } },
   );
   return handleResponse(res);
 }
@@ -39,7 +39,7 @@ export async function getPersonProfile(token, personName) {
 export async function getPersonGraph(token, personName, depth = 1) {
   const res = await fetch(
     `${BASE}/network/person/${encodeURIComponent(personName)}/graph?depth=${depth}`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    { headers: { "X-Auth-Token": token } },
   );
   return handleResponse(res);
 }
@@ -47,7 +47,7 @@ export async function getPersonGraph(token, personName, depth = 1) {
 export async function getPersonAssociates(token, personName) {
   const res = await fetch(
     `${BASE}/network/person/${encodeURIComponent(personName)}/associates`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    { headers: { "X-Auth-Token": token } },
   );
   return handleResponse(res);
 }
@@ -55,7 +55,7 @@ export async function getPersonAssociates(token, personName) {
 export async function getPersonTimeline(token, personName) {
   const res = await fetch(
     `${BASE}/network/person/${encodeURIComponent(personName)}/timeline`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    { headers: { "X-Auth-Token": token } },
   );
   return handleResponse(res);
 }
@@ -63,21 +63,21 @@ export async function getPersonTimeline(token, personName) {
 export async function getPersonAnalytics(token, personName) {
   const res = await fetch(
     `${BASE}/network/person/${encodeURIComponent(personName)}/analytics`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    { headers: { "X-Auth-Token": token } },
   );
   return handleResponse(res);
 }
 
 export async function getCommunities(token) {
   const res = await fetch(`${BASE}/network/communities`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { "X-Auth-Token": token },
   });
   return handleResponse(res);
 }
 
 export async function getBridgeIndividuals(token, limit = 20) {
   const res = await fetch(`${BASE}/network/bridge-individuals?limit=${limit}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { "X-Auth-Token": token },
   });
   return handleResponse(res);
 }
