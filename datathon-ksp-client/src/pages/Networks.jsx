@@ -325,33 +325,6 @@ export default function CriminalNetworks() {
               </button>
             </div>
 
-            <div>
-              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">{t("networks.topNetworks")}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {communities.slice(0, 6).map((net, i) => (
-                  <button key={i} onClick={() => net.members?.[0] && selectPerson(net.members[0])}
-                    className="bg-white border border-slate-200 rounded-xl p-5 text-left hover:border-amber-300 hover:shadow-md transition-all">
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-bold text-slate-800 text-sm">{net.members?.slice(0, 3).join(", ")}{net.member_count > 3 ? "..." : ""}</h3>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        net.risk === "Very High" ? "bg-red-100 text-red-700" :
-                        net.risk === "High" ? "bg-amber-100 text-amber-700" :
-                        "bg-yellow-50 text-yellow-700"
-                      }`}>{net.risk}</span>
-                    </div>
-                    <div className="flex gap-4 text-xs text-slate-500">
-                      <span><strong className="text-slate-700">{net.member_count}</strong> {t("networks.columns.members")}</span>
-                      <span><strong className="text-slate-700">{net.total_firs}</strong> {t("networks.columns.firs")}</span>
-                      <span><strong className="text-slate-700">{net.stations_covered}</strong> {t("networks.columns.stations")}</span>
-                    </div>
-                  </button>
-                ))}
-                {communities.length === 0 && (
-                  <p className="text-sm text-slate-400 col-span-3 text-center py-8">{t("networks.noNetworks")}</p>
-                )}
-              </div>
-            </div>
-
             {bridgeIndividuals.length > 0 && (
               <div>
                 <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">{t("networks.bridgeIndividuals")}</h2>
@@ -394,6 +367,33 @@ export default function CriminalNetworks() {
                 </div>
               </div>
             )}
+
+            <div>
+              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">{t("networks.topNetworks")}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {communities.slice(0, 6).map((net, i) => (
+                  <button key={i} onClick={() => net.members?.[0] && selectPerson(net.members[0])}
+                    className="bg-white border border-slate-200 rounded-xl p-5 text-left hover:border-amber-300 hover:shadow-md transition-all">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-bold text-slate-800 text-sm">{net.members?.slice(0, 3).join(", ")}{net.member_count > 3 ? "..." : ""}</h3>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        net.risk === "Very High" ? "bg-red-100 text-red-700" :
+                        net.risk === "High" ? "bg-amber-100 text-amber-700" :
+                        "bg-yellow-50 text-yellow-700"
+                      }`}>{net.risk}</span>
+                    </div>
+                    <div className="flex gap-4 text-xs text-slate-500">
+                      <span><strong className="text-slate-700">{net.member_count}</strong> {t("networks.columns.members")}</span>
+                      <span><strong className="text-slate-700">{net.total_firs}</strong> {t("networks.columns.firs")}</span>
+                      <span><strong className="text-slate-700">{net.stations_covered}</strong> {t("networks.columns.stations")}</span>
+                    </div>
+                  </button>
+                ))}
+                {communities.length === 0 && (
+                  <p className="text-sm text-slate-400 col-span-3 text-center py-8">{t("networks.noNetworks")}</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
