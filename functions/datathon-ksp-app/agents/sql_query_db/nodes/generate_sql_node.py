@@ -5,6 +5,43 @@ from langchain_core.messages import AIMessage, HumanMessage
 from llm.catalyst_llm_service import catalyst_llm_service as llm
 from agents.sql_query_db.state import SQLAgentState
 
+SCHEMA_HINTS = """
+CRITICAL SCHEMA RULES — follow these EXACTLY:
+
+1. CaseMaster has NO "DistrictID" column. To filter by district, JOIN through:
+   CaseMaster.PoliceStationID → Unit.UnitID → Unit.DistrictID → District.DistrictName
+
+2. CaseMaster has NO "FIRDate" column. The date column is "CrimeRegisteredDate".
+
+3. "Murder", "Robbery", "Theft", etc. are crime TYPES in CrimeSubHead, NOT CaseCategory.
+   - CaseCategory values: FIR, UDR, PAR, Zero FIR (filing types only)
+   - To find murder: JOIN CrimeSubHead ON CaseMaster.CrimeMinorHeadID = CrimeSubHead.CrimeSubHeadID
+   - Then filter: CrimeSubHead.CrimeHeadName = 'Murder'
+
+4. CrimeHead (major heads) are broad categories like "Crimes Against Body".
+   CrimeSubHead (minor heads) are specific crimes like "Murder", "Attempt to Murder".
+
+5. Use ONLY column names that appear verbatim in the provided DDL. Never invent or abbreviate column names.
+
+6. Always use table aliases for clarity (e.g., cm, u, d, csh, ch).
+
+Common correct query patterns:
+
+-- Count by district:
+SELECT d.DistrictName, COUNT(*) AS CrimeCount
+FROM CaseMaster cm
+JOIN Unit u ON cm.PoliceStationID = u.UnitID
+JOIN District d ON u.DistrictID = d.DistrictID
+GROUP BY d.DistrictName;
+
+-- Filter by crime type:
+JOIN CrimeSubHead csh ON cm.CrimeMinorHeadID = csh.CrimeSubHeadID
+WHERE csh.CrimeHeadName = 'Murder'
+
+-- Filter by date:
+WHERE cm.CrimeRegisteredDate BETWEEN '2025-01-01' AND '2025-12-31'
+"""
+
 
 def generate_sql_node(state: SQLAgentState):
     """
@@ -31,7 +68,7 @@ def generate_sql_node(state: SQLAgentState):
         for table, ddl in state["schemas"].items()
     )
 
-    system_prompt = """
+    system_prompt = f"""
 You are an expert SQLite SQL generator for a Karnataka State Police (KSP) crime database.
 
 Generate a valid SQLite query that answers the user's latest question with maximum analytical depth.
@@ -55,6 +92,8 @@ Rules:
     ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 1) AS Percentage
 - For top-N queries, use ORDER BY ... DESC LIMIT N.
 - Always add a secondary sort for ties (e.g., ORDER BY count DESC, name ASC).
+
+{SCHEMA_HINTS}
 """
 
     human_prompt = f"""

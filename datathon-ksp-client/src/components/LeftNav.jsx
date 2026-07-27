@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   SquarePen,
   PanelLeftClose,
@@ -13,10 +15,11 @@ import {
 import { menuItems } from "../data/leftNavMenu.js";
 
 const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(
-    conv.title || conv.last_message || "Untitled",
+    conv.title || conv.last_message || t("nav.untitled"),
   );
   const inputRef = useRef(null);
   const menuRef = useRef(null);
@@ -35,19 +38,21 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const commitRename = () => {
+  const commitRename = (e) => {
+    e.stopPropagation();
     const trimmed = draftTitle.trim();
     if (
       trimmed &&
-      trimmed !== (conv.title || conv.last_message || "Untitled")
+      trimmed !== (conv.title || conv.last_message || t("nav.untitled"))
     ) {
       onRename(conv.conversation_id, trimmed);
     }
     setEditing(false);
   };
 
-  const cancelRename = () => {
-    setDraftTitle(conv.title || conv.last_message || "Untitled");
+  const cancelRename = (e) => {
+    e.stopPropagation();
+    setDraftTitle(conv.title || conv.last_message || t("nav.untitled"));
     setEditing(false);
   };
 
@@ -64,8 +69,8 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
             value={draftTitle}
             onChange={(e) => setDraftTitle(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") commitRename();
-              if (e.key === "Escape") cancelRename();
+              if (e.key === "Enter") commitRename(e);
+              if (e.key === "Escape") cancelRename(e);
             }}
             className="flex-1 rounded border border-blue-300 bg-white px-2 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-400"
           />
@@ -86,7 +91,7 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
         <>
           <button
             onClick={() => onSelect(conv.conversation_id)}
-            className={`flex min-w-0 flex-1 items-start gap-2 px-3 py-2 text-left ${
+            className={`flex min-w-0 flex-1 items-start gap-2 px-3 py-2 text-left cursor-pointer ${
               isActive ? "text-blue-700" : "text-slate-700"
             }`}
           >
@@ -95,13 +100,16 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
               className={`mt-0.5 shrink-0 ${isActive ? "text-blue-600" : "text-slate-400"}`}
             />
             <span className="min-w-0 flex-1 truncate text-sm leading-5">
-              {conv.title || conv.last_message || "Untitled"}
+              {conv.title || conv.last_message || t("nav.untitled")}
             </span>
           </button>
 
           <div ref={menuRef} className="relative shrink-0">
             <button
-              onClick={() => setMenuOpen((o) => !o)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen((o) => !o);
+              }}
               className={`mr-1 rounded p-1 transition ${
                 menuOpen
                   ? "bg-slate-200"
@@ -114,24 +122,24 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
             {menuOpen && (
               <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-lg border border-slate-200 bg-white shadow-lg">
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setMenuOpen(false);
                     setEditing(true);
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50"
                 >
-                  <Pencil size={13} className="text-slate-500" />
-                  Rename
+                  <Pencil size={13} className="text-slate-500" /> {t("nav.rename")}
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setMenuOpen(false);
                     onDelete(conv.conversation_id);
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                 >
-                  <Trash2 size={13} />
-                  Delete
+                  <Trash2 size={13} /> {t("nav.delete")}
                 </button>
               </div>
             )}
@@ -146,33 +154,44 @@ const LeftNav = ({
   expanded,
   setExpanded,
   conversations = [],
-  activeConversationId = null,
-  onNewChat,
-  onSelectConversation,
   onRenameConversation,
   onDeleteConversation,
   historyLoading = false,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { t } = useTranslation();
+
+  const menuKeys = ["investigations", "crimeIntelligenceMap", "criminalNetworks", "reports"];
+  const routeMap = {
+    [t("nav.investigations")]: "/investigations",
+    [t("nav.crimeIntelligenceMap")]: "/crime-intelligence-map",
+    [t("nav.criminalNetworks")]: "/networks",
+    [t("nav.reports")]: "/reports",
+  };
+
+  const translatedMenuItems = menuItems.map((item, i) => ({
+    ...item,
+    title: t(`nav.${menuKeys[i]}`),
+  }));
+
   return (
     <aside
       className={`bg-white border-r border-slate-200 transition-all duration-300 flex flex-col ${
         expanded ? "w-64" : "w-16"
       }`}
     >
-      {/* Fixed Header */}
       <div className="shrink-0 border-b border-slate-200 p-2 space-y-2">
         <div
-          className={`flex items-center ${
-            expanded ? "justify-between" : "justify-center"
-          }`}
+          className={`flex items-center ${expanded ? "justify-between" : "justify-center"}`}
         >
           {expanded && (
             <button
-              onClick={onNewChat}
+              onClick={() => navigate("/")}
               className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-100 transition cursor-pointer"
             >
               <SquarePen size={18} />
-              New Chat
+              {t("nav.newChat")}
             </button>
           )}
 
@@ -181,38 +200,33 @@ const LeftNav = ({
             className="rounded-lg p-2 hover:bg-slate-100 transition cursor-pointer"
           >
             {expanded ? (
-              <PanelLeftClose size={18} className="text-slate-700" />
+              <PanelLeftClose size={18} />
             ) : (
-              <PanelLeftOpen size={18} className="text-slate-700" />
+              <PanelLeftOpen size={18} />
             )}
           </button>
         </div>
-
-        {!expanded && (
-          <button
-            onClick={onNewChat}
-            className="w-full flex justify-center rounded-lg p-2 hover:bg-slate-100 transition cursor-pointer"
-            title="New Chat"
-          >
-            <SquarePen size={18} />
-          </button>
-        )}
       </div>
 
-      {/* Scrollable Content */}
       <nav className="flex-1 overflow-y-auto">
-        {/* Main Navigation */}
         <div className="px-2 py-3 space-y-1">
-          {menuItems.map((item) => {
+          {(translatedMenuItems || []).map((item) => {
             const Icon = item.icon;
+            const targetPath = routeMap[item.title];
+            const isActive = location.pathname === targetPath;
+
             return (
               <button
                 key={item.title}
-                className={`w-full flex items-center rounded-lg hover:bg-slate-100 transition-colors cursor-pointer ${
+                onClick={() => navigate(targetPath)}
+                className={`w-full flex items-center rounded-lg transition-colors cursor-pointer ${
                   expanded ? "gap-4 px-4 py-2" : "justify-center py-3"
-                }`}
+                } ${isActive ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-100"}`}
               >
-                <Icon size={18} className="shrink-0" />
+                <Icon
+                  size={18}
+                  className={isActive ? "text-blue-600" : "text-slate-500"}
+                />
                 {expanded && (
                   <span className="text-sm font-medium">{item.title}</span>
                 )}
@@ -221,37 +235,32 @@ const LeftNav = ({
           })}
         </div>
 
-        {/* Conversation history — only when expanded */}
         {expanded && (
           <>
             <div className="mx-3 my-2 border-t border-slate-200" />
-
             <div className="px-3">
               <p className="mb-2 pl-2 text-sm font-semibold tracking-wide text-blue-700">
-                Recent Chats
+                {t("nav.recentChats")}
               </p>
 
-              {historyLoading && (
-                <p className="pl-2 text-xs text-slate-400">Loading...</p>
-              )}
-
-              {!historyLoading && conversations.length === 0 && (
-                <p className="pl-2 text-xs text-slate-400">
-                  No conversations yet.
-                </p>
-              )}
-
               <div className="space-y-1">
-                {conversations.map((conv) => (
-                  <ConversationItem
-                    key={conv.conversation_id}
-                    conv={conv}
-                    isActive={conv.conversation_id === activeConversationId}
-                    onSelect={onSelectConversation}
-                    onRename={onRenameConversation}
-                    onDelete={onDeleteConversation}
-                  />
-                ))}
+                {Array.isArray(conversations) &&
+                  [...conversations]
+                    .sort(
+                      (a, b) => new Date(b.updated_at) - new Date(a.updated_at),
+                    )
+                    .map((conv) => (
+                      <ConversationItem
+                        key={conv.conversation_id}
+                        conv={conv}
+                        isActive={
+                          location.pathname === `/chat/${conv.conversation_id}`
+                        }
+                        onSelect={(id) => navigate(`/chat/${id}`)}
+                        onRename={onRenameConversation}
+                        onDelete={onDeleteConversation}
+                      />
+                    ))}
               </div>
             </div>
           </>

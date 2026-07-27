@@ -1,4 +1,3 @@
-# routes/auth.py
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from schemas.auth import SignUpRequest, SignInRequest, AuthResponse
 from db.dependencies import get_officer_repository, get_catalyst_user_repository
@@ -8,7 +7,7 @@ from auth.security import verify_password, create_token, decode_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-
+     
 def _extract_bearer_token(request: Request) -> str:
     authorization = request.headers.get("Authorization", "")
     scheme, _, token = authorization.partition(" ")
@@ -97,6 +96,12 @@ def signin(
     user_repository: CatalystUserRepository = Depends(get_catalyst_user_repository),
 ):
     user = user_repository.get_user(req.kgid)
+
+    print("User:", user)
+
+    if user:
+        print("Password OK:", verify_password(req.password, user["password_hash"]))
+
     if not user or not verify_password(req.password, user["password_hash"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -1,50 +1,110 @@
-import Header from "../components/Header";
-import LeftNav from "../components/LeftNav";
-import { ArrowUp, Paperclip } from "lucide-react";
+import {
+  ArrowUp,
+  Paperclip,
+  Mic,
+  MicOff,
+  Volume2,
+  Copy,
+  ThumbsUp,
+  ThumbsDown,
+  RefreshCw,
+  File,
+  X,
+} from "lucide-react";
+import { useTranslation } from "react-i18next";
+import useSpeechRecognition from "../hooks/useSpeechRecognition";
+import useSpeechSynthesis from "../hooks/useSpeechSynthesis";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useParams, useNavigate, useLocation, useOutletContext } from "react-router-dom";
 import AnalysisPanel from "../components/AnalysisPanel";
 import { useAuth } from "../auth/AuthContext";
-import {
-  generateResponse,
-  listConversations,
-  getConversation,
-  renameConversation,
-  deleteConversation,
-} from "../api/chat";
-
-const GREETING = {
-  role: "assistant",
-  text: "Hello! Ask me anything about the crime database.",
-};
+import { generateResponse, getConversation, sendFeedback } from "../api/chat";
 
 export default function Home() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { token } = useAuth();
+  const { refreshConversations } = useOutletContext();
+  const { t, i18n } = useTranslation();
 
-  const [expanded, setExpanded] = useState(true);
+  const GREETING = {
+    role: "assistant",
+    content: t("chat.greeting"),
+  };
+
   const [messages, setMessages] = useState([GREETING]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [followUps, setFollowUps] = useState([]);
   const [activeAnalysis, setActiveAnalysis] = useState(null);
-
-  const [conversationId, setConversationId] = useState(null);
-  const [conversations, setConversations] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [conversationId, setConversationId] = useState(id || null);
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const didConsumeInitialState = useRef(false);
 
-  // Load conversation list on mount
+  const [attachedFiles, setAttachedFiles] = useState([]);
+
+  const { speak, stop } = useSpeechSynthesis();
+
+  const handleTranscript = useCallback((text) => {
+    setInput(text);
+  }, []);
+
+  const { supported, isListening, startListening, stopListening } =
+    useSpeechRecognition(handleTranscript);
+
   useEffect(() => {
-    if (!token) return;
-    listConversations(token)
-      .then((data) => setConversations(data.conversations ?? []))
-      .catch(() => {});
-  }, [token]);
+    if (id) {
+      setLoading(true);
+      getConversation(token, id)
+        .then((data) => {
+          setMessages(data.messages || [GREETING]);
+          setConversationId(id);
 
-  // Auto-scroll
+          const lastMsg = data.messages?.[data.messages.length - 1];
+          if (lastMsg?.analysis) {
+            setActiveAnalysis({
+              ...lastMsg.analysis,
+              response: lastMsg.analysis.response || lastMsg.content || "",
+            });
+          } else {
+            setActiveAnalysis(null);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load conversation:", err);
+
+          // --- FIX HERE ---
+          // Redirect to home and replace history so the back button doesn't
+          // get stuck on the invalid ID
+          navigate("/", { replace: true });
+        })
+        .finally(() => setLoading(false));
+    } else {
+      // Reset state for "New Chat"
+      setMessages([GREETING]);
+      setConversationId(null);
+      setActiveAnalysis(null);
+      setFollowUps([]);
+    }
+  }, [id, token, navigate]); // Ensure navigate is in the dependency array
+
+  // Pre-fill input when navigating from Investigations with context
+  useEffect(() => {
+    if (didConsumeInitialState.current) return;
+    const initialMessage = location.state?.initialMessage;
+    if (initialMessage) {
+      didConsumeInitialState.current = true;
+      setInput(initialMessage);
+    }
+  }, [location.state]);
+
+  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading, followUps]);
@@ -57,246 +117,464 @@ export default function Home() {
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [input]);
 
-  const startNewChat = useCallback(() => {
-    setConversationId(null);
-    setMessages([GREETING]);
-    setFollowUps([]);
-    setActiveAnalysis(null);
+  const handleFileSelect = (e) => {
+    const selected = Array.from(e.target.files || []);
+    if (!selected.length) return;
+
+    const allowed = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+    ];
+
+    const valid = [];
+    for (const file of selected) {
+      if (!allowed.includes(file.type)) {
+        alert(`"${file.name}" is unsupported. Upload PDF, Excel, Word, or image files.`);
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`"${file.name}" exceeds the 10 MB limit.`);
+        continue;
+      }
+      valid.push(file);
+    }
+
+    if (valid.length) {
+      setAttachedFiles((prev) => [...prev, ...valid]);
+    }
+    e.target.value = "";
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
+  const sendMessage = async (message = input) => {
+    if ((!message.trim() && !attachedFiles.length) || loading) return;
+
+    stop();
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: message,
+      },
+    ]);
+
+    const filesToSend = attachedFiles;
     setInput("");
-  }, []);
-
-  const loadConversation = useCallback(
-    async (id) => {
-      if (!token) return;
-      setHistoryLoading(true);
-      try {
-        const data = await getConversation(token, id);
-        setConversationId(id);
-        setFollowUps([]);
-        setActiveAnalysis(null);
-
-        const loaded = data.messages.map((m) => {
-          if (m.role === "user") return { role: "user", text: m.content };
-          const analysis = m.analysis
-            ? { ...m.analysis, response: m.content, user_query: "" }
-            : null;
-          return { role: "assistant", text: m.content, analysis };
-        });
-
-        setMessages([GREETING, ...loaded]);
-
-        // Restore the last assistant analysis so the panel isn't blank
-        const lastAssistant = [...loaded].reverse().find((m) => m.analysis);
-        if (lastAssistant) setActiveAnalysis(lastAssistant.analysis);
-      } catch {
-        // keep current state on error
-      } finally {
-        setHistoryLoading(false);
-      }
-    },
-    [token],
-  );
-
-  const handleRenameConversation = useCallback(
-    async (id, title) => {
-      if (!token) return;
-      try {
-        await renameConversation(token, id, title);
-        setConversations((prev) =>
-          prev.map((c) => (c.conversation_id === id ? { ...c, title } : c)),
-        );
-      } catch {
-        // non-fatal; UI already shows old title
-      }
-    },
-    [token],
-  );
-
-  const handleDeleteConversation = useCallback(
-    async (id) => {
-      if (!token) return;
-      try {
-        await deleteConversation(token, id);
-        setConversations((prev) =>
-          prev.filter((c) => c.conversation_id !== id),
-        );
-        if (conversationId === id) startNewChat();
-      } catch {
-        // non-fatal
-      }
-    },
-    [token, conversationId, startNewChat],
-  );
-
-  const sendMessage = async (overrideQuestion = null) => {
-    const question = overrideQuestion ?? input;
-    if (!question.trim() || loading) return;
-
-    setMessages((prev) => [...prev, { role: "user", text: question }]);
-    setInput("");
-    setFollowUps([]);
+    setAttachedFiles([]);
     setLoading(true);
+    setFollowUps([]);
 
     try {
-      const data = await generateResponse(token, question, conversationId);
-
-      // Persist conversation id returned by the backend
-      if (data.conversation_id && data.conversation_id !== conversationId) {
-        setConversationId(data.conversation_id);
-        // Refresh sidebar list for new conversations
-        listConversations(token)
-          .then((d) => setConversations(d.conversations ?? []))
-          .catch(() => {});
+      const data = await generateResponse(token, message, id || null, i18n.language, filesToSend);
+      // If this was a new chat, refresh the sidebar and redirect
+      if (!id && data.conversation_id) {
+        refreshConversations();
+        navigate(`/chat/${data.conversation_id}`, { replace: true });
       }
 
-      const hasAnalysis = data.sql_query && data.sql_result?.length > 0;
-      const analysis = hasAnalysis ? { ...data, user_query: question } : null;
+      const analysis = {
+        sql_query: data.sql_query,
+        sql_result: data.sql_result,
+        charts: data.charts,
+        response: data.response,
+        follow_up_questions: data.follow_up_questions,
+      };
+
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", text: data.response, analysis },
+        {
+          role: "assistant",
+          content: data.response,
+          analysis,
+          message_id: data.message_id,
+          created_at: data.created_at,
+          feedback: null,
+        },
       ]);
-      if (hasAnalysis) setActiveAnalysis(analysis);
-      setFollowUps(data.follow_up_questions ?? []);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", text: "Something went wrong. Please try again." },
-      ]);
+      setActiveAnalysis(analysis);
+      setFollowUps(data.follow_up_questions || []);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
+  const [copiedIndex, setCopiedIndex] = useState(null);
+  const [speakingIndex, setSpeakingIndex] = useState(null);
+
+  const handleCopy = async (text, index) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const handleFeedback = (index, value) => {
+    const msg = messages[index];
+    if (!msg || msg.role !== "assistant") return;
+
+    const newFeedback = msg.feedback === value ? null : value;
+
+    setMessages((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], feedback: newFeedback };
+      return updated;
+    });
+
+    if (conversationId && msg.created_at) {
+      sendFeedback(token, conversationId, msg.created_at, newFeedback).catch(
+        (err) => console.error("Failed to save feedback:", err),
+      );
+    }
+  };
+
+  const retryMessage = (index) => {
+    const userMsg = messages[index - 1];
+    if (!userMsg || userMsg.role !== "user") return;
+
+    setMessages((prev) => prev.slice(0, index));
+    sendMessage(userMsg.content);
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-slate-50">
-      <Header />
-      <div className="flex flex-1 overflow-hidden">
-        <LeftNav
-          expanded={expanded}
-          setExpanded={setExpanded}
-          conversations={conversations}
-          activeConversationId={conversationId}
-          onNewChat={startNewChat}
-          onSelectConversation={loadConversation}
-          onRenameConversation={handleRenameConversation}
-          onDeleteConversation={handleDeleteConversation}
-          historyLoading={historyLoading}
-        />
+    <div className="flex-1 flex h-full overflow-hidden bg-white">
+      {/* Chat column */}
+      <section className="w-[47%] border-r border-slate-200 flex flex-col">
+        <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
+          {messages.map((m, i) => {
+            // Ensure analysis contains actual data (SQL query or SQL results)
+            const hasAnalysis =
+              m.analysis &&
+              (m.analysis.sql_query ||
+                (Array.isArray(m.analysis.sql_result) &&
+                  m.analysis.sql_result.length > 0));
 
-        <main className="flex-1 flex overflow-hidden">
-          {/* Chat column */}
-          <section className="w-[47%] border-r border-slate-200 bg-white flex flex-col">
-            <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
-              {messages.map((m, i) => (
+            // Value-based comparison to accurately detect active item across re-renders
+            const isCurrentlyActive =
+              activeAnalysis &&
+              hasAnalysis &&
+              (activeAnalysis === m.analysis ||
+                activeAnalysis.sql_query === m.analysis.sql_query);
+
+            return (
+              <div
+                key={i}
+                className={`flex ${
+                  m.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
                 <div
-                  key={i}
-                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`rounded-3xl px-5 py-3 shadow-sm text-[15px] leading-7 ${
+                    m.role === "user"
+                      ? "bg-red-50 max-w-[78%]"
+                      : "bg-slate-100 max-w-[84%]"
+                  }`}
                 >
-                  <div
-                    className={`rounded-3xl px-5 py-4 shadow-sm text-[15px] leading-7 ${
-                      m.role === "user"
-                        ? "bg-red-50 max-w-[78%]"
-                        : "bg-slate-100 max-w-[84%]"
-                    }`}
-                  >
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {m.text}
-                    </ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({ children }) => (
+                        <h1 className="text-2xl font-bold mt-6 mb-4 text-slate-900">
+                          {children}
+                        </h1>
+                      ),
 
-                    {m.analysis?.sql_query && (
+                      h2: ({ children }) => (
+                        <h2 className="text-xl font-semibold mt-6 mb-3 border-b border-slate-300 pb-1 text-slate-900">
+                          {children}
+                        </h2>
+                      ),
+
+                      h3: ({ children }) => (
+                        <h3 className="text-lg font-semibold mt-5 mb-2 text-slate-900">
+                          {children}
+                        </h3>
+                      ),
+
+                      p: ({ children }) => (
+                        <p className="mb-2 leading-8 text-slate-800">
+                          {children}
+                        </p>
+                      ),
+
+                      ul: ({ children }) => (
+                        <ul className="list-disc pl-6 mb-2 space-y-1">
+                          {children}
+                        </ul>
+                      ),
+
+                      ol: ({ children }) => (
+                        <ol className="list-decimal pl-6 mb-4 space-y-1">
+                          {children}
+                        </ol>
+                      ),
+
+                      li: ({ children }) => (
+                        <li className="leading-7">{children}</li>
+                      ),
+
+                      strong: ({ children }) => (
+                        <strong className="font-semibold text-slate-900">
+                          {children}
+                        </strong>
+                      ),
+
+                      blockquote: ({ children }) => (
+                        <blockquote className="border-l-4 border-slate-300 pl-4 italic text-slate-600 my-4">
+                          {children}
+                        </blockquote>
+                      ),
+
+                      code: ({ children }) => (
+                        <code className="rounded bg-slate-200 px-1 py-0.5 text-sm font-mono">
+                          {children}
+                        </code>
+                      ),
+                    }}
+                  >
+                    {m.content}
+                  </ReactMarkdown>
+
+                  {/* Open Investigation button */}
+                  {hasAnalysis && (
+                    <button
+                      onClick={() => setActiveAnalysis({
+                        ...m.analysis,
+                        response: m.analysis.response || m.content || "",
+                      })}
+                      className={`rounded-lg border px-4 py-2 mb-2 text-sm transition cursor-pointer ${
+                        isCurrentlyActive
+                          ? "border-blue-500 bg-blue-50 text-blue-700 font-medium shadow-xs"
+                          : "border-slate-300 bg-white hover:bg-slate-50 text-slate-700"
+                      }`}
+                    >
+                      {isCurrentlyActive
+                        ? t("chat.viewingInvestigation")
+                        : t("chat.openInvestigation")}
+                    </button>
+                  )}
+
+                  {/* Action bar */}
+                  {m.role === "assistant" && m !== GREETING && (
+                    <div className="mt-1 flex items-center gap-0.5">
                       <button
-                        onClick={() => setActiveAnalysis(m.analysis)}
-                        className={`mt-4 rounded-lg border px-4 py-2 text-sm transition ${
-                          activeAnalysis === m.analysis
-                            ? "border-blue-500 bg-blue-50 text-blue-700"
-                            : "border-slate-300 bg-white hover:bg-slate-50"
-                        }`}
+                        onClick={() => handleCopy(m.content, i)}
+                        className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition cursor-pointer"
+                        title={t("chat.copy")}
                       >
-                        {activeAnalysis === m.analysis
-                          ? "Viewing Investigation"
-                          : "Open Investigation"}
+                        {copiedIndex === i ? (
+                          <span className="text-[10px] font-medium text-green-600">
+                            {t("chat.copied")}
+                          </span>
+                        ) : (
+                          <Copy size={12} />
+                        )}
                       </button>
-                    )}
-                  </div>
+
+                      <button
+                        onClick={() => {
+                          if (speakingIndex === i) {
+                            stop();
+                            setSpeakingIndex(null);
+                          } else {
+                            stop();
+                            speak(m.content);
+                            setSpeakingIndex(i);
+                          }
+                        }}
+                        className={`flex h-6 w-6 items-center justify-center rounded transition cursor-pointer ${
+                          speakingIndex === i
+                            ? "bg-red-100 text-red-600"
+                            : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                        }`}
+                        title={speakingIndex === i ? t("chat.stop") : t("chat.readAloud")}
+                      >
+                        <Volume2 size={12} />
+                      </button>
+
+                      <button
+                        onClick={() => handleFeedback(i, "up")}
+                        className={`flex h-6 w-6 items-center justify-center rounded transition cursor-pointer ${
+                          m.feedback === "up"
+                            ? "text-blue-600 bg-blue-100 hover:bg-blue-200"
+                            : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                        }`}
+                        title={t("chat.helpful")}
+                      >
+                        <ThumbsUp size={12} />
+                      </button>
+
+                      <button
+                        onClick={() => handleFeedback(i, "down")}
+                        className={`flex h-6 w-6 items-center justify-center rounded transition cursor-pointer ${
+                          m.feedback === "down"
+                            ? "text-red-600 bg-red-100 hover:bg-red-200"
+                            : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                        }`}
+                        title={t("chat.notHelpful")}
+                      >
+                        <ThumbsDown size={12} />
+                      </button>
+
+                      <button
+                        onClick={() => retryMessage(i)}
+                        className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition cursor-pointer"
+                        title={t("chat.retry")}
+                      >
+                        <RefreshCw size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {loading && (
+            <div className="flex justify-start">
+              <div className="rounded-3xl bg-slate-100 px-5 py-4 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce" />
+                  <span
+                    className="h-2 w-2 rounded-full bg-slate-500 animate-bounce"
+                    style={{ animationDelay: ".15s" }}
+                  />
+                  <span
+                    className="h-2 w-2 rounded-full bg-slate-500 animate-bounce"
+                    style={{ animationDelay: ".3s" }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input Area */}
+        <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4">
+          <div className="flex items-end gap-2 rounded-[28px] border border-slate-300 bg-white px-3 py-2 shadow-sm focus-within:border-blue-500 transition">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 cursor-pointer"
+            >
+              <Paperclip size={18} />
+            </button>
+
+            {supported && (
+              <button
+                onClick={() => {
+                  console.log("Mic button clicked. Listening:", isListening);
+                  if (isListening) stopListening();
+                  else startListening();
+                }}
+                className={`flex h-10 w-10 items-center justify-center rounded-full transition cursor-pointer ${
+                  isListening
+                    ? "bg-red-100 text-red-600 animate-pulse"
+                    : "text-slate-500 hover:bg-slate-100"
+                }`}
+              >
+                {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+              </button>
+            )}
+
+            <textarea
+              ref={textareaRef}
+              value={input}
+              placeholder={t("chat.inputPlaceholder")}
+              className="flex-1 resize-none bg-transparent text-[15px] leading-6 outline-none overflow-y-auto max-h-45 py-2 placeholder:text-slate-400"
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+            />
+
+            <button
+              disabled={loading}
+              onClick={() => sendMessage()}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-300 transition"
+            >
+              <ArrowUp size={18} />
+            </button>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            accept=".pdf,.xlsx,.xls,.doc,.docx,.png,.jpg,.jpeg,.gif"
+            onChange={handleFileSelect}
+          />
+
+          {attachedFiles.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {attachedFiles.map((file, idx) => (
+                <div
+                  key={`${file.name}-${idx}`}
+                  className="flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1 text-sm"
+                >
+                  <File size={13} className="text-slate-500 shrink-0" />
+                  <span className="truncate text-slate-700 max-w-[180px]">{file.name}</span>
+                  <span className="text-slate-400 shrink-0">{formatFileSize(file.size)}</span>
+                  <button
+                    onClick={() => setAttachedFiles((prev) => prev.filter((_, i) => i !== idx))}
+                    className="ml-0.5 shrink-0 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    title={t("chat.removeFile")}
+                  >
+                    <X size={13} />
+                  </button>
                 </div>
               ))}
-
-              {(loading || historyLoading) && (
-                <div className="flex justify-start">
-                  <div className="rounded-3xl bg-slate-100 px-5 py-4 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce" />
-                      <span
-                        className="h-2 w-2 rounded-full bg-slate-500 animate-bounce"
-                        style={{ animationDelay: ".15s" }}
-                      />
-                      <span
-                        className="h-2 w-2 rounded-full bg-slate-500 animate-bounce"
-                        style={{ animationDelay: ".3s" }}
-                      />
-                      <span className="ml-3 text-sm text-slate-600">
-                        {historyLoading ? "Loading..." : "Thinking..."}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
             </div>
+          )}
 
-            {/* Input */}
-            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4">
-              <div className="flex items-end gap-2 rounded-[28px] border border-slate-300 bg-white px-3 py-2 shadow-sm focus-within:border-blue-500 focus-within:shadow-md transition">
-                <button className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100">
-                  <Paperclip size={18} />
-                </button>
+          {isListening && (
+            <div className="mt-2">
+              <span className="text-xs text-red-500 font-medium">
+                🎤 {t("chat.listening")}
+              </span>
+            </div>
+          )}
 
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  placeholder="Ask a question or provide instructions..."
-                  className="flex-1 resize-none bg-transparent text-[15px] leading-6 outline-none overflow-y-auto max-h-45 py-2 placeholder:text-slate-400"
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      sendMessage();
-                    }
-                  }}
-                />
-
+          {followUps.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {followUps.map((q) => (
                 <button
-                  disabled={loading}
-                  onClick={() => sendMessage()}
-                  className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-300 transition"
+                  key={q}
+                  onClick={() => sendMessage(q)}
+                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm transition hover:bg-slate-50"
                 >
-                  <ArrowUp size={18} />
+                  {q}
                 </button>
-              </div>
-
-              {followUps.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {followUps.map((q) => (
-                    <button
-                      key={q}
-                      onClick={() => sendMessage(q)}
-                      className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm transition hover:bg-slate-50"
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
-          </section>
+          )}
+        </div>
+      </section>
 
-          {/* Analysis panel */}
-          <section className="flex-1 overflow-auto bg-linear-to-br from-slate-100 to-slate-200 p-2">
-            <AnalysisPanel analysis={activeAnalysis} />
-          </section>
-        </main>
-      </div>
+      {/* Analysis panel */}
+      <section className="flex-1 overflow-auto bg-linear-to-br from-slate-100 to-slate-200 p-2">
+        <AnalysisPanel analysis={activeAnalysis} />
+      </section>
     </div>
   );
 }

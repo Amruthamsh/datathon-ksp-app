@@ -12,7 +12,7 @@ export const menuItems = [
     icon: FolderKanban,
   },
   {
-    title: "Crime Hotspots",
+    title: "Crime Intelligence Map",
     icon: MapPinned,
   },
   {

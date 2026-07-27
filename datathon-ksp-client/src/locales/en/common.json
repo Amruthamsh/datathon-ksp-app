@@ -1,0 +1,355 @@
+{
+  "app": {
+    "title": "KSP Intelligence Framework",
+    "sessionExpired": "Your session has expired. Please sign in again."
+  },
+  "auth": {
+    "kgid": "KGID",
+    "password": "Password",
+    "dob": "Date of Birth",
+    "phone": "Phone (optional)",
+    "email": "Email (optional)",
+    "kgidPlaceholder": "KGIDxxxxxxxx",
+    "signIn": "Sign In",
+    "signUp": "Create Account",
+    "signOut": "Sign out",
+    "verifying": "Verifying...",
+    "signingIn": "Signing in...",
+    "creating": "Creating...",
+    "needAccount": "Need an account?",
+    "createOne": "Create one",
+    "alreadyHaveAccount": "Already have an account?",
+    "loginTitle": "Karnataka State Police",
+    "loginSubtitle": "Access the intelligence workspace with your KGID and password.",
+    "signupTitle": "Karnataka State Police",
+    "signupSubtitle": "Verify your identity first, then set your credentials.",
+    "verifyIdentity": "Verify Identity",
+    "setCredentials": "Set Credentials",
+    "back": "Back",
+    "createAccount": "Create Account",
+    "unableToVerify": "Unable to verify officer",
+    "accountCreatedSignInFailed": "Account created, but sign in failed",
+    "unableToCreate": "Unable to create account",
+    "unableToSignIn": "Unable to sign in right now"
+  },
+  "nav": {
+    "newChat": "New Chat",
+    "recentChats": "Recent Chats",
+    "rename": "Rename",
+    "delete": "Delete",
+    "untitled": "Untitled",
+    "investigations": "Investigations",
+    "crimeIntelligenceMap": "Crime Intelligence Map",
+    "criminalNetworks": "Criminal Networks",
+    "reports": "Reports"
+  },
+  "header": {
+    "searchPlaceholder": "Search FIRs, accused, victims, locations...",
+    "unknownUser": "Unknown user"
+  },
+  "chat": {
+    "greeting": "Hello! Ask me anything about the crime database.",
+    "inputPlaceholder": "Ask a question or provide instructions...",
+    "listening": "Listening...",
+    "stop": "Stop",
+    "readAloud": "Read aloud",
+    "copy": "Copy",
+    "copied": "OK",
+    "helpful": "Helpful",
+    "notHelpful": "Not helpful",
+    "retry": "Retry",
+    "openInvestigation": "Open Investigation",
+    "viewingInvestigation": "Viewing Investigation",
+    "fileAttached": "File attached",
+    "removeFile": "Remove file"
+  },
+  "analysis": {
+    "workspace": "Analysis Workspace",
+    "queryAnalysis": "Query Analysis",
+    "charts": "chart(s)",
+    "table": "Table",
+    "addToReports": "Add to Reports",
+    "adding": "Adding...",
+    "export": "Export",
+    "pdf": "PDF",
+    "word": "Word",
+    "sqlResults": "SQL Results",
+    "rows": "({{count}} rows)",
+    "sqlQuery": "SQL Query",
+    "noQueryAvailable": "No query available.",
+    "filterRows": "Filter rows...",
+    "noRowsMatch": "No rows match the filter.",
+    "noResultRows": "No result rows were returned.",
+    "exportExcel": "Export Excel",
+    "reportAdded": "Report added.",
+    "unableToSaveReport": "Unable to save report.",
+    "exportFailed": "Export failed.",
+    "pickResponse": "Pick a response with analysis...",
+    "noData": "No data available.",
+    "noVisualization": "No visualization available for this result."
+  },
+  "chart": {
+    "noData": "No data available.",
+    "noVisualization": "No visualization available for this result.",
+    "low": "Low",
+    "high": "High",
+    "row": "Row {{count}}"
+  },
+  "home": {
+    "greeting": "Hello! Ask me anything about the crime database.",
+    "openInvestigation": "Open Investigation",
+    "viewingInvestigation": "Viewing Investigation"
+  },
+  "investigations": {
+    "title": "Investigations Queue",
+    "subtitle": "Highest-priority investigations that need your attention.",
+    "searchPlaceholder": "Search CR No, station, district...",
+    "filters": {
+      "assigned": "Assigned",
+      "chargesheetPending": "Chargesheet Pending",
+      "repeatOffenders": "Repeat Offenders",
+      "arrestsPending": "Arrests Pending",
+      "needReviewToday": "Need Review Today",
+      "status": "Status",
+      "gravity": "Gravity",
+      "station": "Station",
+      "officer": "Officer",
+      "district": "District",
+      "crimeHead": "Crime Head",
+      "sortPriority": "Sort: Priority"
+    },
+    "priority": {
+      "critical": "CRITICAL",
+      "high": "HIGH",
+      "medium": "MEDIUM",
+      "low": "LOW"
+    },
+    "actions": {
+      "compare": "Compare",
+      "commonSuspects": "Common Suspects",
+      "askAI": "Ask AI"
+    },
+    "detail": {
+      "caseSummary": "Case Summary",
+      "caseDetails": "Case Details",
+      "crimeGroup": "Crime Group",
+      "crimeHead": "Crime Head",
+      "gravity": "Gravity",
+      "district": "District",
+      "incidentDate": "Incident Date",
+      "registrationDate": "Registration Date",
+      "people": "People",
+      "accused": "Accused",
+      "victims": "Victims",
+      "noneRecorded": "None recorded",
+      "actsAndSections": "Acts & Sections",
+      "bailable": "Bailable",
+      "nonBailable": "Non-Bailable",
+      "indiaCode": "IndiaCode",
+      "indianKanoon": "Indian Kanoon"
+    },
+    "intel": {
+      "crossInvestigation": "Cross Investigation Intel",
+      "similarCases": "Similar Cases",
+      "sharedAccused": "shared accused",
+      "sharedActs": "shared acts"
+    },
+    "location": {
+      "stationId": "Station ID",
+      "viewOnMap": "View on Map"
+    },
+    "actions2": {
+      "deepDive": "Ask AI for Deep Dive",
+      "askAIContextually": "Recommend Next Steps"
+    },
+    "empty": "No investigations match the selected filters or search terms.",
+    "loading": "Loading Investigations Queue...",
+    "allLabel": "All {{label}}s",
+    "reset": "Reset"
+  },
+  "crimeMap": {
+    "title": "Crime Intelligence Map",
+    "subtitle": "Decide where to deploy police resources",
+    "generatePatrolPlan": "Generate Patrol Plan",
+    "layers": {
+      "title": "Map Layers",
+      "trendHeatmap": "Trend Heatmap",
+      "clusterView": "Cluster View",
+      "districtRisk": "District Risk",
+      "networkOverlay": "Network Overlay"
+    },
+    "summary": {
+      "operationalSummary": "Operational Summary",
+      "todaysHighestPriority": "Today's Highest Priority",
+      "todaysRisk": "Today's Risk",
+      "emergingHotspots": "Emerging Hotspots",
+      "repeatOffenders": "Repeat Offenders",
+      "crimes30d": "Crimes (30d)",
+      "quickActions": "Quick Actions",
+      "switchToCluster": "Switch to Cluster View...",
+      "enableNetwork": "Enable Network Overlay..."
+    },
+    "heatmap": {
+      "change": "Change",
+      "direction": "Direction",
+      "increasing": "Crime Increasing",
+      "stable": "Stable",
+      "decreasing": "Crime Decreasing",
+      "currentPeriod": "Current Period",
+      "previousPeriod": "Previous Period",
+      "trendIncreasing": "Crime Trend -- Increasing",
+      "trendDecreasing": "Crime Trend -- Decreasing"
+    },
+    "district": {
+      "operationalRisk": "Operational Risk",
+      "crimeCount": "Crime Count",
+      "pendingInvestigations": "Pending Investigations",
+      "trend": "Trend",
+      "riskBreakdown": "Risk Breakdown",
+      "crimeVolume": "Crime Volume",
+      "pendingCases": "Pending Cases",
+      "emergingTrend": "Emerging Trend"
+    },
+    "cluster": {
+      "totalIncidents": "Total Incidents",
+      "peakWindow": "Peak Window",
+      "linkedCases": "Linked Cases",
+      "networks": "Networks",
+      "crimeBreakdown": "Crime Breakdown",
+      "nearbyStations": "Nearby Stations",
+      "whyGrowing": "Why is this hotspot growing?"
+    },
+    "network": {
+      "members": "Members",
+      "totalFirs": "Total FIRs",
+      "networkRisk": "Network Risk",
+      "districtsCovered": "Districts Covered",
+      "topMembers": "Top Members",
+      "openInNetworks": "Open in Criminal Networks"
+    },
+    "patrol": {
+      "title": "Patrol Planner",
+      "subtitle": "Generate Deployment Routes",
+      "timeOfDay": "Time of Day",
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "evening": "Evening",
+      "night": "Night",
+      "unitsAvailable": "Units Available",
+      "crimeFocus": "Crime Focus",
+      "allCrimes": "All Crimes",
+      "crimesAgainstBody": "Crimes Against Body",
+      "crimesAgainstProperty": "Crimes Against Property",
+      "crimesAgainstWomen": "Crimes Against Women",
+      "crimesAgainstPublicOrder": "Crimes Against Public Order",
+      "economicOffences": "Economic Offences",
+      "area": "Area",
+      "allDistricts": "All Districts",
+      "generating": "Generating...",
+      "reconfigure": "Reconfigure",
+      "routesGenerated": "Routes Generated",
+      "score": "Score: {{count}}",
+      "shift": "Shift",
+      "exportPdf": "Export PDF",
+      "exportExcel": "Export Excel",
+      "close": "Close"
+    },
+    "askAI": {
+      "deepDive": "Ask AI for Deep Dive",
+      "trendAnalysis": "Analyze This Trend",
+      "districtAnalysis": "Analyze This District",
+      "clusterAnalysis": "Analyze This Hotspot",
+      "networkAnalysis": "Analyze This Network",
+      "patrolInsights": "AI Patrol Insights"
+    },
+    "noData": "No data available.",
+    "loadingCluster": "Loading cluster intelligence...",
+    "selectPerson": "Select a person to view their network graph.",
+    "noTimeline": "No timeline data available.",
+    "selectPersonNetwork": "Select a person or network to view their intelligence profile."
+  },
+  "networks": {
+    "title": "CRIMINAL NETWORK INTELLIGENCE",
+    "subtitle": "Identify key individuals, connections, and criminal organisations",
+    "searchPlaceholder": "Search Person Name, Crime Number, Police Station...",
+    "tabs": {
+      "people": "People",
+      "cases": "Cases",
+      "stations": "Stations"
+    },
+    "firs": "{{count}} FIRs",
+    "stats": {
+      "repeatOffenders": "Repeat Offenders",
+      "criminalGroups": "Criminal Groups",
+      "bridgeIndividuals": "Bridge Individuals",
+      "highRiskNetworks": "High Risk Networks"
+    },
+    "topNetworks": "Top Criminal Networks",
+    "columns": {
+      "members": "Members",
+      "firs": "FIRs",
+      "stations": "Stations"
+    },
+    "noNetworks": "No networks identified yet. Search for a person to begin.",
+    "bridgeIndividuals": "Bridge Individuals",
+    "table": {
+      "name": "Name",
+      "associates": "Associates",
+      "districts": "Districts"
+    },
+    "back": "Back",
+    "graph": "Graph",
+    "timeline": "Timeline",
+    "profile": {
+      "title": "Network Profile",
+      "person": "Person",
+      "networkScore": "Network Score",
+      "networkRank": "Network Rank",
+      "associatedFirs": "Associated FIRs",
+      "knownAssociates": "Known Associates",
+      "policeStations": "Police Stations",
+      "mostCommonCrime": "Most Common Crime",
+      "recentActivity": "Recent Activity",
+      "investigationLeads": "Investigation Leads"
+    },
+    "insights": {
+      "centralFigure": "Central figure",
+      "appearsInFirs": "Appears in {{count}} FIRs",
+      "frequentlyArrestedWith": "Frequently arrested with {{name}}",
+      "sharedFirs": "shared FIRs",
+      "operatesAcrossDistricts": "Operates across {{count}} districts",
+      "linkedToRepeatOffenders": "Linked to {{count}} repeat offenders",
+      "associatesWithCriminalHistory": "Associates with criminal history"
+    },
+    "analytics": {
+      "title": "Network Analytics",
+      "sharedArrests": "Shared Arrests",
+      "lastSeen": "Last Seen"
+    },
+    "empty": "Select a person or network to view their intelligence profile.",
+    "deepDive": "Deep dive with AI"
+  },
+  "reports": {
+    "title": "Saved Analytics Reports",
+    "subtitle": "View visualizations or inspect dynamic queries.",
+    "restore": "Restore ({{count}}) Hidden Widgets",
+    "noActiveWidgets": "No active widgets",
+    "allHidden": "All reports are hidden or no data was returned.",
+    "resetDashboard": "Reset Dashboard",
+    "untitledReport": "Untitled Report",
+    "actions": {
+      "deleteReport": "Delete Report",
+      "viewSql": "View SQL & Reasoning",
+      "expand": "Expand",
+      "minimize": "Minimize",
+      "fullScreen": "Full Screen",
+      "hideWidget": "Hide Widget"
+    },
+    "aiReasoning": "AI Reasoning",
+    "executedSql": "Executed SQL",
+    "copySql": "Copy SQL",
+    "copied": "Copied",
+    "detailedView": "Detailed view and source query",
+    "loading": "Executing queries and generating dashboard..."
+  }
+}

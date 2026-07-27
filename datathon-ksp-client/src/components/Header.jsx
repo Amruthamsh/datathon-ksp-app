@@ -1,5 +1,6 @@
 import React from "react";
 import { Search, Bell, BadgeQuestionMarkIcon, LogOut } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import logo from "../assets/Seal_of_Karnataka.svg";
 import profile from "../assets/profile.svg";
 import LanguageSelector from "./LanguageSelector";
@@ -7,13 +8,14 @@ import { useAuth } from "../auth/AuthContext";
 
 const Header = () => {
   const { officer, signOut } = useAuth();
+  const { t } = useTranslation();
 
   return (
     <header className="h-12 border-b border-slate-200 bg-white flex items-center justify-between px-6">
       <div className="flex items-center gap-6">
         <img src={logo} alt="Logo" className="h-8 w-8" />
         <h1 className="text-xl font-semibold text-red-700">
-          KSP Intelligence Framework
+          {t("app.title")}
         </h1>
       </div>
       <div className="flex items-center gap-6">
@@ -24,7 +26,7 @@ const Header = () => {
           />
           <input
             type="text"
-            placeholder="Search FIRs, accused, victims, locations..."
+            placeholder={t("header.searchPlaceholder")}
             className="
                 w-full
                 rounded-xl
@@ -48,7 +50,7 @@ const Header = () => {
         <LanguageSelector />
         <Bell size={24} />
         <BadgeQuestionMarkIcon size={24} />
-        <p>{officer?.full_name ?? "Unknown user"}</p>
+        <p>{officer?.full_name ?? t("header.unknownUser")}</p>
         <img src={profile} alt="Profile" className="h-8 w-8 rounded-full" />
         <button
           type="button"
@@ -56,7 +58,7 @@ const Header = () => {
           className="flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition cursor-pointer"
         >
           <LogOut size={16} />
-          Sign out
+          {t("auth.signOut")}
         </button>
       </div>
     </header>

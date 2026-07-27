@@ -17,3 +17,6 @@ class SQLAgentState(TypedDict):
     response: str
     follow_up_questions: list[str]
     charts: list[dict]
+    language: Literal["en", "kn"]
+    original_query: str
+    translated_query: str

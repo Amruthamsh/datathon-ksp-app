@@ -2,10 +2,16 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Investigations from "./pages/Investigations";
+import CrimeIntelligenceMap from "./pages/CrimeIntelligenceMap";
+import Networks from "./pages/Networks";
+import Reports from "./pages/Reports";
+import DashboardLayout from "./components/DashboardLayout";
 
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
@@ -27,13 +33,12 @@ function LoginRoute() {
 function SessionListener() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     function handleSessionExpired() {
-      toast.error("Your session has expired. Please sign in again.");
-
+      toast.error(t("app.sessionExpired"));
       signOut();
-
       navigate("/login", { replace: true });
     }
 
@@ -42,7 +47,7 @@ function SessionListener() {
     return () => {
       window.removeEventListener("session-expired", handleSessionExpired);
     };
-  }, [navigate, signOut]);
+  }, [navigate, signOut, t]);
 
   return null;
 }
@@ -51,20 +56,31 @@ function AppRoutes() {
   return (
     <>
       <SessionListener />
-
       <Routes>
+        <Route path="/login" element={<LoginRoute />} />
+        <Route path="/signup" element={<Signup />} />
+
         <Route
-          path="/"
           element={
             <ProtectedRoute>
-              <Home />
+              <DashboardLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          {/* New Chat (Empty) */}
+          <Route path="/" element={<Home />} />
 
-        <Route path="/login" element={<LoginRoute />} />
+          {/* Specific Chat by ID */}
+          <Route path="/chat/:id" element={<Home />} />
 
-        <Route path="/signup" element={<Signup />} />
+          <Route path="/investigations" element={<Investigations />} />
+          <Route
+            path="/crime-intelligence-map"
+            element={<CrimeIntelligenceMap />}
+          />
+          <Route path="/networks" element={<Networks />} />
+          <Route path="/reports" element={<Reports />} />
+        </Route>
       </Routes>
     </>
   );
@@ -74,7 +90,6 @@ function App() {
   return (
     <AuthProvider>
       <Toaster position="top-center" reverseOrder={false} />
-
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>

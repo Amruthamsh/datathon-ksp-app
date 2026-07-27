@@ -1,7 +1,12 @@
-import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export default function LanguageSelector() {
-  const [lang, setLang] = useState("en");
+  const { i18n } = useTranslation();
+  const lang = i18n.language;
+
+  function setLang(lng) {
+    i18n.changeLanguage(lng);
+  }
 
   return (
     <div className="flex rounded-lg overflow-hidden">

@@ -2,14 +2,14 @@ import logging
 import traceback
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from langchain_core.messages import HumanMessage, AIMessage
 
 from agents.sql_query_db.graph import graph
 from auth.dependencies import get_current_user
 from db.dependencies import get_chat_repository, get_conversation_repository
 from db.catalyst.nosql_chat_repository import ChatRepository, ConversationRepository
-from schemas.chat import ChatRequest, RenameConversationRequest
+from schemas.chat import RenameConversationRequest, FeedbackRequest
 
 logger = logging.getLogger("fastapi_function")
 router = APIRouter(prefix="/chat", tags=["Chat"])
@@ -28,13 +28,15 @@ def _build_state_messages(history: list, current_query: str) -> list:
 
 @router.post("/generate", status_code=200)
 async def generate_response(
-    request: ChatRequest,
+    user_query: str = Form(...),
+    conversation_id: str | None = Form(None),
+    language: str | None = Form(None),
+    files: list[UploadFile] = File(default=[]),
     current_user: dict = Depends(get_current_user),
     chat_repo: Optional[ChatRepository] = Depends(get_chat_repository),
     conv_repo: Optional[ConversationRepository] = Depends(get_conversation_repository),
 ):
     user_id = current_user["kgid"]
-    conversation_id = request.conversation_id
     history = []
 
     # Persistence is best-effort — never block the query on a Catalyst failure
@@ -46,7 +48,7 @@ async def generate_response(
                     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
                 history = chat_repo.get_messages(conversation_id)
             else:
-                conversation = conv_repo.create(user_id, request.user_query)
+                conversation = conv_repo.create(user_id, user_query)
                 conversation_id = conversation["conversation_id"]
         except HTTPException:
             raise
@@ -55,11 +57,20 @@ async def generate_response(
             conversation_id = conversation_id  # keep whatever was passed in
 
         try:
-            chat_repo.save_message(conversation_id, "user", request.user_query)
+            chat_repo.save_message(conversation_id, "user", user_query)
         except Exception as e:
             logger.warning(f"Failed to save user message (non-fatal): {e}")
 
-    state = {"messages": _build_state_messages(history, request.user_query)}
+    if files:
+        for f in files:
+            logger.info(f"Received file upload: {f.filename} ({f.content_type})")
+
+    state = {
+        "messages": _build_state_messages(history, user_query),
+        "language": language or "en",
+        "original_query": user_query,
+        "translated_query": "",
+    }
 
     graph_error = None
     try:
@@ -74,13 +85,15 @@ async def generate_response(
         if graph_error else ""
     )
 
+    assistant_msg = None
     if chat_repo and conversation_id:
         try:
-            chat_repo.save_message(
+            assistant_msg = chat_repo.save_message(
                 conversation_id,
                 "assistant",
                 response_text,
                 analysis={
+                    "response": response_text,
                     "sql_query": result.get("sql_query"),
                     "sql_result": result.get("sql_result", []),
                     "charts": result.get("charts", []),
@@ -92,13 +105,15 @@ async def generate_response(
 
     if conv_repo and conversation_id:
         try:
-            conv_repo.touch(conversation_id, user_id, request.user_query)
+            conv_repo.touch(conversation_id, user_id, user_query)
         except Exception as e:
             logger.warning(f"Failed to touch conversation (non-fatal): {e}")
 
     return {
         "status": "success",
         "conversation_id": conversation_id,
+        "message_id": assistant_msg.get("message_id") if assistant_msg else None,
+        "created_at": assistant_msg.get("created_at") if assistant_msg else None,
         "response": response_text,
         "sql_query": result.get("sql_query"),
         "sql_result": result.get("sql_result", []),
@@ -186,6 +201,33 @@ async def delete_conversation(
     return {"status": "success", "conversation_id": conversation_id}
 
 
+@router.post("/feedback", status_code=200)
+async def submit_feedback(
+    body: FeedbackRequest,
+    current_user: dict = Depends(get_current_user),
+    chat_repo: Optional[ChatRepository] = Depends(get_chat_repository),
+):
+    if not chat_repo:
+        raise HTTPException(status_code=503, detail="Persistence unavailable.")
+
+    try:
+        chat_repo.update_message_feedback(
+            body.conversation_id,
+            body.created_at,
+            body.feedback,
+        )
+    except Exception as e:
+        logger.error(f"Failed to update feedback: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save feedback.")
+
+    return {
+        "status": "success",
+        "conversation_id": body.conversation_id,
+        "created_at": body.created_at,
+        "feedback": body.feedback,
+    }
+
+
 @router.get("/conversation/{conversation_id}", status_code=200)
 async def get_conversation(
     conversation_id: str,
@@ -211,6 +253,8 @@ async def get_conversation(
                 "content": m["content"],
                 "analysis": m.get("analysis"),
                 "created_at": m.get("created_at"),
+                "message_id": m.get("message_id"),
+                "feedback": m.get("feedback"),
             }
             for m in messages
         ],
