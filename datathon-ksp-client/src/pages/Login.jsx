@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import logo from "../assets/Seal_of_Karnataka.svg";
 import { ShieldCheck } from "lucide-react";
+import { API_BASE } from "../api/config";
 
 async function getErrorMessage(response, fallbackMessage) {
   try {
@@ -41,7 +42,7 @@ export default function Login() {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/signin", {
+      const response = await fetch(`${API_BASE}/auth/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
