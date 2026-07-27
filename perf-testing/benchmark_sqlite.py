@@ -28,7 +28,7 @@ from typing import Optional
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-DEFAULT_DB = Path(__file__).resolve().parent.parent / "synthetic-data" / "fir_system.db"
+DEFAULT_DB = Path(__file__).resolve().parent.parent / "functions" / "datathon-ksp-app" / "fir_system.db"
 DEFAULT_ITERATIONS = 100
 
 # SLO thresholds (ms) — queries exceeding these are flagged

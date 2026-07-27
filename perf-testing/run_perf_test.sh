@@ -33,7 +33,7 @@ USERS=20
 SPAWN_RATE=4
 SQLITE_ONLY=false
 LOCUST_ONLY=false
-DB_PATH="${SCRIPT_DIR}/../synthetic-data/fir_system.db"
+DB_PATH="${SCRIPT_DIR}/../functions/datathon-ksp-app/fir_system.db"
 BENCH_ITERATIONS=100
 
 # ── Parse CLI flags ──────────────────────────────────────────────────

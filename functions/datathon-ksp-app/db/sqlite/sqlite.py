@@ -11,7 +11,11 @@ for candidate in [_dir, *_dir.parents]:
         load_dotenv(env_file)
         break
 
-SQLITE_DATABASE_PATH = os.getenv("SQLITE_DATABASE_PATH")
+_BACKEND_ROOT = _dir.parent.parent
+SQLITE_DATABASE_PATH = os.getenv(
+    "SQLITE_DATABASE_PATH",
+    str(_BACKEND_ROOT / "fir_system.db"),
+)
 
 
 @contextmanager

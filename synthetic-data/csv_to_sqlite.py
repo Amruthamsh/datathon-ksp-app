@@ -15,7 +15,10 @@ import os
 import sqlite3
 
 CSV_DIR = "sample_data_large_csv"
-DB_PATH = "fir_system.db"
+DB_PATH = os.path.join(
+    os.path.dirname(__file__),
+    "..", "functions", "datathon-ksp-app", "fir_system.db",
+)
 
 # ----------------------------------------------------------------------------
 # Schema — one CREATE TABLE per table, in FK dependency order
