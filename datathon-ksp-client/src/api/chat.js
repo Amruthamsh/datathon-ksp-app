@@ -24,38 +24,21 @@ export async function generateResponse(
   language = "en",
   files = [],
 ) {
-  let res;
-
-  if (files.length > 0) {
-    const formData = new FormData();
-    formData.append("user_query", userQuery);
-    formData.append("language", language);
-    if (conversationId) formData.append("conversation_id", conversationId);
-    for (const file of files) {
-      formData.append("files", file);
-    }
-
-    res = await fetch(`${BASE}/chat/generate`, {
-      method: "POST",
-      headers: {
-        "X-Auth-Token": token,
-      },
-      body: formData,
-    });
-  } else {
-    res = await fetch(`${BASE}/chat/generate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Auth-Token": token,
-      },
-      body: JSON.stringify({
-        user_query: userQuery,
-        conversation_id: conversationId,
-        language,
-      }),
-    });
+  const formData = new FormData();
+  formData.append("user_query", userQuery);
+  formData.append("language", language);
+  if (conversationId) formData.append("conversation_id", conversationId);
+  for (const file of files) {
+    formData.append("files", file);
   }
+
+  const res = await fetch(`${BASE}/chat/generate`, {
+    method: "POST",
+    headers: {
+      "X-Auth-Token": token,
+    },
+    body: formData,
+  });
 
   return handleResponse(res);
 }
