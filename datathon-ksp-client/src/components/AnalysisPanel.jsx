@@ -113,21 +113,19 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
 
       <div className="overflow-hidden rounded-2xl border border-slate-200">
         <div className="max-h-96 overflow-y-auto overflow-x-auto">
-          <table className="w-full table-fixed border-collapse text-left text-xs">
+          <table className="min-w-full border-collapse text-left text-xs">
             <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
               <tr>
                 {columns.map((col) => (
                   <th
                     key={col}
-                    className="border-b border-slate-200 px-3 py-3 align-top font-semibold text-slate-700"
+                    className="whitespace-nowrap border-b border-slate-200 px-3 py-3 align-top font-semibold text-slate-700"
                   >
                     <button
                       onClick={() => toggleSort(col)}
                       className="flex items-center gap-1 hover:text-blue-600 transition"
                     >
-                      <span className="whitespace-normal wrap-break-word">
-                        {col}
-                      </span>
+                      <span className="whitespace-nowrap">{col}</span>
                       {sortKey === col ? (
                         sortDir === "asc" ? (
                           <ArrowUp
@@ -158,9 +156,9 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
                     {columns.map((col) => (
                       <td
                         key={col}
-                        className="border-b border-slate-100 px-3 py-3 align-top text-slate-700"
+                        className="whitespace-nowrap border-b border-slate-100 px-3 py-3 align-top text-slate-700"
                       >
-                        <span className="block whitespace-normal wrap-break-word">
+                        <span className="block whitespace-nowrap">
                           {formatValue(row?.[col])}
                         </span>
                       </td>
@@ -361,7 +359,9 @@ export default function AnalysisPanel({ analysis }) {
                       className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors cursor-pointer disabled:opacity-50"
                     >
                       <Save size={13} />
-                      {savingIdx === idx ? t("analysis.adding") : t("analysis.addToReports")}
+                      {savingIdx === idx
+                        ? t("analysis.adding")
+                        : t("analysis.addToReports")}
                     </button>
                   </div>
                   <div
