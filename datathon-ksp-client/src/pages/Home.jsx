@@ -17,10 +17,22 @@ import useSpeechSynthesis from "../hooks/useSpeechSynthesis";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useParams, useNavigate, useLocation, useOutletContext } from "react-router-dom";
+import {
+  useParams,
+  useNavigate,
+  useLocation,
+  useOutletContext,
+} from "react-router-dom";
 import AnalysisPanel from "../components/AnalysisPanel";
 import { useAuth } from "../auth/AuthContext";
 import { generateResponse, getConversation, sendFeedback } from "../api/chat";
+
+const CHAT_WIDTH_DEFAULT = 47;
+const CHAT_WIDTH_MIN = 25;
+const CHAT_WIDTH_MAX = 75;
+
+const clampChatWidth = (value) =>
+  Math.min(CHAT_WIDTH_MAX, Math.max(CHAT_WIDTH_MIN, value));
 
 export default function Home() {
   const { id } = useParams();
@@ -48,6 +60,13 @@ export default function Home() {
   const didConsumeInitialState = useRef(false);
 
   const [attachedFiles, setAttachedFiles] = useState([]);
+
+  const layoutRef = useRef(null);
+  const [chatWidth, setChatWidth] = useState(() => {
+    const saved = Number(localStorage.getItem("ksp-chat-width"));
+    return Number.isFinite(saved) ? clampChatWidth(saved) : CHAT_WIDTH_DEFAULT;
+  });
+  const [isResizing, setIsResizing] = useState(false);
 
   const { speak, stop } = useSpeechSynthesis();
 
@@ -117,6 +136,37 @@ export default function Home() {
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [input]);
 
+  // Drag-to-resize chat/analysis panes
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMove = (e) => {
+      const layout = layoutRef.current;
+      if (!layout) return;
+      const rect = layout.getBoundingClientRect();
+      setChatWidth(
+        clampChatWidth(((e.clientX - rect.left) / rect.width) * 100),
+      );
+    };
+    const handleUp = () => setIsResizing(false);
+
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing]);
+
+  useEffect(() => {
+    localStorage.setItem("ksp-chat-width", chatWidth.toFixed(2));
+  }, [chatWidth]);
+
   const handleFileSelect = (e) => {
     const selected = Array.from(e.target.files || []);
     if (!selected.length) return;
@@ -134,7 +184,9 @@ export default function Home() {
     const valid = [];
     for (const file of selected) {
       if (!allowed.includes(file.type)) {
-        alert(`"${file.name}" is unsupported. Upload PDF, Excel, Word, or image files.`);
+        alert(
+          `"${file.name}" is unsupported. Upload PDF, Excel, Word, or image files.`,
+        );
         continue;
       }
       if (file.size > 10 * 1024 * 1024) {
@@ -176,7 +228,13 @@ export default function Home() {
     setFollowUps([]);
 
     try {
-      const data = await generateResponse(token, message, id || null, i18n.language, filesToSend);
+      const data = await generateResponse(
+        token,
+        message,
+        id || null,
+        i18n.language,
+        filesToSend,
+      );
       // If this was a new chat, refresh the sidebar and redirect
       if (!id && data.conversation_id) {
         refreshConversations();
@@ -252,10 +310,18 @@ export default function Home() {
   };
 
   return (
-    <div className="flex-1 flex h-full overflow-hidden bg-white">
+    <div
+      ref={layoutRef}
+      className={`flex-1 flex h-full overflow-hidden bg-white ${
+        isResizing ? "select-none" : ""
+      }`}
+    >
       {/* Chat column */}
-      <section className="w-[47%] border-r border-slate-200 flex flex-col">
-        <div className="flex-1 overflow-y-auto px-7 py-6 space-y-5">
+      <section
+        className="flex flex-col min-w-0"
+        style={{ width: `${chatWidth}%` }}
+      >
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
           {messages.map((m, i) => {
             // Ensure analysis contains actual data (SQL query or SQL results)
             const hasAnalysis =
@@ -279,53 +345,53 @@ export default function Home() {
                 }`}
               >
                 <div
-                  className={`rounded-3xl px-5 py-3 shadow-sm text-[15px] leading-7 ${
+                  className={`rounded-2xl px-4 py-2.5 shadow-sm text-[14px] leading-6 ${
                     m.role === "user"
-                      ? "bg-red-50 max-w-[78%]"
-                      : "bg-slate-100 max-w-[84%]"
+                      ? "bg-red-50 max-w-[85%]"
+                      : "bg-slate-100 max-w-[90%]"
                   }`}
                 >
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ children }) => (
-                        <h1 className="text-2xl font-bold mt-6 mb-4 text-slate-900">
+                        <h1 className="text-xl font-bold mt-3 mb-1.5 text-slate-900">
                           {children}
                         </h1>
                       ),
 
                       h2: ({ children }) => (
-                        <h2 className="text-xl font-semibold mt-6 mb-3 border-b border-slate-300 pb-1 text-slate-900">
+                        <h2 className="text-lg font-semibold mt-3 mb-1.5 border-b border-slate-300 pb-1 text-slate-900">
                           {children}
                         </h2>
                       ),
 
                       h3: ({ children }) => (
-                        <h3 className="text-lg font-semibold mt-5 mb-2 text-slate-900">
+                        <h3 className="text-base font-semibold mt-2.5 mb-1 text-slate-900">
                           {children}
                         </h3>
                       ),
 
                       p: ({ children }) => (
-                        <p className="mb-2 leading-8 text-slate-800">
+                        <p className="mb-1.5 leading-6 text-slate-800">
                           {children}
                         </p>
                       ),
 
                       ul: ({ children }) => (
-                        <ul className="list-disc pl-6 mb-2 space-y-1">
+                        <ul className="list-disc pl-6 mb-1.5 space-y-0.5">
                           {children}
                         </ul>
                       ),
 
                       ol: ({ children }) => (
-                        <ol className="list-decimal pl-6 mb-4 space-y-1">
+                        <ol className="list-decimal pl-6 mb-1.5 space-y-0.5">
                           {children}
                         </ol>
                       ),
 
                       li: ({ children }) => (
-                        <li className="leading-7">{children}</li>
+                        <li className="leading-6">{children}</li>
                       ),
 
                       strong: ({ children }) => (
@@ -335,7 +401,7 @@ export default function Home() {
                       ),
 
                       blockquote: ({ children }) => (
-                        <blockquote className="border-l-4 border-slate-300 pl-4 italic text-slate-600 my-4">
+                        <blockquote className="border-l-4 border-slate-300 pl-4 italic text-slate-600 my-2">
                           {children}
                         </blockquote>
                       ),
@@ -353,10 +419,12 @@ export default function Home() {
                   {/* Open Investigation button */}
                   {hasAnalysis && (
                     <button
-                      onClick={() => setActiveAnalysis({
-                        ...m.analysis,
-                        response: m.analysis.response || m.content || "",
-                      })}
+                      onClick={() =>
+                        setActiveAnalysis({
+                          ...m.analysis,
+                          response: m.analysis.response || m.content || "",
+                        })
+                      }
                       className={`rounded-lg border px-4 py-2 mb-2 text-sm transition cursor-pointer ${
                         isCurrentlyActive
                           ? "border-blue-500 bg-blue-50 text-blue-700 font-medium shadow-xs"
@@ -402,7 +470,11 @@ export default function Home() {
                             ? "bg-red-100 text-red-600"
                             : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
                         }`}
-                        title={speakingIndex === i ? t("chat.stop") : t("chat.readAloud")}
+                        title={
+                          speakingIndex === i
+                            ? t("chat.stop")
+                            : t("chat.readAloud")
+                        }
                       >
                         <Volume2 size={12} />
                       </button>
@@ -447,7 +519,7 @@ export default function Home() {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="rounded-3xl bg-slate-100 px-5 py-4 shadow-sm">
+              <div className="rounded-2xl bg-slate-100 px-4 py-3 shadow-sm">
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce" />
                   <span
@@ -533,10 +605,18 @@ export default function Home() {
                   className="flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1 text-sm"
                 >
                   <File size={13} className="text-slate-500 shrink-0" />
-                  <span className="truncate text-slate-700 max-w-[180px]">{file.name}</span>
-                  <span className="text-slate-400 shrink-0">{formatFileSize(file.size)}</span>
+                  <span className="truncate text-slate-700 max-w-[180px]">
+                    {file.name}
+                  </span>
+                  <span className="text-slate-400 shrink-0">
+                    {formatFileSize(file.size)}
+                  </span>
                   <button
-                    onClick={() => setAttachedFiles((prev) => prev.filter((_, i) => i !== idx))}
+                    onClick={() =>
+                      setAttachedFiles((prev) =>
+                        prev.filter((_, i) => i !== idx),
+                      )
+                    }
                     className="ml-0.5 shrink-0 text-slate-400 hover:text-slate-600 cursor-pointer"
                     title={t("chat.removeFile")}
                   >
@@ -571,8 +651,28 @@ export default function Home() {
         </div>
       </section>
 
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          setIsResizing(true);
+        }}
+        onDoubleClick={() => setChatWidth(CHAT_WIDTH_DEFAULT)}
+        className="group relative w-1.5 shrink-0 cursor-col-resize touch-none select-none flex items-center justify-center"
+        title="Drag to resize — double-click to reset"
+      >
+        <div
+          className={`absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors ${
+            isResizing
+              ? "w-0.5 bg-blue-500"
+              : "bg-slate-200 group-hover:bg-blue-400"
+          }`}
+        />
+      </div>
+
       {/* Analysis panel */}
-      <section className="flex-1 overflow-auto bg-linear-to-br from-slate-100 to-slate-200 p-2">
+      <section className="flex-1 min-w-0 overflow-auto bg-linear-to-br from-slate-100 to-slate-200 p-2">
         <AnalysisPanel analysis={activeAnalysis} />
       </section>
     </div>
