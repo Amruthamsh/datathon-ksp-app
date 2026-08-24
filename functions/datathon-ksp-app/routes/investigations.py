@@ -86,7 +86,7 @@ async def get_filters(
 # ---------------------------------------------------------------------
 # Investigation Table
 # ---------------------------------------------------------------------
-@router.get("/", status_code=status.HTTP_200_OK)
+@router.get("", status_code=status.HTTP_200_OK)
 async def get_investigations(
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),

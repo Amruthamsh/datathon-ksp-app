@@ -66,7 +66,7 @@ export async function getInvestigations(token, params = {}) {
 
   const queryString = buildQueryString(queryParams);
 
-  const res = await fetch(`${BASE}/investigations/${queryString}`, {
+  const res = await fetch(`${BASE}/investigations${queryString}`, {
     headers: {
       "X-Auth-Token": token,
     },

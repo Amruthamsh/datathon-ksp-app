@@ -2,3 +2,4 @@ catalyst-debug.log
 .build
 .catalyst
 .env
+functions/datathon-ksp-app/fir_system.db

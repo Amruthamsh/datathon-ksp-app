@@ -3,7 +3,7 @@ import base64
 from pathlib import Path
 from typing import Dict
 from jinja2 import Environment, FileSystemLoader
-from playwright.async_api import async_playwright
+
 from schemas.report import ReportPayload
 from utils.markdown import markdown_to_html
 
@@ -19,6 +19,13 @@ class PDFGenerator:
         chart_paths: Dict[str, Path],
         output_path: Path,
     ) -> Path:
+        try:
+            from playwright.async_api import async_playwright
+        except ImportError as exc:
+            raise ValueError(
+                "PDF export is not available on this deployment "
+                "(playwright is not bundled). Please export the report as DOCX instead."
+            ) from exc
         # 1. Convert chart images to base64
         chart_map = {}
         for chart_id, image_path in chart_paths.items():

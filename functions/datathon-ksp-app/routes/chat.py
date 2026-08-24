@@ -3,9 +3,7 @@ import traceback
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from langchain_core.messages import HumanMessage, AIMessage
 
-from agents.sql_query_db.graph import graph
 from auth.dependencies import get_current_user
 from db.dependencies import get_chat_repository, get_conversation_repository
 from db.catalyst.nosql_chat_repository import ChatRepository, ConversationRepository
@@ -14,8 +12,20 @@ from schemas.chat import RenameConversationRequest, FeedbackRequest
 logger = logging.getLogger("fastapi_function")
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
+_graph = None
+
+
+def _get_graph():
+    global _graph
+    if _graph is None:
+        from agents.sql_query_db.graph import graph
+        _graph = graph
+    return _graph
+
 
 def _build_state_messages(history: list, current_query: str) -> list:
+    from langchain_core.messages import HumanMessage, AIMessage
+
     messages = []
     for m in history:
         if m.get("role") == "user":
@@ -74,7 +84,7 @@ async def generate_response(
 
     graph_error = None
     try:
-        result = graph.invoke(state)
+        result = _get_graph().invoke(state)
     except Exception:
         traceback.print_exc()
         graph_error = True

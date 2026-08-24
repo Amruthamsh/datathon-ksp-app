@@ -18,13 +18,13 @@ Karnataka's police force manages tens of thousands of FIRs across 31 districts. 
 
 KSP CrimeLens Intelligence Framework connects five operational modules through a shared AI backbone:
 
-| Module | Purpose | Key Interaction |
-|---|---|---|
-| **Natural Language Chat** | Ask any question about the crime database | Conversational AI with auto-generated charts and SQL |
-| **Investigations** | Triage and solve individual cases | Priority-scored case queue, cross-investigation intel, FIR/PDD export |
-| **Crime Intelligence Map** | Decide where to deploy police resources | Heatmaps, cluster analysis, district risk, patrol route planner |
-| **Criminal Networks** | Understand organisations and relationships | Interactive graph visualisation, bridge individual detection, AI summaries |
-| **Reports** | Collect and share findings | Drag-to-reorder intelligence workbooks, PDF/Word export |
+| Module                     | Purpose                                    | Key Interaction                                                            |
+| -------------------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
+| **Natural Language Chat**  | Ask any question about the crime database  | Conversational AI with auto-generated charts and SQL                       |
+| **Investigations**         | Triage and solve individual cases          | Priority-scored case queue, cross-investigation intel, FIR/PDD export      |
+| **Crime Intelligence Map** | Decide where to deploy police resources    | Heatmaps, cluster analysis, district risk, patrol route planner            |
+| **Criminal Networks**      | Understand organisations and relationships | Interactive graph visualisation, bridge individual detection, AI summaries |
+| **Reports**                | Collect and share findings                 | Drag-to-reorder intelligence workbooks, PDF/Word export                    |
 
 Every module has access to an embedded AI assistant — officers never leave their workflow to ask a follow-up question.
 
@@ -33,13 +33,17 @@ Every module has access to an embedded AI assistant — officers never leave the
 ## Features
 
 ### Natural Language to SQL
+
 Officers type or speak questions in plain English or Kannada. A **13-node LangGraph agent** detects the language, translates if needed, classifies intent, plans the query, generates SQL, executes it, and returns a structured analysis with charts and follow-up suggestions.
 
 ### Bilingual (English / Kannada)
+
 Full end-to-end language pipeline: input is detected via Unicode range analysis, translated to canonical English using domain dictionaries (332 lines of crime-specific mappings for districts, crime heads, ranks, acts, and more), processed by the SQL engine in English-only, then translated back to Kannada for the response. Officers can switch languages mid-conversation.
 
 ### Crime Intelligence Map
+
 Four map layers powered by deck.gl and MapLibre:
+
 - **Trend Heatmap** — crime density with period-over-period change detection
 - **Cluster View** — DBSCAN-based hotspot identification with peak time windows
 - **District Risk** — composite risk scores (volume, pending cases, emerging trends)
@@ -48,10 +52,13 @@ Four map layers powered by deck.gl and MapLibre:
 Includes a **patrol route planner** that generates optimised deployment plans by time-of-day, crime focus, and available units.
 
 ### Investigation Command Center
+
 Every case gets a priority score (Critical / High / Medium / Low) based on gravity, repeat offender involvement, chargesheet deadlines, and pending arrests. The system surfaces similar cases with shared accused or shared acts, and provides cross-investigation intelligence to prevent duplicate efforts.
 
 ### Criminal Network Analysis
+
 Cytoscape-powered interactive graph visualisation of person-to-person connections derived from shared FIRs. Detects:
+
 - **Bridge individuals** — people connecting otherwise separate criminal groups
 - **Community structures** — connected components within the network
 - **Repeat offender zones** — geographic clusters of recurring suspects
@@ -59,9 +66,11 @@ Cytoscape-powered interactive graph visualisation of person-to-person connection
 Each person gets a network profile with score, rank, associated FIRs, known associates, and recent activity timeline.
 
 ### Reports Dashboard
+
 Saved analyses become draggable widgets on a configurable reports dashboard. Each widget can be expanded, minimised, hidden, or exported. Full SQL and AI reasoning are inspectable per report. Export to PDF or Word for briefings and inter-departmental sharing.
 
 ### Role-Based Authentication
+
 KGID-verified identity system: officers sign in with their Karnataka Government ID and date of birth. Sessions are token-based with 4-hour expiry. Account creation requires identity verification against the employee database before credentials are set.
 
 ---
@@ -124,19 +133,19 @@ KGID-verified identity system: officers sign in with their Karnataka Government 
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | React 18, Vite, Tailwind CSS v4, react-router-dom v7 |
-| **Charts** | Recharts |
-| **Maps** | deck.gl 9.x, MapLibre GL, react-map-gl, Turf.js |
-| **Graphs** | Cytoscape.js |
-| **i18n** | react-i18next (English + Kannada) |
-| **Backend** | Python 3.13, FastAPI, LangGraph, LangChain |
-| **LLM** | Zoho Catalyst QuickML (GLM-47B), with Groq and Ollama fallbacks |
-| **Auth** | passlib (pbkdf2_sha256 + bcrypt), itsdangerous (JWT-like tokens) |
-| **Database** | SQLite (read-only FIR data), Zoho Catalyst NoSQL (chat persistence), Zoho Catalyst Datastore (user auth, reports) |
-| **Export** | Playwright (PDF rendering), python-docx (Word), jsPDF + SheetJS (client-side PDF/Excel) |
-| **Deployment** | Zoho Catalyst (Advanced I/O Function + Slate App) |
+| Layer          | Technology                                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Frontend**   | React 18, Vite, Tailwind CSS v4, react-router-dom v7                                                              |
+| **Charts**     | Recharts                                                                                                          |
+| **Maps**       | deck.gl 9.x, MapLibre GL, react-map-gl, Turf.js                                                                   |
+| **Graphs**     | Cytoscape.js                                                                                                      |
+| **i18n**       | react-i18next (English + Kannada)                                                                                 |
+| **Backend**    | Python 3.13, FastAPI, LangGraph, LangChain                                                                        |
+| **LLM**        | Zoho Catalyst QuickML (GLM-47B), with Groq and Ollama fallbacks                                                   |
+| **Auth**       | passlib (pbkdf2_sha256 + bcrypt), itsdangerous (JWT-like tokens)                                                  |
+| **Database**   | SQLite (read-only FIR data), Zoho Catalyst NoSQL (chat persistence), Zoho Catalyst Datastore (user auth, reports) |
+| **Export**     | Playwright (PDF rendering), python-docx (Word), jsPDF + SheetJS (client-side PDF/Excel)                           |
+| **Deployment** | Zoho Catalyst (Advanced I/O Function + Slate App)                                                                 |
 
 ---
 
@@ -236,11 +245,11 @@ python main.py       # Runs on http://localhost:8000
 
 Set in `functions/datathon-ksp-app/.env`:
 
-| Variable | Description |
-|---|---|
+| Variable               | Description                                                                       |
+| ---------------------- | --------------------------------------------------------------------------------- |
 | `SQLITE_DATABASE_PATH` | Path to `fir_system.db` (defaults to backend bundle; override with absolute path) |
-| `GROQ_API_KEY` | Groq LLM API key (fallback provider) |
-| `SECRET_KEY` | Token signing key for authentication |
+| `GROQ_API_KEY`         | Groq LLM API key (fallback provider)                                              |
+| `SECRET_KEY`           | Token signing key for authentication                                              |
 
 ---
 
@@ -318,22 +327,22 @@ The database stays English-only. Only input and output are translated — ensuri
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/chat/generate` | Send a message, get AI response with SQL and charts |
-| `POST` | `/auth/signup` | Create account (KGID verification required) |
-| `POST` | `/auth/signin` | Authenticate with KGID + password |
-| `GET` | `/investigations/summary` | Dashboard stats and priority queue |
-| `POST` | `/investigations/filtered` | Filtered investigation list |
-| `GET` | `/investigations/{id}` | Case detail with intelligence panel |
-| `GET` | `/crime-map/summary` | Operational summary for map view |
-| `POST` | `/crime-map/heatmap` | Heatmap data with trend analysis |
-| `POST` | `/crime-map/clusters` | DBSCAN cluster intelligence |
-| `POST` | `/crime-map/patrol-plan` | Generate patrol deployment routes |
-| `GET` | `/networks/search` | Search people, FIRs, stations |
-| `GET` | `/networks/person/{id}` | Person profile with network graph |
-| `POST` | `/reports/save` | Save a report widget |
-| `GET` | `/reports/list` | List saved reports |
+| Method | Endpoint                   | Description                                         |
+| ------ | -------------------------- | --------------------------------------------------- |
+| `POST` | `/chat/generate`           | Send a message, get AI response with SQL and charts |
+| `POST` | `/auth/signup`             | Create account (KGID verification required)         |
+| `POST` | `/auth/signin`             | Authenticate with KGID + password                   |
+| `GET`  | `/investigations/summary`  | Dashboard stats and priority queue                  |
+| `POST` | `/investigations/filtered` | Filtered investigation list                         |
+| `GET`  | `/investigations/{id}`     | Case detail with intelligence panel                 |
+| `GET`  | `/crime-map/summary`       | Operational summary for map view                    |
+| `POST` | `/crime-map/heatmap`       | Heatmap data with trend analysis                    |
+| `POST` | `/crime-map/clusters`      | DBSCAN cluster intelligence                         |
+| `POST` | `/crime-map/patrol-plan`   | Generate patrol deployment routes                   |
+| `GET`  | `/networks/search`         | Search people, FIRs, stations                       |
+| `GET`  | `/networks/person/{id}`    | Person profile with network graph                   |
+| `POST` | `/reports/save`            | Save a report widget                                |
+| `GET`  | `/reports/list`            | List saved reports                                  |
 
 ---
 
@@ -345,12 +354,12 @@ The project includes a two-layer performance testing suite in `perf-testing/`:
 
 Simulates concurrent users hitting the live API with realistic traffic patterns. Covers **33 endpoints** across all four backend modules:
 
-| User Type | Weight | Endpoints | What It Tests |
-|---|---|---|---|
-| **Health** | 1 | `/health` | Unauthenticated baseline throughput |
-| **Investigations** | 3 | 6 endpoints (list, summary, filters, detail, intel, similar) | Paginated queries, case joins, cross-investigation intelligence |
-| **Crime Map** | 3 | 18 endpoints (heatmap, clusters, districts, patrol, network overlay, etc.) | Geospatial aggregation, DBSCAN clustering, patrol route generation |
-| **Network** | 2 | 9 endpoints (search, profile, graph, associates, timeline, analytics, communities, bridges) | Person graph traversal, community detection, bridge individual scoring |
+| User Type          | Weight | Endpoints                                                                                   | What It Tests                                                          |
+| ------------------ | ------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| **Health**         | 1      | `/health`                                                                                   | Unauthenticated baseline throughput                                    |
+| **Investigations** | 3      | 6 endpoints (list, summary, filters, detail, intel, similar)                                | Paginated queries, case joins, cross-investigation intelligence        |
+| **Crime Map**      | 3      | 18 endpoints (heatmap, clusters, districts, patrol, network overlay, etc.)                  | Geospatial aggregation, DBSCAN clustering, patrol route generation     |
+| **Network**        | 2      | 9 endpoints (search, profile, graph, associates, timeline, analytics, communities, bridges) | Person graph traversal, community detection, bridge individual scoring |
 
 Each response is validated for correct status codes and JSON envelope structure. Failed requests are tracked and reported.
 
@@ -374,13 +383,13 @@ bash perf-testing/run_perf_test.sh --scenario soak
 
 Profiles **27 SQL queries** directly against the FIR database, measuring latency independent of the HTTP layer. Queries are categorized by complexity with P95 SLO thresholds:
 
-| Category | SLO (P95) | Queries Tested |
-|---|---|---|
-| Simple Selects | 50ms | Employee lookup, district list, crime heads, unit filter |
-| Aggregations | 100ms | Case counts, monthly trends, chargesheet pending, repeat offenders |
-| Join-Heavy | 200ms | Investigation list, case detail, similar cases, person search, profile, graph |
-| Complex Analytics | 300ms | Heatmap, district summary, cluster detection, repeat offender zones, patrol recommendations |
-| Full Table Scans | 500ms | Top 100 offenders, cross-table district × crime × gravity aggregation |
+| Category          | SLO (P95) | Queries Tested                                                                              |
+| ----------------- | --------- | ------------------------------------------------------------------------------------------- |
+| Simple Selects    | 50ms      | Employee lookup, district list, crime heads, unit filter                                    |
+| Aggregations      | 100ms     | Case counts, monthly trends, chargesheet pending, repeat offenders                          |
+| Join-Heavy        | 200ms     | Investigation list, case detail, similar cases, person search, profile, graph               |
+| Complex Analytics | 300ms     | Heatmap, district summary, cluster detection, repeat offender zones, patrol recommendations |
+| Full Table Scans  | 500ms     | Top 100 offenders, cross-table district × crime × gravity aggregation                       |
 
 ```bash
 # Run SQLite benchmark (100 iterations per query)
@@ -419,3 +428,6 @@ The `handler(request)` function in `main.py` adapts FastAPI's ASGI interface to 
 ## License
 
 This project was built for the **KSP Datathon** competition.
+
+![alt text](image.png)
+![alt text](image-1.png)

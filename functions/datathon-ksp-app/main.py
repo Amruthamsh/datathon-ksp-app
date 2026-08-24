@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 import io
 import logging
+import time
 from flask import Response as FlaskResponse
 from a2wsgi import ASGIMiddleware
 
@@ -15,6 +16,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("fastapi_function")
 
 app = FastAPI(title="Datathon KSP App", version="1.0.0")
+
+
+@app.middleware("http")
+async def log_request_time(request, call_next):
+    started = time.perf_counter()
+    response = await call_next(request)
+    elapsed = time.perf_counter() - started
+    logger.info(
+        "%s %s -> %s in %.2fs",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed,
+    )
+    return response
 
 app.include_router(chat_router)
 app.include_router(auth_router)

@@ -1,7 +1,7 @@
 {
   "functions": {
     "targets": ["datathon-ksp-app"],
-    "ignore": [],
+    "ignore": ["datathon-ksp-app/.env", "datathon-ksp-app/__pycache__/"],
     "source": "functions"
   },
   "slate": [

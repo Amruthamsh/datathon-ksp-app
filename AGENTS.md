@@ -7,7 +7,7 @@
   - `functions/datathon-ksp-app/`: Python 3.13 FastAPI backend deployed as a Zoho Catalyst Advanced I/O function (`main.py`).
   - `synthetic-data/`: Synthetic FIR crime data generators, SQLite loader, and Catalyst datastore seeders.
 - **Dual Database Architecture**:
-  - **SQLite** (`functions/datathon-ksp-app/fir_system.db`): Structured FIR crime data queried by the LangGraph SQL Agent for natural language analytics.
+  - **SQLite** (`functions/datathon-ksp-app/fir_system.db.gz`, decompressed to the temp dir at runtime): Structured FIR crime data queried by the LangGraph SQL Agent for natural language analytics.
   - **Zoho Catalyst Datastore / NoSQL**: Handles user auth, chat/conversation history, and user reports.
 - **No test suite exists**. There are no `test/`, `tests/`, or `__tests__/` directories anywhere in the repo. No pytest or Jest config.
 
@@ -35,10 +35,14 @@
 ## Operational & Framework Quirks
 
 - **Environment Configuration**: `functions/datathon-ksp-app/.env` requires:
-  - `SQLITE_DATABASE_PATH`: Path to `fir_system.db` (defaults to backend bundle; override with absolute path)
+  - `SQLITE_DATABASE_PATH`: Path to `fir_system.db` (defaults to backend bundle; falls back to decompressing `fir_system.db.gz` into the temp dir; override with absolute path)
   - `GROQ_API_KEY`: Groq LLM API key
   - `SECRET_KEY`: Auth token signing key
 - **FastAPI WSGI Adapter**: `main.py` uses `a2wsgi.ASGIMiddleware` and `FlaskResponse` inside `handler(request)` to adapt FastAPI to Zoho Catalyst's execution handler format.
+- **Deploy Size Limits**: The Catalyst CLI vendors all `requirements.txt` packages into the deploy zip (~115 MB). Keep deps minimal: `playwright` and `ollama` were removed for size (PDF export now raises a graceful error; DOCX export still works). The SQLite DB ships gzipped (`fir_system.db.gz`) and is extracted to the temp dir at runtime.
+- **Secrets**: `.env` is excluded from deploys via `catalyst.json` `functions.ignore`. Set `GROQ_API_KEY` / `SECRET_KEY` as environment variables in the Catalyst console (Function → Configuration → Environment Variables).
+- **Cold Start & Lazy Imports**: The SQL agent stack (LangChain/LangGraph/Groq) is imported lazily inside `routes/chat.py` handlers (`_get_graph()`), NOT at startup — keeps cold start light (~0.55s import, ~70MB RSS) so SQLite-only endpoints never pay for LLM deps. Request-timing middleware in `main.py` logs every request duration; DB gz extraction time is logged once by `db/sqlite/sqlite.py`. Use Catalyst function logs to diagnose slow requests.
+- **SQLite Tuning**: Connections are read-only (`query_only=ON`) with `journal_mode=OFF`, 32MB page cache, and 128MB mmap — no component writes to SQLite (reports/chat go to Catalyst Data Store).
 - **Client API Routing**: `datathon-ksp-client/vite.config.js` proxies `/api` to `http://localhost:3000/server/datathon-ksp-app`.
 - **SQL Agent Graph**: Implemented in `functions/datathon-ksp-app/agents/sql_query_db/` using LangGraph (`Language Detection` -> `Translate Query` -> `Router` -> `Chat` OR `Planner` -> `Fetch Values` -> `Generate SQL` -> `Execute SQL` -> `Response` / `Chart` -> `Finalize` -> `Translate Response`).
 
