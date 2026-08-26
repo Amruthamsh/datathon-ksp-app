@@ -1,5 +1,7 @@
 import {
   ArrowUp,
+  ArrowUpRight,
+  ChevronRight,
   Paperclip,
   Mic,
   MicOff,
@@ -50,14 +52,17 @@ export default function Home() {
   const [messages, setMessages] = useState([GREETING]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [followUps, setFollowUps] = useState([]);
   const [activeAnalysis, setActiveAnalysis] = useState(null);
   const [conversationId, setConversationId] = useState(id || null);
 
   const messagesEndRef = useRef(null);
+  const chatScrollRef = useRef(null);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const didConsumeInitialState = useRef(false);
+  const streamIntervalRef = useRef(null);
 
   const [attachedFiles, setAttachedFiles] = useState([]);
 
@@ -78,6 +83,14 @@ export default function Home() {
     useSpeechRecognition(handleTranscript);
 
   useEffect(() => {
+    // Cancel any fake streaming if user switches conversation / new chat
+    if (streamIntervalRef.current) {
+      clearInterval(streamIntervalRef.current);
+      streamIntervalRef.current = null;
+      setIsStreaming(false);
+    }
+    // Clear stale follow-ups immediately — they are conversation-dependent
+    setFollowUps([]);
     if (id) {
       setLoading(true);
       getConversation(token, id)
@@ -93,6 +106,15 @@ export default function Home() {
             });
           } else {
             setActiveAnalysis(null);
+          }
+          // Conversation-dependent follow-ups: show only the last assistant's questions
+          if (
+            lastMsg?.role === "assistant" &&
+            lastMsg?.analysis?.follow_up_questions?.length
+          ) {
+            setFollowUps(lastMsg.analysis.follow_up_questions);
+          } else {
+            setFollowUps([]);
           }
         })
         .catch((err) => {
@@ -123,10 +145,44 @@ export default function Home() {
     }
   }, [location.state]);
 
-  // Auto-scroll to bottom
+  // Cleanup streaming interval on unmount
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading, followUps]);
+    return () => {
+      if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
+    };
+  }, []);
+
+  // Gentle nudge when user starts a conversation or asks a follow-up:
+  // scroll down *a little* to make breathing room for the upcoming
+  // streaming bubble, but never auto-scroll while the assistant is streaming
+  // or after it finishes (requirement: "don't autoscroll to bottom when response generated").
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (last?.role !== "user") return;
+    const el = chatScrollRef.current;
+    if (!el) return;
+    // Wait for the user bubble to paint before measuring / scrolling
+    requestAnimationFrame(() => {
+      // Nudge amount — enough to reveal ~one assistant bubble height of empty space
+      const NUDGE_PX = 180;
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+
+      if (nearBottom) {
+        // At bottom: scrollIntoView will reveal the bottom spacer padding
+        // that lives below the sentinel, creating the empty space.
+        messagesEndRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
+        // And nudge a touch more after the smooth scroll kicks in
+        setTimeout(() => {
+          el.scrollBy({ top: 32, behavior: "smooth" });
+        }, 120);
+      } else {
+        el.scrollBy({ top: NUDGE_PX, behavior: "smooth" });
+      }
+    });
+  }, [messages]);
 
   // Auto-grow textarea
   useEffect(() => {
@@ -208,8 +264,94 @@ export default function Home() {
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
+  // --- Fake streaming: reveal the full response in chunks after API returns ---
+  const startFakeStreaming = useCallback(
+    (fullText, analysis, meta, pendingConversationId) => {
+      // Clear any previous interval
+      if (streamIntervalRef.current) {
+        clearInterval(streamIntervalRef.current);
+        streamIntervalRef.current = null;
+      }
+
+      const text = fullText || "";
+      if (!text) {
+        // No content — just finalize immediately
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "",
+            analysis,
+            ...meta,
+            feedback: null,
+          },
+        ]);
+        setActiveAnalysis(analysis);
+        setFollowUps(analysis?.follow_up_questions || []);
+        if (pendingConversationId) {
+          refreshConversations();
+          navigate(`/chat/${pendingConversationId}`, { replace: true });
+        }
+        return;
+      }
+
+      // Insert an empty assistant bubble that we will progressively fill
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "",
+          analysis,
+          ...meta,
+          feedback: null,
+        },
+      ]);
+      setIsStreaming(true);
+
+      // Chunk by characters for natural typing feel — ~22 chars ≈ 4-5 words per frame
+      const CHUNK_SIZE = 22;
+      const INTERVAL_MS = 28;
+      let cursor = 0;
+
+      streamIntervalRef.current = setInterval(() => {
+        cursor = Math.min(cursor + CHUNK_SIZE, text.length);
+        const chunk = text.slice(0, cursor);
+
+        setMessages((prev) => {
+          const next = [...prev];
+          const lastIdx = next.length - 1;
+          if (lastIdx >= 0 && next[lastIdx].role === "assistant") {
+            next[lastIdx] = { ...next[lastIdx], content: chunk };
+          }
+          return next;
+        });
+
+        if (cursor >= text.length) {
+          clearInterval(streamIntervalRef.current);
+          streamIntervalRef.current = null;
+          setIsStreaming(false);
+          setActiveAnalysis(analysis);
+          setFollowUps(analysis?.follow_up_questions || []);
+          if (pendingConversationId) {
+            refreshConversations();
+            navigate(`/chat/${pendingConversationId}`, { replace: true });
+          }
+        }
+      }, INTERVAL_MS);
+    },
+    [navigate, refreshConversations],
+  );
+
   const sendMessage = async (message = input) => {
-    if ((!message.trim() && !attachedFiles.length) || loading) return;
+    if ((!message.trim() && !attachedFiles.length) || loading || isStreaming)
+      return;
+
+    // Cancel any ongoing fake stream (e.g. retry while streaming)
+    if (streamIntervalRef.current) {
+      clearInterval(streamIntervalRef.current);
+      streamIntervalRef.current = null;
+      setIsStreaming(false);
+    }
 
     stop();
 
@@ -235,11 +377,6 @@ export default function Home() {
         i18n.language,
         filesToSend,
       );
-      // If this was a new chat, refresh the sidebar and redirect
-      if (!id && data.conversation_id) {
-        refreshConversations();
-        navigate(`/chat/${data.conversation_id}`, { replace: true });
-      }
 
       const analysis = {
         sql_query: data.sql_query,
@@ -249,22 +386,30 @@ export default function Home() {
         follow_up_questions: data.follow_up_questions,
       };
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data.response,
-          analysis,
-          message_id: data.message_id,
-          created_at: data.created_at,
-          feedback: null,
-        },
-      ]);
-      setActiveAnalysis(analysis);
-      setFollowUps(data.follow_up_questions || []);
+      const meta = {
+        message_id: data.message_id,
+        created_at: data.created_at,
+      };
+
+      // Keep loading spinner until API returns, then switch to streaming
+      setLoading(false);
+
+      const pendingConversationId =
+        !id && data.conversation_id ? data.conversation_id : null;
+
+      // If this is an existing conversation, keep the id in sync immediately
+      if (!pendingConversationId && data.conversation_id) {
+        setConversationId(data.conversation_id);
+      }
+
+      startFakeStreaming(
+        data.response || "",
+        analysis,
+        meta,
+        pendingConversationId,
+      );
     } catch (e) {
       console.error(e);
-    } finally {
       setLoading(false);
     }
   };
@@ -302,6 +447,11 @@ export default function Home() {
   };
 
   const retryMessage = (index) => {
+    if (isStreaming && streamIntervalRef.current) {
+      clearInterval(streamIntervalRef.current);
+      streamIntervalRef.current = null;
+      setIsStreaming(false);
+    }
     const userMsg = messages[index - 1];
     if (!userMsg || userMsg.role !== "user") return;
 
@@ -321,7 +471,10 @@ export default function Home() {
         className="flex flex-col min-w-0"
         style={{ width: `${chatWidth}%` }}
       >
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <div
+          ref={chatScrollRef}
+          className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+        >
           {messages.map((m, i) => {
             // Ensure analysis contains actual data (SQL query or SQL results)
             const hasAnalysis =
@@ -415,6 +568,11 @@ export default function Home() {
                   >
                     {m.content}
                   </ReactMarkdown>
+                  {isStreaming &&
+                    i === messages.length - 1 &&
+                    m.role === "assistant" && (
+                      <span className="inline-block w-2 h-4 bg-slate-500 animate-pulse ml-0.5 translate-y-0.5 align-middle" />
+                    )}
 
                   {/* Open Investigation button */}
                   {hasAnalysis && (
@@ -437,81 +595,83 @@ export default function Home() {
                     </button>
                   )}
 
-                  {/* Action bar */}
-                  {m.role === "assistant" && m !== GREETING && (
-                    <div className="mt-1 flex items-center gap-0.5">
-                      <button
-                        onClick={() => handleCopy(m.content, i)}
-                        className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition cursor-pointer"
-                        title={t("chat.copy")}
-                      >
-                        {copiedIndex === i ? (
-                          <span className="text-[10px] font-medium text-green-600">
-                            {t("chat.copied")}
-                          </span>
-                        ) : (
-                          <Copy size={12} />
-                        )}
-                      </button>
+                  {/* Action bar — hidden while this bubble is still streaming */}
+                  {m.role === "assistant" &&
+                    m !== GREETING &&
+                    !(isStreaming && i === messages.length - 1) && (
+                      <div className="mt-1 flex items-center gap-0.5">
+                        <button
+                          onClick={() => handleCopy(m.content, i)}
+                          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition cursor-pointer"
+                          title={t("chat.copy")}
+                        >
+                          {copiedIndex === i ? (
+                            <span className="text-[10px] font-medium text-green-600">
+                              {t("chat.copied")}
+                            </span>
+                          ) : (
+                            <Copy size={12} />
+                          )}
+                        </button>
 
-                      <button
-                        onClick={() => {
-                          if (speakingIndex === i) {
-                            stop();
-                            setSpeakingIndex(null);
-                          } else {
-                            stop();
-                            speak(m.content);
-                            setSpeakingIndex(i);
+                        <button
+                          onClick={() => {
+                            if (speakingIndex === i) {
+                              stop();
+                              setSpeakingIndex(null);
+                            } else {
+                              stop();
+                              speak(m.content);
+                              setSpeakingIndex(i);
+                            }
+                          }}
+                          className={`flex h-6 w-6 items-center justify-center rounded transition cursor-pointer ${
+                            speakingIndex === i
+                              ? "bg-red-100 text-red-600"
+                              : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                          }`}
+                          title={
+                            speakingIndex === i
+                              ? t("chat.stop")
+                              : t("chat.readAloud")
                           }
-                        }}
-                        className={`flex h-6 w-6 items-center justify-center rounded transition cursor-pointer ${
-                          speakingIndex === i
-                            ? "bg-red-100 text-red-600"
-                            : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
-                        }`}
-                        title={
-                          speakingIndex === i
-                            ? t("chat.stop")
-                            : t("chat.readAloud")
-                        }
-                      >
-                        <Volume2 size={12} />
-                      </button>
+                        >
+                          <Volume2 size={12} />
+                        </button>
 
-                      <button
-                        onClick={() => handleFeedback(i, "up")}
-                        className={`flex h-6 w-6 items-center justify-center rounded transition cursor-pointer ${
-                          m.feedback === "up"
-                            ? "text-blue-600 bg-blue-100 hover:bg-blue-200"
-                            : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
-                        }`}
-                        title={t("chat.helpful")}
-                      >
-                        <ThumbsUp size={12} />
-                      </button>
+                        <button
+                          onClick={() => handleFeedback(i, "up")}
+                          className={`flex h-6 w-6 items-center justify-center rounded transition cursor-pointer ${
+                            m.feedback === "up"
+                              ? "text-blue-600 bg-blue-100 hover:bg-blue-200"
+                              : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                          }`}
+                          title={t("chat.helpful")}
+                        >
+                          <ThumbsUp size={12} />
+                        </button>
 
-                      <button
-                        onClick={() => handleFeedback(i, "down")}
-                        className={`flex h-6 w-6 items-center justify-center rounded transition cursor-pointer ${
-                          m.feedback === "down"
-                            ? "text-red-600 bg-red-100 hover:bg-red-200"
-                            : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
-                        }`}
-                        title={t("chat.notHelpful")}
-                      >
-                        <ThumbsDown size={12} />
-                      </button>
+                        <button
+                          onClick={() => handleFeedback(i, "down")}
+                          className={`flex h-6 w-6 items-center justify-center rounded transition cursor-pointer ${
+                            m.feedback === "down"
+                              ? "text-red-600 bg-red-100 hover:bg-red-200"
+                              : "text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                          }`}
+                          title={t("chat.notHelpful")}
+                        >
+                          <ThumbsDown size={12} />
+                        </button>
 
-                      <button
-                        onClick={() => retryMessage(i)}
-                        className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition cursor-pointer"
-                        title={t("chat.retry")}
-                      >
-                        <RefreshCw size={12} />
-                      </button>
-                    </div>
-                  )}
+                        <button
+                          onClick={() => retryMessage(i)}
+                          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition cursor-pointer"
+                          title={t("chat.retry")}
+                        >
+                          <RefreshCw size={12} />
+                        </button>
+                      </div>
+                    )}
                 </div>
               </div>
             );
@@ -535,7 +695,44 @@ export default function Home() {
             </div>
           )}
 
+          {/* Follow-ups — distinctive investigative-chip design */}
+          {!loading && !isStreaming && followUps.length > 0 && (
+            <div className="w-full space-y-3 pt-2 pb-1 animate-in fade-in duration-300">
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-500">
+                  {t("chat.suggestedFollowUps") || "Suggested follow-ups"}
+                </span>
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {followUps.map((q, idx) => (
+                  <button
+                    key={q}
+                    onClick={() => sendMessage(q)}
+                    style={{ animationDelay: `${idx * 70}ms` }}
+                    className="group relative flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-left shadow-sm transition-all duration-200 hover:border-red-200 hover:bg-red-50/40 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 focus-visible:border-red-300 cursor-pointer animate-in fade-in slide-in-from-bottom-1"
+                  >
+                    {/* Left accent icon */}
+                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-colors duration-200 group-hover:bg-red-600 group-active:bg-red-700">
+                      <ArrowUpRight size={14} strokeWidth={2.2} />
+                    </span>
+                    <span className="flex-1 text-[13.5px] font-medium leading-5 text-slate-800 group-hover:text-slate-900">
+                      {q}
+                    </span>
+                    <ChevronRight
+                      size={16}
+                      className="mt-1 shrink-0 text-slate-300 transition-all duration-200 group-hover:text-red-500 group-hover:translate-x-0.5"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
+          {/* Breathing room so the gentle nudge has scrollable space */}
+          <div className="h-28 shrink-0 pointer-events-none" aria-hidden />
         </div>
 
         {/* Input Area */}
@@ -580,7 +777,7 @@ export default function Home() {
             />
 
             <button
-              disabled={loading}
+              disabled={loading || isStreaming}
               onClick={() => sendMessage()}
               className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-300 transition"
             >
@@ -632,20 +829,6 @@ export default function Home() {
               <span className="text-xs text-red-500 font-medium">
                 🎤 {t("chat.listening")}
               </span>
-            </div>
-          )}
-
-          {followUps.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {followUps.map((q) => (
-                <button
-                  key={q}
-                  onClick={() => sendMessage(q)}
-                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm transition hover:bg-slate-50"
-                >
-                  {q}
-                </button>
-              ))}
             </div>
           )}
         </div>

@@ -60,6 +60,7 @@
     "retry": "Retry",
     "openInvestigation": "Open Investigation",
     "viewingInvestigation": "Viewing Investigation",
+    "suggestedFollowUps": "Suggested follow-ups",
     "fileAttached": "File attached",
     "removeFile": "Remove file"
   },
