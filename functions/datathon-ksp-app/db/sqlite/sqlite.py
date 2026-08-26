@@ -25,6 +25,8 @@ _CONFIGURED_DB_PATH = os.getenv(
     "SQLITE_DATABASE_PATH",
     str(_BACKEND_ROOT / "fir_system.db"),
 )
+if not Path(_CONFIGURED_DB_PATH).is_absolute():
+    _CONFIGURED_DB_PATH = str((_BACKEND_ROOT / _CONFIGURED_DB_PATH).resolve())
 
 _extract_lock = threading.Lock()
 

@@ -23,6 +23,7 @@ import {
   Building,
   UserCheck,
   FilterX,
+  FolderOpen,
 } from "lucide-react";
 import {
   getSummary,
@@ -193,12 +194,17 @@ export default function InvestigationsQueue() {
             ?.toLowerCase()
             .includes(q);
           const matchesDistrict = row.DistrictName?.toLowerCase().includes(q);
-          const matchesOfficer = row.FirstName?.toLowerCase().includes(q);
+          const matchesOfficer =
+            row.FirstName?.toLowerCase().includes(q) ||
+            row.AssignedOfficer?.toLowerCase().includes(q);
+          const matchesCrimeGroup =
+            row.CrimeGroupName?.toLowerCase().includes(q);
           if (
             !matchesCrimeNo &&
             !matchesStation &&
             !matchesDistrict &&
-            !matchesOfficer
+            !matchesOfficer &&
+            !matchesCrimeGroup
           ) {
             return false;
           }
@@ -296,18 +302,27 @@ export default function InvestigationsQueue() {
     if (!selectedCase) return "";
     const parts = [];
 
-    parts.push(`Case: ${selectedCase.CrimeNo || `#${selectedCase.CaseMasterID}`}`);
+    parts.push(
+      `Case: ${selectedCase.CrimeNo || `#${selectedCase.CaseMasterID}`}`,
+    );
     if (selectedCase.Priority) parts.push(`Priority: ${selectedCase.Priority}`);
-    if (selectedCase.CrimeHeadName) parts.push(`Crime Head: ${selectedCase.CrimeHeadName}`);
-    if (selectedCase.CrimeGroupName) parts.push(`Crime Group: ${selectedCase.CrimeGroupName}`);
+    if (selectedCase.CrimeHeadName)
+      parts.push(`Crime Head: ${selectedCase.CrimeHeadName}`);
+    if (selectedCase.CrimeGroupName)
+      parts.push(`Crime Group: ${selectedCase.CrimeGroupName}`);
     if (selectedCase.Gravity) parts.push(`Gravity: ${selectedCase.Gravity}`);
-    if (selectedCase.CaseStatusName) parts.push(`Status: ${selectedCase.CaseStatusName}`);
+    if (selectedCase.CaseStatusName)
+      parts.push(`Status: ${selectedCase.CaseStatusName}`);
     if (selectedCase.UnitName || selectedCase.DistrictName) {
-      parts.push(`Location: ${selectedCase.UnitName || ""}${selectedCase.UnitName && selectedCase.DistrictName ? ", " : ""}${selectedCase.DistrictName || ""}`);
+      parts.push(
+        `Location: ${selectedCase.UnitName || ""}${selectedCase.UnitName && selectedCase.DistrictName ? ", " : ""}${selectedCase.DistrictName || ""}`,
+      );
     }
     if (selectedCase.FirstName) parts.push(`IO: ${selectedCase.FirstName}`);
-    if (selectedCase.BriefFacts) parts.push(`Brief Facts: ${selectedCase.BriefFacts}`);
-    if (formattedActs.length > 0) parts.push(`Acts/Sections: ${formattedActs.join(", ")}`);
+    if (selectedCase.BriefFacts)
+      parts.push(`Brief Facts: ${selectedCase.BriefFacts}`);
+    if (formattedActs.length > 0)
+      parts.push(`Acts/Sections: ${formattedActs.join(", ")}`);
     if (caseIntel?.accused?.length > 0) {
       const names = caseIntel.accused.map((a) => a.AccusedName).join(", ");
       parts.push(`Accused: ${names}`);
@@ -317,7 +332,10 @@ export default function InvestigationsQueue() {
       parts.push(`Victims: ${names}`);
     }
     if (similarCases.length > 0) {
-      const refs = similarCases.slice(0, 3).map((s) => s.CrimeNo).join(", ");
+      const refs = similarCases
+        .slice(0, 3)
+        .map((s) => s.CrimeNo)
+        .join(", ");
       parts.push(`Similar Cases: ${refs}`);
     }
 
@@ -359,18 +377,26 @@ export default function InvestigationsQueue() {
         {
           label: t("investigations.filters.assigned"),
           value: summary.assigned,
+          icon: FolderOpen,
+          accent: "bg-blue-50 text-blue-600",
         },
         {
           label: t("investigations.filters.chargesheetPending"),
           value: summary.chargesheet_pending,
+          icon: FileText,
+          accent: "bg-amber-50 text-amber-600",
         },
         {
           label: t("investigations.filters.repeatOffenders"),
           value: summary.repeat_offenders,
+          icon: Users,
+          accent: "bg-rose-50 text-rose-600",
         },
         {
           label: t("investigations.filters.arrestsPending"),
           value: summary.arrests_pending,
+          icon: Gavel,
+          accent: "bg-violet-50 text-violet-600",
         },
         // { label: t("investigations.filters.needReviewToday"), value: summary.review_today },
       ]
@@ -384,29 +410,29 @@ export default function InvestigationsQueue() {
 
     if (priority.includes("CRITICAL")) {
       return (
-        <span className="flex items-center px-2.5 py-1 bg-red-100 text-red-700 font-bold text-xs rounded border border-red-200">
-          <ShieldAlert size={12} className="mr-1" />{" "}
+        <span className="flex items-center px-2 py-0.5 bg-red-100 text-red-700 font-bold text-[11px] rounded border border-red-200 whitespace-nowrap">
+          <ShieldAlert size={11} className="mr-1" />{" "}
           {t("investigations.priority.critical")}
         </span>
       );
     }
     if (priority.includes("HIGH")) {
       return (
-        <span className="flex items-center px-2.5 py-1 bg-orange-100 text-orange-700 font-bold text-xs rounded border border-orange-200">
-          <AlertCircle size={12} className="mr-1" />{" "}
+        <span className="flex items-center px-2 py-0.5 bg-orange-100 text-orange-700 font-bold text-[11px] rounded border border-orange-200 whitespace-nowrap">
+          <AlertCircle size={11} className="mr-1" />{" "}
           {t("investigations.priority.high")}
         </span>
       );
     }
     if (priority.includes("MEDIUM")) {
       return (
-        <span className="flex items-center px-2.5 py-1 bg-yellow-100 text-yellow-700 font-bold text-xs rounded border border-yellow-200">
+        <span className="flex items-center px-2 py-0.5 bg-yellow-100 text-yellow-700 font-bold text-[11px] rounded border border-yellow-200 whitespace-nowrap">
           {t("investigations.priority.medium")}
         </span>
       );
     }
     return (
-      <span className="flex items-center px-2.5 py-1 bg-slate-100 text-slate-600 font-bold text-xs rounded border border-slate-200">
+      <span className="flex items-center px-2 py-0.5 bg-slate-100 text-slate-600 font-bold text-[11px] rounded border border-slate-200 whitespace-nowrap">
         {t("investigations.priority.low")}
       </span>
     );
@@ -437,17 +463,17 @@ export default function InvestigationsQueue() {
       {/* MAIN WORKSPACE */}
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
-          selectedCase ? "mr-[500px]" : ""
+          selectedCase ? "mr-[640px]" : ""
         }`}
       >
         {/* HEADER & METRICS */}
-        <div className="p-6 bg-white border-b border-slate-200">
-          <div className="flex justify-between items-center mb-6">
+        <div className="px-6 py-4 bg-white border-b border-slate-200">
+          <div className="flex justify-between items-center mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">
+              <h1 className="text-xl font-bold text-slate-800">
                 {t("investigations.title")}
               </h1>
-              <p className="text-sm text-slate-500">
+              <p className="text-xs text-slate-500">
                 {t("investigations.subtitle")}
               </p>
             </div>
@@ -455,14 +481,14 @@ export default function InvestigationsQueue() {
               <div className="relative">
                 <Search
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  size={16}
+                  size={15}
                 />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t("investigations.searchPlaceholder")}
-                  className="pl-9 pr-4 py-2 border border-slate-300 rounded-md text-sm w-72 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="pl-8 pr-8 py-1.5 border border-slate-300 rounded-md text-sm w-60 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
                 {searchQuery && (
                   <button
@@ -476,25 +502,35 @@ export default function InvestigationsQueue() {
             </div>
           </div>
 
-          <div className="flex space-x-4 overflow-x-auto pb-2">
-            {metrics.map((metric) => (
-              <button
-                key={metric.label}
-                className="flex flex-col items-start p-4 min-w-[140px] rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 transition-all"
-              >
-                <span className="text-2xl font-bold text-slate-800">
-                  {metric.value ?? 0}
-                </span>
-                <span className="text-xs font-medium mt-1 text-slate-500">
-                  {metric.label}
-                </span>
-              </button>
-            ))}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {metrics.map((metric) => {
+              const Icon = metric.icon;
+              return (
+                <div
+                  key={metric.label}
+                  className="group flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm transition-all cursor-default"
+                >
+                  <div
+                    className={`flex items-center justify-center w-9 h-9 rounded-lg shrink-0 ${metric.accent}`}
+                  >
+                    <Icon size={17} strokeWidth={2.2} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xl font-bold text-slate-900 leading-tight tabular-nums">
+                      {metric.value ?? 0}
+                    </div>
+                    <div className="text-[11px] font-medium text-slate-500 truncate">
+                      {metric.label}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* TOOLBAR */}
-        <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between min-h-[56px] relative z-20">
+        <div className="px-6 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between min-h-[48px] relative z-20">
           {selectedCases.length > 0 ? (
             <div className="flex items-center w-full animate-in fade-in slide-in-from-top-2">
               <span className="text-sm font-semibold text-blue-700 mr-6 bg-blue-100 px-2 py-1 rounded">
@@ -599,30 +635,36 @@ export default function InvestigationsQueue() {
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 sticky top-0 border-b border-slate-200 z-10">
               <tr>
-                <th className="py-3 px-4 w-12 text-center">
+                <th className="py-2 px-3 w-10 text-center">
                   <input
                     type="checkbox"
                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
                 </th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="py-2 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                   {t("investigations.filters.sortPriority")
                     .split(":")[1]
                     ?.trim() || "Priority"}
                 </th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="py-2 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[170px]">
                   Crime No
                 </th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="py-2 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                   {t("investigations.filters.station")}
                 </th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="py-2 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                  Crime Group
+                </th>
+                <th className="py-2 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                   {t("investigations.filters.status")}
                 </th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="py-2 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                   {t("investigations.filters.gravity")}
                 </th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="py-2 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                  Assigned To
+                </th>
+                <th className="py-2 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                   Age
                 </th>
               </tr>
@@ -640,7 +682,7 @@ export default function InvestigationsQueue() {
                     } ${selectedCases.includes(row.CaseMasterID) ? "bg-blue-50/30" : ""}`}
                   >
                     <td
-                      className="py-3 px-4 text-center"
+                      className="py-2 px-3 text-center"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <input
@@ -650,24 +692,50 @@ export default function InvestigationsQueue() {
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                       />
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-2 px-3">
                       {renderPriorityBadge(row.Priority)}
                     </td>
-                    <td className="py-3 px-4 font-bold text-slate-900">
-                      {row.CrimeNo}
+                    <td
+                      className="py-2 px-3 font-semibold text-slate-900 text-[13px] max-w-[170px]"
+                      title={row.CrimeNo}
+                    >
+                      <span className="block truncate">{row.CrimeNo}</span>
                     </td>
-                    <td className="py-3 px-4 text-sm text-slate-600">
+                    <td className="py-2 px-3 text-[13px] text-slate-600 whitespace-nowrap">
                       {row.Station || row.UnitName}
                     </td>
-                    <td className="py-3 px-4 text-sm">
-                      <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium">
+                    <td className="py-2 px-3 text-[13px]">
+                      {row.CrimeGroupName ? (
+                        <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[11px] font-medium border border-indigo-100 whitespace-nowrap">
+                          {row.CrimeGroupName}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-3 text-[13px]">
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[11px] font-medium whitespace-nowrap">
                         {row.CaseStatusName || row.status || "Open"}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-sm font-medium text-slate-700">
+                    <td className="py-2 px-3 text-[13px] font-medium text-slate-700 whitespace-nowrap">
                       {row.Gravity || "-"}
                     </td>
-                    <td className="py-3 px-4 text-sm text-slate-600">
+                    <td className="py-2 px-3 text-[13px] whitespace-nowrap">
+                      {row.AssignedOfficer || row.FirstName ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 text-slate-600 text-[9px] font-bold uppercase shrink-0">
+                            {(row.AssignedOfficer || row.FirstName).slice(0, 2)}
+                          </span>
+                          <span className="text-slate-700 font-medium">
+                            {row.AssignedOfficer || row.FirstName}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">Unassigned</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-3 text-[13px] text-slate-600 whitespace-nowrap">
                       {row.AgeDays != null
                         ? (() => {
                             const totalDays = Math.floor(Number(row.AgeDays));
@@ -685,7 +753,7 @@ export default function InvestigationsQueue() {
               ) : (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={9}
                     className="py-12 text-center text-slate-400 text-sm"
                   >
                     {t("investigations.empty")}
@@ -699,7 +767,7 @@ export default function InvestigationsQueue() {
 
       {/* SIDE DRAWER */}
       {selectedCase && (
-        <div className="fixed inset-y-0 right-0 w-[500px] bg-white border-l border-slate-200 shadow-2xl flex flex-col z-20 animate-in slide-in-from-right">
+        <div className="fixed inset-y-0 right-0 w-[550px] bg-white border-l border-slate-200 shadow-2xl flex flex-col z-20 animate-in slide-in-from-right">
           {/* DRAWER HEADER */}
           <div className="p-5 border-b border-slate-200 flex justify-between items-start bg-slate-50">
             <div>

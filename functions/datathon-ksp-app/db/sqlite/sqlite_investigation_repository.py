@@ -203,6 +203,10 @@ class SQLiteInvestigationRepository:
 
                 ch.CrimeGroupName,
 
+                csh.CrimeHeadName,
+
+                TRIM(e.FirstName) AS AssignedOfficer,
+
                 cm.CrimeRegisteredDate,
 
                 julianday('now') - julianday(cm.CrimeRegisteredDate)
@@ -233,6 +237,12 @@ class SQLiteInvestigationRepository:
 
             LEFT JOIN CrimeHead ch
                 ON cm.CrimeMajorHeadID=ch.CrimeHeadID
+
+            LEFT JOIN CrimeSubHead csh
+                ON cm.CrimeMinorHeadID=csh.CrimeSubHeadID
+
+            LEFT JOIN Employee e
+                ON cm.PolicePersonID=e.EmployeeID
 
             LEFT JOIN CaseStatusMaster csm
                 ON cm.CaseStatusID=csm.CaseStatusID
