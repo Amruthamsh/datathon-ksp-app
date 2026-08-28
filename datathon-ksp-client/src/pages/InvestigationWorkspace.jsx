@@ -1022,10 +1022,7 @@ function CaseBriefTab({
               </span>
             </div>
             <div className="divide-y divide-[#E5E7EB]">
-              <DossierSection
-                eyebrow="Case summary"
-                title="Summary of the offense"
-              >
+              <DossierSection title="Summary of the offense">
                 <Synopsis
                   caseData={caseData}
                   actSectionDetails={actSectionDetails}
