@@ -425,11 +425,14 @@ export default function InvestigationsQueue() {
 
   const handleCrossCase = () => {
     const rows = cases.filter((r) => selected.includes(r.CaseMasterID));
-    if (rows.length < 2) return;
+    if (rows.length < 1) return;
     const lines = rows.map((r, i) =>
       `${i + 1}. ${r.CrimeNo} — ${r.Station || r.UnitName || ""} ${r.DistrictName ? `(${r.DistrictName})` : ""} · ${r.CrimeHeadName || r.CrimeGroupName || ""} · ${r.Gravity || ""} · ${getRowIntel(r)}`.trim(),
     );
-    const msg = `Analyse these ${rows.length} FIRs and identify connections between accused, location, and modus operandi:\n\n${lines.join("\n")}\n\nQuestion: Are these cases connected? Compare accused overlap, locations, time windows, and MO. Highlight shared accused, same station/district, and similar crime heads.`;
+    const msg =
+      rows.length === 1
+        ? `Analyse this FIR and suggest next steps, connections and risks:\n\n${lines.join("\n")}\n\nQuestion: Summarize this case, identify accused and MO, flag overdue items, and suggest 3 related FIRs to investigate next.`
+        : `Analyse these ${rows.length} FIRs and identify connections between accused, location, and modus operandi:\n\n${lines.join("\n")}\n\nQuestion: Are these cases connected? Compare accused overlap, locations, time windows, and MO. Highlight shared accused, same station/district, and similar crime heads.`;
     navigate("/", { state: { initialMessage: msg } });
   };
 
@@ -795,19 +798,19 @@ export default function InvestigationsQueue() {
           </tbody>
         </table>
       </div>
-      {/* Floating cross-case bar — minimal, only when 2+ selected */}
-      {selected.length >= 2 && (
+      {/* Floating cross-case bar — now works for 1+ selected */}
+      {selected.length >= 1 && (
         <div className="pointer-events-none fixed bottom-5 left-1/2 z-40 -translate-x-1/2">
           <div className="pointer-events-auto flex items-center gap-4 border border-[#1A1A2E] bg-[#1A1A2E] px-4 py-2.5 shadow-lg">
             <span className="text-xs font-medium text-white/90">
-              {selected.length} cases selected
+              {selected.length} {selected.length === 1 ? "case selected" : "cases selected"}
             </span>
             <span className="text-white/30">·</span>
             <button
               onClick={handleCrossCase}
               className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-white hover:text-white/80"
             >
-              Start Cross-Case Analysis <ArrowRight size={12} />
+              {selected.length === 1 ? "Chat about this case" : "Start Cross-Case Analysis"} <ArrowRight size={12} />
             </button>
             <button
               onClick={() => setSelected([])}
