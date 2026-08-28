@@ -1,1 +1,20 @@
 @import "tailwindcss";
+
+:root {
+  --ksp-ink: #1A1A2E;
+  --ksp-paper: #F4F6F9;
+  --ksp-critical: #D62828;
+  --ksp-high: #C85A00;
+  --ksp-done: #2D6A4F;
+  --ksp-muted: #374151;
+  --ksp-rule: #DDE3EC;
+  --ksp-abscond: #FEF3C7;
+}
+
+.ksp-queue, .ksp-workspace {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  color: var(--ksp-ink);
+}
+.ksp-mono {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}

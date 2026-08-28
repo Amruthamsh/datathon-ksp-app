@@ -62,7 +62,20 @@
     "viewingInvestigation": "Viewing Investigation",
     "suggestedFollowUps": "Suggested follow-ups",
     "fileAttached": "File attached",
-    "removeFile": "Remove file"
+    "removeFile": "Remove file",
+    "addContext": "Add intelligence sources",
+    "contextTitle": "Add Intelligence Sources",
+    "contextSubtitle": "CrimeLens augments the KSP case database with contextual intelligence.",
+    "crimeDatabase": "Crime Database",
+    "crimeDatabaseDesc": "KSP case records — authoritative internal intelligence",
+    "useMyLocation": "Use My Location",
+    "useMyLocationDesc": "Find nearby incidents, suspects & clusters around me",
+    "openWeb": "Open Web",
+    "openWebDesc": "Search public sources beyond KSP records",
+    "locationContext": "Location Context",
+    "currentLocation": "Current location",
+    "searchRadius": "Search radius",
+    "sources": "Sources"
   },
   "analysis": {
     "workspace": "Analysis Workspace",
@@ -103,7 +116,7 @@
   },
   "investigations": {
     "title": "Investigations Queue",
-    "subtitle": "Highest-priority investigations that need your attention.",
+    "subtitle": "AI-ranked cases requiring investigator attention, based on urgency, evidence gaps and connected intelligence.",
     "searchPlaceholder": "Search CR No, station, district...",
     "filters": {
       "assigned": "Assigned",

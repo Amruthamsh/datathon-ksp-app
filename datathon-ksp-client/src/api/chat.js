@@ -23,11 +23,34 @@ export async function generateResponse(
   conversationId = null,
   language = "en",
   files = [],
+  context = {},
 ) {
   const formData = new FormData();
-  formData.append("user_query", userQuery);
+  // Enrich the query with contextual intelligence markers so the backend
+  // can distinguish sources without changing the API contract.
+  let enrichedQuery = userQuery;
+  const ctxHints = [];
+  if (context.useLocation && context.location) {
+    const { lat, lng, radiusKm } = context.location;
+    ctxHints.push(
+      `[Location context: lat ${lat.toFixed(4)}, lng ${lng.toFixed(4)}, radius ${radiusKm}km]`,
+    );
+  } else if (context.useLocation) {
+    ctxHints.push(`[Location context: enabled, radius ${context.location?.radiusKm ?? 5}km]`);
+  }
+  if (context.useWeb) ctxHints.push("[Open Web: include public sources]");
+  // Crime Database is always the authoritative source
+  if (ctxHints.length) enrichedQuery += `\n\n${ctxHints.join(" ")}`;
+
+  formData.append("user_query", enrichedQuery);
   formData.append("language", language);
   if (conversationId) formData.append("conversation_id", conversationId);
+  // Forward raw context flags for future backend use
+  if (context.useLocation) formData.append("use_location", "true");
+  if (context.location?.lat) formData.append("location_lat", String(context.location.lat));
+  if (context.location?.lng) formData.append("location_lng", String(context.location.lng));
+  if (context.location?.radiusKm) formData.append("location_radius_km", String(context.location.radiusKm));
+  if (context.useWeb) formData.append("use_web", "true");
   for (const file of files) {
     formData.append("files", file);
   }

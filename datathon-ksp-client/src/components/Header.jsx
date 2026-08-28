@@ -6,7 +6,7 @@ import profile from "../assets/profile.svg";
 import LanguageSelector from "./LanguageSelector";
 import { useAuth } from "../auth/AuthContext";
 
-const Header = () => {
+const Header = ({ hideSearch = false }) => {
   const { officer, signOut } = useAuth();
   const { t } = useTranslation();
 
@@ -19,15 +19,16 @@ const Header = () => {
         </h1>
       </div>
       <div className="flex items-center gap-6">
-        <div className="relative w-96">
-          <Search
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"
-          />
-          <input
-            type="text"
-            placeholder={t("header.searchPlaceholder")}
-            className="
+        {!hideSearch && (
+          <div className="relative w-96">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"
+            />
+            <input
+              type="text"
+              placeholder={t("header.searchPlaceholder")}
+              className="
                 w-full
                 rounded-xl
                 border
@@ -45,8 +46,9 @@ const Header = () => {
                 focus:ring-blue-100
                 transition
               "
-          />
-        </div>
+            />
+          </div>
+        )}
         <LanguageSelector />
         <Bell size={24} />
         <BadgeQuestionMarkIcon size={24} />
