@@ -1209,7 +1209,7 @@ function CriticalBanner({
 
   return (
     <div
-      className={`rounded-xl border ${styles.border} border-l-4 ${styles.stroke} bg-white px-5 py-4 shadow-sm`}
+      className={`rounded-xl border ${styles.border} bg-white px-5 py-4 shadow-sm`}
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
         <span
