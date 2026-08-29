@@ -87,14 +87,14 @@ export default function Login() {
         <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
 
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-12 text-center">
-          <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 backdrop-blur-sm">
+          <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-white ring-1 ring-white/20 shadow-lg">
             <img
               src={logo}
               alt="Karnataka State Police"
               className="h-16 w-16"
             />
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-white">
+          <h2 className="text-3xl font-bold tracking-tight text-yellow-200">
             KSP CrimeLens
           </h2>
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-red-100">
@@ -131,7 +131,7 @@ export default function Login() {
                 <ShieldCheck size={18} className="text-red-700" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-slate-900">
+                <h1 className="text-lg font-bold text-red-700">
                   {t("auth.signIn")}
                 </h1>
               </div>
