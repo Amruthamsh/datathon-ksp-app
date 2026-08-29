@@ -1665,7 +1665,7 @@ class CrimeMapRepository:
         except Exception:
             pass
 
-    def get_pois(self, district: str = None, poi_type: str = None, limit: int = 500):
+    def get_pois(self, district: str = None, poi_type: str = None, limit: int = 5000):
         self._ensure_intel()
         with get_connection() as conn:
             try:

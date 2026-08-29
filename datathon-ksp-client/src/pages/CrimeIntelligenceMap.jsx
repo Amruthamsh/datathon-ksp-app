@@ -993,8 +993,8 @@ function MapView({
     if (!token) return;
     const activeTypes = Object.entries(poiFilters || {}).filter(([,v])=>v).map(([k])=>k);
     if (!activeTypes.length) { setPoiData([]); return; }
-    // fetch all then filter client-side for speed (single request)
-    crimeMapApi.getPOIs(token, { limit: 2000 }).then((r)=>{
+    // fetch all then filter client-side for speed (single request) — limit 5000 covers 31 districts
+    crimeMapApi.getPOIs(token, { limit: 5000 }).then((r)=>{
       const all = r.data||[];
       const filtered = all.filter(d=> activeTypes.includes(d.POIType));
       setPoiData(filtered);

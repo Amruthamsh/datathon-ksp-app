@@ -64,18 +64,25 @@ def _overpass_query(district: str, lat: float, lng: float, radius_m: int = 20000
     delta = radius_m / 111000.0
     min_lat, max_lat = lat - delta, lat + delta
     min_lng, max_lng = lng - delta, lng + delta
-    # Build query: union of selected amenities inside bbox
-    clauses = []
-    for frag, _, _ in POI_DEFS:
-        # frag is like node["amenity"="atm"] -> inject bbox
-        clauses.append(f'  {frag}({min_lat:.4f},{min_lng:.4f},{max_lat:.4f},{max_lng:.4f});')
-    query = f'[out:json][timeout:25];\n(\n' + "\n".join(clauses) + '\n);\nout body 200;'
-    try:
-        # Use POST with raw body text/plain to avoid 406 on overpass-api.de
-        req = urllib.request.Request(OVERPASS_URL, data=query.encode("utf-8"), headers={"Content-Type":"text/plain", "User-Agent":"KSP-Intel-ETL/1.0"})
+    # Build queries split to avoid bus_stop crowding out liquor/ATM (bus_stops are 70% of nodes)
+    high_clauses = []
+    bus_clauses = []
+    for frag, poi_type, _ in POI_DEFS:
+        target = bus_clauses if poi_type == "Bus_Stop" else high_clauses
+        target.append(f'  {frag}({min_lat:.4f},{min_lng:.4f},{max_lat:.4f},{max_lng:.4f});')
+    def run(clauses, limit):
+        if not clauses:
+            return []
+        q = f'[out:json][timeout:25];\n(\n' + "\n".join(clauses) + f'\n);\nout body {limit};'
+        req = urllib.request.Request(OVERPASS_URL, data=q.encode("utf-8"), headers={"Content-Type":"text/plain", "User-Agent":"KSP-Intel-ETL/1.0"})
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             return data.get("elements", [])
+    try:
+        high = run(high_clauses, 400)
+        time.sleep(0.4)  # be nice to Overpass
+        bus = run(bus_clauses, 400)
+        return high + bus
     except Exception as e:
         logger.warning("Overpass fetch failed for %s: %s", district, e)
         return []
