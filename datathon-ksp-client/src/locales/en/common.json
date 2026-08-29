@@ -187,14 +187,20 @@
     "generatePatrolPlan": "Generate Patrol Plan",
     "layers": {
       "title": "Map Layers",
-      "trendHeatmap": "Trend Heatmap",
+      "trendHeatmap": "Crime Incidents",
       "clusterView": "Cluster View",
       "districtRisk": "District Risk",
       "networkOverlay": "Network Overlay"
     },
+    "legend": {
+      "crimeTypes": "Crime Types",
+      "all": "All",
+      "none": "None"
+    },
     "summary": {
       "operationalSummary": "Operational Summary",
       "todaysHighestPriority": "Today's Highest Priority",
+      "filteredPriority": "Filtered Priority",
       "todaysRisk": "Today's Risk",
       "emergingHotspots": "Emerging Hotspots",
       "repeatOffenders": "Repeat Offenders",
@@ -213,6 +219,39 @@
       "previousPeriod": "Previous Period",
       "trendIncreasing": "Crime Trend -- Increasing",
       "trendDecreasing": "Crime Trend -- Decreasing"
+    },
+    "crimes": {
+      "station": "Police Station",
+      "district": "District",
+      "gravity": "Gravity",
+      "coordinates": "Coordinates",
+      "crimeType": "Crime Type",
+      "incidentCount": "Incident Count",
+      "thisPeriod": "this period",
+      "previousPeriod": "previously",
+      "loading": "Loading incident…"
+    },
+    "detail": {
+      "crimeType": "Crime Sub-Type",
+      "status": "Case Status",
+      "incidentDate": "Incident Date",
+      "coordinates": "Coordinates",
+      "briefFacts": "Brief Facts"
+    },
+    "dateRange": {
+      "title": "Date Range",
+      "from": "From",
+      "to": "To",
+      "last30": "30D",
+      "last90": "90D",
+      "last180": "180D",
+      "all": "All"
+    },
+    "timeline": {
+      "title": "Crime Timeline",
+      "reset": "Reset Range",
+      "total": "total",
+      "empty": "No timeline data available."
     },
     "district": {
       "operationalRisk": "Operational Risk",
@@ -266,7 +305,12 @@
       "shift": "Shift",
       "exportPdf": "Export PDF",
       "exportExcel": "Export Excel",
-      "close": "Close"
+      "close": "Close",
+      "overlay": {
+        "active": "Patrol Route Active",
+        "waypoint": "Waypoint {{number}}",
+        "estArrival": "ETA: {{time}}"
+      }
     },
     "askAI": {
       "deepDive": "Ask AI for Deep Dive",
@@ -280,7 +324,29 @@
     "loadingCluster": "Loading cluster intelligence...",
     "selectPerson": "Select a person to view their network graph.",
     "noTimeline": "No timeline data available.",
-    "selectPersonNetwork": "Select a person or network to view their intelligence profile."
+    "selectPersonNetwork": "Select a person or network to view their intelligence profile.",
+    "toolbar": {
+      "drawLasso": "Draw Spatial Query",
+      "toggle3D": "3D Pitch",
+      "resetView": "Reset View",
+      "patrolRoute": "Show Patrol Route",
+      "clearRoute": "Clear Route"
+    },
+    "lasso": {
+      "instructions": "Draw a polygon on the map to query incidents within the area",
+      "active": "Drawing spatial query...",
+      "results": "{{count}} incidents found in selected area",
+      "noResults": "No incidents found in the drawn area",
+      "clear": "Clear Selection",
+      "analyzeAI": "Analyze Selection with AI"
+    },
+
+    "context": {
+      "title": "Predictive Context",
+      "socioeconomic": "Socio-Economic Factors",
+      "highRiskPOIs": "High-Risk POIs",
+      "temporalThreat": "Temporal Threat Index"
+    }
   },
   "networks": {
     "title": "CRIMINAL NETWORK INTELLIGENCE",

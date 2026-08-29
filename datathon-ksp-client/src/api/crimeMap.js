@@ -24,8 +24,9 @@ function buildQueryString(params = {}) {
   return qs ? `?${qs}` : "";
 }
 
-export async function getSummary(token) {
-  const res = await fetch(`${BASE}/crime-map/summary`, {
+export async function getSummary(token, params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/crime-map/summary${qs}`, {
     headers: { "X-Auth-Token": token },
   });
   return handleResponse(res);
@@ -69,8 +70,9 @@ export async function getHotspotDetail(token, lat, lng) {
   return handleResponse(res);
 }
 
-export async function getTimeline(token) {
-  const res = await fetch(`${BASE}/crime-map/timeline`, {
+export async function getTimeline(token, params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/crime-map/timeline-range${qs}`, {
     headers: { "X-Auth-Token": token },
   });
   return handleResponse(res);
@@ -126,8 +128,32 @@ export async function getRepeatOffenderZones(token) {
   return handleResponse(res);
 }
 
-export async function getHeatmapTrends(token) {
-  const res = await fetch(`${BASE}/crime-map/heatmap-trends`, {
+export async function getHeatmapTrends(token, params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/crime-map/heatmap-trends${qs}`, {
+    headers: { "X-Auth-Token": token },
+  });
+  return handleResponse(res);
+}
+
+export async function getCrimes(token, params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/crime-map/crimes${qs}`, {
+    headers: { "X-Auth-Token": token },
+  });
+  return handleResponse(res);
+}
+
+export async function getCrimesLight(token, params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/crime-map/crimes-light${qs}`, {
+    headers: { "X-Auth-Token": token },
+  });
+  return handleResponse(res);
+}
+
+export async function getCrimeDetail(token, caseId) {
+  const res = await fetch(`${BASE}/crime-map/crime/${caseId}`, {
     headers: { "X-Auth-Token": token },
   });
   return handleResponse(res);
@@ -140,8 +166,8 @@ export async function getDistrictRisk(token) {
   return handleResponse(res);
 }
 
-export async function getClusterIntel(token, lat, lng) {
-  const qs = buildQueryString({ lat, lng });
+export async function getClusterIntel(token, lat, lng, params = {}) {
+  const qs = buildQueryString({ lat, lng, ...params });
   const res = await fetch(`${BASE}/crime-map/cluster-intel${qs}`, {
     headers: { "X-Auth-Token": token },
   });
@@ -151,6 +177,14 @@ export async function getClusterIntel(token, lat, lng) {
 export async function getPatrolPlan(token, params = {}) {
   const qs = buildQueryString(params);
   const res = await fetch(`${BASE}/crime-map/patrol-plan${qs}`, {
+    headers: { "X-Auth-Token": token },
+  });
+  return handleResponse(res);
+}
+
+export async function getPreventionPlan(token, params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/crime-map/prevention-plan${qs}`, {
     headers: { "X-Auth-Token": token },
   });
   return handleResponse(res);

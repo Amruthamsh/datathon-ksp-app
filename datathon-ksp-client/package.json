@@ -12,9 +12,10 @@
   "dependencies": {
     "@deck.gl/aggregation-layers": "^9.3.7",
     "@deck.gl/core": "^9.3.7",
-    "@deck.gl/geo-layers": "^9.3.7",
+    "@deck.gl/geo-layers": "^9.3.10",
     "@deck.gl/layers": "^9.3.7",
     "@deck.gl/react": "^9.3.7",
+    "@mapbox/polyline": "^1.2.1",
     "@tailwindcss/vite": "^4.3.1",
     "@turf/turf": "^7.3.5",
     "cytoscape": "^3.34.0",
