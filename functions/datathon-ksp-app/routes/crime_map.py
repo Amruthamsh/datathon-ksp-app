@@ -476,3 +476,130 @@ async def get_network_overlay_enhanced(
         logger.error(e)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to fetch enhanced network overlay.")
+
+
+# ------------------------------------------------------------------
+# Intelligence Platform — live external data
+# ------------------------------------------------------------------
+
+@router.get("/intelligence/pois", status_code=status.HTTP_200_OK)
+async def get_intelligence_pois(
+    district: str = Query(None),
+    poi_type: str = Query(None),
+    limit: int = Query(500),
+    current_user: dict = Depends(get_current_user),
+    repo: CrimeMapRepository = Depends(get_crime_map_repository),
+):
+    try:
+        data = repo.get_pois(district=district, poi_type=poi_type, limit=limit)
+        return {"status": "success", "data": data}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch POIs.")
+
+@router.get("/intelligence/poi-stats", status_code=status.HTTP_200_OK)
+async def get_intelligence_poi_stats(
+    current_user: dict = Depends(get_current_user),
+    repo: CrimeMapRepository = Depends(get_crime_map_repository),
+):
+    try:
+        data = repo.get_poi_stats()
+        return {"status": "success", "data": data}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch POI stats.")
+
+@router.get("/intelligence/socio-economic", status_code=status.HTTP_200_OK)
+async def get_intelligence_socio(
+    district: str = Query(None),
+    year: int = Query(None),
+    current_user: dict = Depends(get_current_user),
+    repo: CrimeMapRepository = Depends(get_crime_map_repository),
+):
+    try:
+        data = repo.get_socio_economic(district=district, year=year)
+        return {"status": "success", "data": data}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch socio-economic data.")
+
+@router.get("/intelligence/weather", status_code=status.HTTP_200_OK)
+async def get_intelligence_weather(
+    district: str = Query(None),
+    days: int = Query(14),
+    current_user: dict = Depends(get_current_user),
+    repo: CrimeMapRepository = Depends(get_crime_map_repository),
+):
+    try:
+        data = repo.get_weather(district=district, days=days)
+        return {"status": "success", "data": data}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch weather data.")
+
+@router.get("/intelligence/district-risk-enhanced", status_code=status.HTTP_200_OK)
+async def get_intelligence_risk_enhanced(
+    current_user: dict = Depends(get_current_user),
+    repo: CrimeMapRepository = Depends(get_crime_map_repository),
+):
+    try:
+        data = repo.get_district_risk_enhanced()
+        return {"status": "success", "data": data}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch enhanced risk.")
+
+@router.get("/intelligence/status", status_code=status.HTTP_200_OK)
+async def get_intelligence_status(
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        from services.intelligence_etl_service import get_status
+        from db.sqlite.intelligence_schema import ensure_intelligence_tables
+        ensure_intelligence_tables()
+        return {"status": "success", "data": get_status()}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch intelligence status.")
+
+@router.post("/intelligence/refresh", status_code=status.HTTP_200_OK)
+async def post_intelligence_refresh(
+    district: str = Query(None),
+    poi_radius_m: int = Query(20000),
+    weather_days: int = Query(30),
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        # restrict to admin roles optionally — for now any authenticated user can trigger but it is rate-limited by ETL delay
+        from services.intelligence_etl_service import fetch_live_pois, fetch_live_weather, fetch_live_socio_economic, get_status
+        from db.sqlite.intelligence_schema import ensure_intelligence_tables
+        ensure_intelligence_tables()
+        result = {}
+        # if district specified, only refresh that district's POIs
+        if district:
+            result["pois"] = fetch_live_pois(limit_districts=[district], radius_m=poi_radius_m)
+        else:
+            # Catalyst function has 30s timeout — full 31-district POI refresh (~38s) would time out.
+            # Default quick refresh: top 8 districts. Use offline etl_live.py for full 31.
+            quick_districts = ["Bengaluru Urban","Mysuru","Belagavi","Dakshina Kannada","Kalaburagi","Dharwad","Ballari","Tumakuru"]
+            result["pois"] = fetch_live_pois(limit_districts=quick_districts, radius_m=poi_radius_m)
+        try:
+            result["weather"] = fetch_live_weather(days=min(weather_days,14))
+        except Exception as we:
+            result["weather_error"] = str(we)
+        try:
+            result["socio"] = fetch_live_socio_economic()
+        except Exception as se:
+            result["socio_error"] = str(se)
+        result["status"] = get_status()
+        return {"status": "success", "data": result}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Refresh failed: {e}")

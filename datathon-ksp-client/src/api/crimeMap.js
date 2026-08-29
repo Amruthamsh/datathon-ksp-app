@@ -196,3 +196,51 @@ export async function getNetworkOverlayEnhanced(token) {
   });
   return handleResponse(res);
 }
+
+export async function getPOIs(token, params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/crime-map/intelligence/pois${qs}`, {
+    headers: { "X-Auth-Token": token },
+  });
+  return handleResponse(res);
+}
+export async function getPOIStats(token) {
+  const res = await fetch(`${BASE}/crime-map/intelligence/poi-stats`, {
+    headers: { "X-Auth-Token": token },
+  });
+  return handleResponse(res);
+}
+export async function getSocioEconomic(token, params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/crime-map/intelligence/socio-economic${qs}`, {
+    headers: { "X-Auth-Token": token },
+  });
+  return handleResponse(res);
+}
+export async function getWeather(token, params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/crime-map/intelligence/weather${qs}`, {
+    headers: { "X-Auth-Token": token },
+  });
+  return handleResponse(res);
+}
+export async function getDistrictRiskEnhanced(token) {
+  const res = await fetch(`${BASE}/crime-map/intelligence/district-risk-enhanced`, {
+    headers: { "X-Auth-Token": token },
+  });
+  return handleResponse(res);
+}
+export async function getIntelligenceStatus(token) {
+  const res = await fetch(`${BASE}/crime-map/intelligence/status`, {
+    headers: { "X-Auth-Token": token },
+  });
+  return handleResponse(res);
+}
+export async function refreshIntelligence(token, params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/crime-map/intelligence/refresh${qs}`, {
+    method: "POST",
+    headers: { "X-Auth-Token": token },
+  });
+  return handleResponse(res);
+}

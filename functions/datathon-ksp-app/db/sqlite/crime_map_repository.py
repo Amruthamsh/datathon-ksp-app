@@ -1654,3 +1654,198 @@ class CrimeMapRepository:
             for i, r in enumerate(result):
                 r["network_name"] = f"Network {chr(65 + i)}" if i < 26 else f"Network {i + 1}"
             return result[:20]
+
+    # ------------------------------------------------------------------
+    # Intelligence — POI / Socio-economic / Weather / Enhanced Risk
+    # ------------------------------------------------------------------
+    def _ensure_intel(self):
+        try:
+            from db.sqlite.intelligence_schema import ensure_intelligence_tables
+            ensure_intelligence_tables()
+        except Exception:
+            pass
+
+    def get_pois(self, district: str = None, poi_type: str = None, limit: int = 500):
+        self._ensure_intel()
+        with get_connection() as conn:
+            try:
+                sql = "SELECT PoiID, DistrictID, DistrictName, POIType, POIName, Latitude as lat, Longitude as lng, RiskWeight, Source FROM DistrictPOI WHERE 1=1"
+                params=[]
+                if district:
+                    sql += " AND DistrictName=?"
+                    params.append(district)
+                if poi_type:
+                    sql += " AND POIType=?"
+                    params.append(poi_type)
+                sql += " LIMIT ?"
+                params.append(limit)
+                rows = conn.execute(sql, params).fetchall()
+                return [dict(r) for r in rows]
+            except Exception:
+                return []
+
+    def get_poi_stats(self):
+        self._ensure_intel()
+        with get_connection() as conn:
+            try:
+                rows = conn.execute("""
+                    SELECT DistrictName as district, POIType as poi_type, COUNT(*) as cnt, AVG(RiskWeight) as avg_risk
+                    FROM DistrictPOI GROUP BY DistrictName, POIType
+                """).fetchall()
+                # also totals per district
+                totals = conn.execute("""
+                    SELECT DistrictName as district, COUNT(*) as total, SUM(RiskWeight) as risk_sum
+                    FROM DistrictPOI GROUP BY DistrictName
+                """).fetchall()
+                return {"by_district_type": [dict(r) for r in rows], "totals": [dict(r) for r in totals]}
+            except Exception:
+                return {"by_district_type": [], "totals": []}
+
+    def get_socio_economic(self, district: str = None, year: int = None):
+        self._ensure_intel()
+        with get_connection() as conn:
+            try:
+                sql = "SELECT RecordID, DistrictID, DistrictName as district, Year as year, Population as population, PopulationDensity as population_density, UnemploymentRate as unemployment_rate, PerCapitaIncome as per_capita_income, LiteracyRate as literacy_rate, Source as source, UpdatedAt as updated_at FROM DistrictSocioEconomic WHERE 1=1"
+                params=[]
+                if district:
+                    sql += " AND DistrictName=?"
+                    params.append(district)
+                if year:
+                    sql += " AND Year=?"
+                    params.append(year)
+                sql += " ORDER BY Year DESC"
+                rows = conn.execute(sql, params).fetchall()
+                if not year and not district:
+                    seen={}
+                    for r in rows:
+                        d=dict(r)
+                        if d["district"] not in seen:
+                            seen[d["district"]] = d
+                    return list(seen.values())
+                if district and not year and len(rows) > 1:
+                    return [dict(rows[0])]
+                return [dict(r) for r in rows]
+            except Exception as e:
+                return []
+
+    def get_weather(self, district: str = None, days: int = 14):
+        self._ensure_intel()
+        with get_connection() as conn:
+            try:
+                if district:
+                    rows = conn.execute("""
+                        SELECT DistrictName as district, Date as date, AvgTemp as avg_temp, MaxTemp as max_temp, MinTemp as min_temp, Rainfall as rainfall, Humidity as humidity
+                        FROM DistrictWeather WHERE DistrictName=? ORDER BY Date DESC LIMIT ?
+                    """, (district, days)).fetchall()
+                else:
+                    rows = conn.execute("""
+                        SELECT DistrictName as district, Date as date, AvgTemp as avg_temp, Rainfall as rainfall, Humidity as humidity
+                        FROM DistrictWeather ORDER BY Date DESC LIMIT ?
+                    """, (days*3,)).fetchall()
+                return [dict(r) for r in rows]
+            except Exception:
+                return []
+
+    def get_district_risk_enhanced(self):
+        """Enhanced risk = base crime risk blended with live socio-economic + POI + weather multipliers."""
+        self._ensure_intel()
+        base = self.get_district_risk_summary()
+        if not base:
+            return []
+        with get_connection() as conn:
+            try:
+                # fetch latest socio
+                socio = {}
+                try:
+                    for r in conn.execute("SELECT DistrictName, UnemploymentRate, PopulationDensity, PerCapitaIncome, LiteracyRate FROM DistrictSocioEconomic WHERE Year=(SELECT MAX(Year) FROM DistrictSocioEconomic)").fetchall():
+                        socio[r["DistrictName"]] = dict(r)
+                except Exception:
+                    pass
+                poi_totals={}
+                poi_liquor={}
+                try:
+                    for r in conn.execute("SELECT DistrictName, COUNT(*) as total, SUM(CASE WHEN POIType='Liquor_Store' THEN 1 ELSE 0 END) as liquor, SUM(RiskWeight) as risk_sum FROM DistrictPOI GROUP BY DistrictName").fetchall():
+                        poi_totals[r["DistrictName"]] = dict(r)
+                        poi_liquor[r["DistrictName"]] = r["liquor"] or 0
+                except Exception:
+                    pass
+                weather_avg={}
+                try:
+                    for r in conn.execute("SELECT DistrictName, AVG(Rainfall) as avg_rain, AVG(AvgTemp) as avg_temp FROM DistrictWeather WHERE Date >= date('now','-14 days') GROUP BY DistrictName").fetchall():
+                        weather_avg[r["DistrictName"]] = dict(r)
+                except Exception:
+                    # fallback to open-meteo table may be empty initially
+                    pass
+                max_poi = max([v["total"] for v in poi_totals.values()], default=1)
+                enhanced=[]
+                for entry in base:
+                    d = entry["district"]
+                    s = socio.get(d, {})
+                    unemp = s.get("UnemploymentRate", 7.0) or 7.0
+                    # unemployment multiplier: >7% adds risk, <5% reduces
+                    unemp_bonus = (unemp - 7.0) * 3.5  # 10% -> +10.5
+                    # POI bonus: normalize liquor density and total risk sum
+                    p = poi_totals.get(d, {"total": 0, "risk_sum": 0, "liquor": 0})
+                    poi_density_norm = (p["total"] / max_poi * 12) if max_poi else 0
+                    liquor_bonus = min(8, (p["liquor"] or 0) * 0.6)
+                    poi_bonus = poi_density_norm * 0.5 + liquor_bonus * 0.5
+                    # weather: heavy rain -> + property crime risk, heat -> + assault
+                    w = weather_avg.get(d, {})
+                    rain = w.get("avg_rain", 2.0) or 2.0
+                    temp = w.get("avg_temp", 28) or 28
+                    weather_bonus = 0
+                    if rain and rain > 8:
+                        weather_bonus += 4  # monsoon property theft
+                    if rain and rain < 1 and temp and temp > 34:
+                        weather_bonus += 3  # heat -> assault
+                    # literacy negative correlation
+                    literacy = s.get("LiteracyRate", 75) or 75
+                    literacy_bonus = (75 - literacy) * 0.15
+                    enhanced_score = entry["risk_score"] + unemp_bonus + poi_bonus + weather_bonus + literacy_bonus
+                    enhanced_score = max(5, min(98, round(enhanced_score,1)))
+                    # level
+                    if enhanced_score >= 75:
+                        lvl="CRITICAL"
+                    elif enhanced_score >= 50:
+                        lvl="HIGH"
+                    elif enhanced_score >= 25:
+                        lvl="MEDIUM"
+                    else:
+                        lvl="LOW"
+                    e = dict(entry)
+                    e["risk_score_base"] = entry["risk_score"]
+                    e["risk_score"] = enhanced_score
+                    e["risk_score_enhanced"] = enhanced_score
+                    e["risk_level"] = lvl
+                    e["multipliers"] = {
+                        "unemployment_rate": round(unemp,1),
+                        "unemployment_bonus": round(unemp_bonus,1),
+                        "poi_total": p["total"],
+                        "poi_liquor": p["liquor"],
+                        "poi_bonus": round(poi_bonus,1),
+                        "weather_rain_14d_avg": round(rain,1) if rain else None,
+                        "weather_temp_14d_avg": round(temp,1) if temp else None,
+                        "weather_bonus": round(weather_bonus,1),
+                        "literacy_rate": round(literacy,1) if literacy else None,
+                    }
+                    # human readable drivers
+                    drivers=[]
+                    if unemp_bonus > 4:
+                        drivers.append(f"Unemployment {unemp}% (+{round(unemp_bonus)} risk)")
+                    if liquor_bonus > 3:
+                        drivers.append(f"{p['liquor']} liquor outlets clustered (+{round(liquor_bonus)} )")
+                    if weather_bonus>0:
+                        drivers.append(f"Weather pattern (+{weather_bonus}) rain {round(rain,1)}mm" if rain>8 else f"Heat {round(temp,1)}°C (+{weather_bonus})")
+                    if poi_bonus>5:
+                        drivers.append(f"High POI density {p['total']} (+{round(poi_bonus,1)})")
+                    e["risk_drivers"] = drivers
+                    if s:
+                        e["socio"] = {"population_density": s.get("PopulationDensity"), "per_capita_income": s.get("PerCapitaIncome"), "literacy_rate": s.get("LiteracyRate"), "unemployment_rate": s.get("UnemploymentRate")}
+                    enhanced.append(e)
+                enhanced.sort(key=lambda x: x["risk_score"], reverse=True)
+                for i, r in enumerate(enhanced):
+                    r["rank"] = i+1
+                return enhanced
+            except Exception as e:
+                logger.warning("enhanced risk failed %s", e)
+                return base
