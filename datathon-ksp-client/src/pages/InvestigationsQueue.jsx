@@ -768,7 +768,7 @@ export default function InvestigationsQueue() {
                       </div>
                     </td>
                     <td className="px-3 py-2.5 align-top">
-                      <span className="inline-flex border border-[#1A1A2E] bg-white px-2 py-0.5 text-[11px] font-semibold text-[#1A1A2E] group-hover:bg-[#1A1A2E] group-hover:text-white transition-colors">
+                      <span className="inline-flex w-[148px] justify-center whitespace-nowrap rounded-sm border border-slate-600 bg-white px-2 py-0.5 text-[11px] font-semibold text-[#1A1A2E] group-hover:border-[#1A1A2E] group-hover:bg-[#1A1A2E] group-hover:text-white transition-colors">
                         {next}
                       </span>
                     </td>
