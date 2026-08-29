@@ -142,9 +142,9 @@ export default function InvestigationsQueue() {
       };
     if (v.includes("high"))
       return {
-        bg: "bg-[#C85A00]",
+        bg: "bg-[#F97316]",
         fg: "text-white",
-        border: "border-[#C85A00]",
+        border: "border-[#F97316]",
         label: "HIGH",
       };
     if (v.includes("medium"))
@@ -547,27 +547,36 @@ export default function InvestigationsQueue() {
               id: "overdue",
               label: "OVERDUE CHARGESHEETS",
               value: statCounts.overdue,
-              bg: "bg-[#FEF2F2]",
-              valueColor: "text-[#D62828]",
-              dot: "bg-[#D62828]",
+              bg: "bg-red-400",
+              valueColor: "text-white",
+              dot: "bg-white",
+              labelColor: "text-white/85",
+              subColor: "text-white/80",
+              badgeColor: "text-[#DC2626]",
               sub: "past due date",
             },
             {
               id: "absconding",
               label: "ACCUSED ABSCONDING",
               value: statCounts.abscondingTotal,
-              bg: "bg-[#FFFBEB]",
-              valueColor: "text-[#92400E]",
-              dot: "bg-[#C85A00]",
+              bg: "bg-orange-300",
+              valueColor: "text-slate-900",
+              dot: "bg-slate-800",
+              labelColor: "text-slate-800",
+              subColor: "text-slate-700",
+              badgeColor: "text-slate-800",
               sub: "at large",
             },
             {
               id: "chargesheet_pending",
               label: "CHARGESHEET PENDING",
               value: statCounts.chargesheetPending,
-              bg: "bg-[#F4F6F9]",
-              valueColor: "text-[#1A1A2E]",
-              dot: "bg-[#1A1A2E]",
+              bg: "bg-blue-900/90",
+              valueColor: "text-white",
+              dot: "bg-white",
+              labelColor: "text-white/85",
+              subColor: "text-white/80",
+              badgeColor: "text-[#2563EB]",
               sub: "not filed",
             },
           ].map((m) => {
@@ -576,7 +585,7 @@ export default function InvestigationsQueue() {
               <button
                 key={m.id}
                 onClick={() => setParam("stat", active ? "" : m.id)}
-                className={`relative flex flex-col items-start gap-1 px-4 py-3 text-left transition ${active ? "bg-[#1A1A2E] text-white" : `${m.bg} hover:brightness-[0.98]`}`}
+                className={`relative flex flex-col items-start gap-1 rounded-md px-4 py-3 text-left transition ${active ? "bg-[#1A1A2E] text-white" : `${m.bg} hover:brightness-[0.98]`}`}
                 title={
                   active
                     ? "Click to clear filter"
@@ -584,7 +593,7 @@ export default function InvestigationsQueue() {
                 }
               >
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-[0.1em] ${active ? "text-white/70" : "text-[#6B7280]"}`}
+                  className={`text-[10px] font-bold uppercase tracking-[0.1em] ${active ? "text-white/70" : m.labelColor || "text-white/85"}`}
                 >
                   {m.label}
                 </span>
@@ -595,17 +604,17 @@ export default function InvestigationsQueue() {
                     {m.value ?? 0}
                   </span>
                   <span
-                    className={`h-1.5 w-1.5 rounded-full ${active ? "bg-white" : m.dot} ${m.value > 0 ? "animate-pulse" : "opacity-30"}`}
+                    className={`h-1.5 w-1.5 rounded-full ${active ? "bg-white" : m.dot} ${m.value > 0 ? "animate-pulse" : "opacity-90"}`}
                   />
                   <span
-                    className={`text-[11px] font-medium ${active ? "text-white/60" : "text-[#6B7280]"}`}
+                    className={`text-[11px] font-medium ${active ? "text-white/60" : m.subColor || "text-white/80"}`}
                   >
                     {m.sub}
                   </span>
                 </span>
                 {m.value > 0 && !active && (
                   <span
-                    className={`absolute right-3 top-3 text-[10px] font-bold uppercase tracking-wide ${m.valueColor} border bg-white px-1.5 py-0.5`}
+                    className={`absolute right-3 top-3 text-[10px] font-bold uppercase tracking-wide ${m.badgeColor || m.valueColor} border border-white bg-white px-1.5 py-0.5`}
                   >
                     Action needed
                   </span>
@@ -731,7 +740,7 @@ export default function InvestigationsQueue() {
                     </td>
                     <td className="px-3 py-2.5 align-top">
                       <span
-                        className={`inline-flex h-5 items-center justify-center whitespace-nowrap border px-2 text-[10px] font-bold uppercase tracking-[0.08em] ${box.bg} ${box.fg} ${box.border}`}
+                        className={`inline-flex h-5 w-[78px] items-center justify-center whitespace-nowrap rounded-md border px-2 text-[10px] font-bold uppercase tracking-[0.08em] ${box.bg} ${box.fg} ${box.border}`}
                       >
                         {box.label}
                       </span>
@@ -803,14 +812,18 @@ export default function InvestigationsQueue() {
         <div className="pointer-events-none fixed bottom-5 left-1/2 z-40 -translate-x-1/2">
           <div className="pointer-events-auto flex items-center gap-4 border border-[#1A1A2E] bg-[#1A1A2E] px-4 py-2.5 shadow-lg">
             <span className="text-xs font-medium text-white/90">
-              {selected.length} {selected.length === 1 ? "case selected" : "cases selected"}
+              {selected.length}{" "}
+              {selected.length === 1 ? "case selected" : "cases selected"}
             </span>
             <span className="text-white/30">·</span>
             <button
               onClick={handleCrossCase}
               className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-white hover:text-white/80"
             >
-              {selected.length === 1 ? "Chat about this case" : "Start Cross-Case Analysis"} <ArrowRight size={12} />
+              {selected.length === 1
+                ? "Chat about this case"
+                : "Start Cross-Case Analysis"}{" "}
+              <ArrowRight size={12} />
             </button>
             <button
               onClick={() => setSelected([])}

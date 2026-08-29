@@ -59,7 +59,7 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
   return (
     <div
       className={`group relative flex items-center rounded-lg transition ${
-        isActive ? "bg-blue-50" : "hover:bg-slate-100"
+        isActive ? "bg-blue-900/90 text-white" : "hover:bg-slate-100"
       }`}
     >
       {editing ? (
@@ -92,12 +92,12 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
           <button
             onClick={() => onSelect(conv.conversation_id)}
             className={`flex min-w-0 flex-1 items-start gap-2 px-3 py-2 text-left cursor-pointer ${
-              isActive ? "text-blue-700" : "text-slate-700"
+              isActive ? "text-white" : "text-slate-700"
             }`}
           >
             <MessageSquare
               size={15}
-              className={`mt-0.5 shrink-0 ${isActive ? "text-blue-600" : "text-slate-400"}`}
+              className={`mt-0.5 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`}
             />
             <span className="min-w-0 flex-1 truncate text-sm leading-5">
               {conv.title || conv.last_message || t("nav.untitled")}
@@ -111,12 +111,16 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
                 setMenuOpen((o) => !o);
               }}
               className={`mr-1 rounded p-1 transition ${
-                menuOpen
-                  ? "bg-slate-200"
-                  : "opacity-0 group-hover:opacity-100 hover:bg-slate-200"
+                isActive
+                  ? menuOpen
+                    ? "bg-white/20 text-white"
+                    : "opacity-0 group-hover:opacity-100 hover:bg-white/20 text-white"
+                  : menuOpen
+                    ? "bg-slate-200"
+                    : "opacity-0 group-hover:opacity-100 hover:bg-slate-200"
               }`}
             >
-              <MoreHorizontal size={14} className="text-slate-500" />
+              <MoreHorizontal size={14} className={isActive ? "text-white" : "text-slate-500"} />
             </button>
 
             {menuOpen && (
@@ -221,11 +225,11 @@ const LeftNav = ({
                 onClick={() => navigate(targetPath)}
                 className={`w-full flex items-center rounded-lg transition-colors cursor-pointer ${
                   expanded ? "gap-4 px-4 py-2" : "justify-center py-3"
-                } ${isActive ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-100"}`}
+                } ${isActive ? "bg-blue-900/90 text-white" : "text-slate-700 hover:bg-slate-100"}`}
               >
                 <Icon
                   size={18}
-                  className={isActive ? "text-blue-600" : "text-slate-500"}
+                  className={isActive ? "text-white" : "text-slate-500"}
                 />
                 {expanded && (
                   <span className="text-sm font-medium">{item.title}</span>
