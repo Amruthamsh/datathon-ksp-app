@@ -70,7 +70,7 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-200">
       {/* Left branding panel */}
       <div className="relative hidden w-[440px] shrink-0 overflow-hidden bg-red-700 lg:flex lg:flex-col lg:items-center lg:justify-between">
         {/* Subtle grid pattern */}
@@ -88,7 +88,11 @@ export default function Login() {
 
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-12 text-center">
           <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 backdrop-blur-sm">
-            <img src={logo} alt="Karnataka State Police" className="h-16 w-16" />
+            <img
+              src={logo}
+              alt="Karnataka State Police"
+              className="h-16 w-16"
+            />
           </div>
           <h2 className="text-3xl font-bold tracking-tight text-white">
             KSP CrimeLens
@@ -111,15 +115,17 @@ export default function Login() {
           {/* Mobile-only branding */}
           <div className="mb-8 flex flex-col items-center lg:hidden">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 ring-1 ring-red-100">
-              <img src={logo} alt="Karnataka State Police" className="h-10 w-10" />
+              <img
+                src={logo}
+                alt="Karnataka State Police"
+                className="h-10 w-10"
+              />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">
-              KSP CrimeLens
-            </h2>
+            <h2 className="text-2xl font-bold text-slate-900">KSP CrimeLens</h2>
           </div>
 
           {/* Card */}
-          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-lg">
             <div className="mb-8 flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
                 <ShieldCheck size={18} className="text-red-700" />
