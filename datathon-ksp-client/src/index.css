@@ -1,19 +1,40 @@
 @import "tailwindcss";
 
-:root {
-  --ksp-ink: #1A1A2E;
-  --ksp-paper: #F4F6F9;
-  --ksp-critical: #D62828;
-  --ksp-high: #F97316;
-  --ksp-done: #2D6A4F;
-  --ksp-muted: #374151;
-  --ksp-rule: #DDE3EC;
-  --ksp-abscond: #FEF3C7;
+@theme {
+  --color-brand: #c00000;
+  --color-brand-deep: #9a0000;
+  --color-brand-soft: #fdf3f3;
+
+  --color-primary: #2563eb;
+  --color-primary-strong: #1d4ed8;
+  --color-primary-soft: #eef4ff;
+  --color-primary-line: #bfdbfe;
+
+  --color-intel: #1e293b;
+  --color-intel-soft: #f1f5f9;
+
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f6f8fb;
+  --color-surface-raised: #f8fafc;
+
+  --color-ink: #0f172a;
+  --color-ink-secondary: #475569;
+  --color-ink-muted: #94a3b8;
+
+  --color-line: #e2e8f0;
+  --color-line-strong: #cbd5e1;
+
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-critical: #dc2626;
+
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-panel: 0.875rem;
+  --radius-popover: 1rem;
+  --radius-pill: 9999px;
 }
 
-.ksp-queue, .ksp-workspace {
-  color: var(--ksp-ink);
-}
-.ksp-mono {
-  font-family: inherit;
+body {
+  background-color: var(--color-surface-subtle);
 }

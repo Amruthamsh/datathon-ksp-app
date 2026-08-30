@@ -35,6 +35,7 @@
   "nav": {
     "newChat": "New Chat",
     "recentChats": "Recent Chats",
+    "workspace": "Workspace",
     "rename": "Rename",
     "delete": "Delete",
     "untitled": "Untitled",

@@ -80,7 +80,7 @@ export default function DashboardLayout() {
       <Header />
 
       {/* 'flex-1 overflow-hidden' ensures the nav and main content fill the rest */}
-      <div className="flex flex-1 overflow-hidden gap-3 bg-[#F4F6F9]">
+      <div className="flex flex-1 overflow-hidden  bg-[#F4F6F9]">
         <LeftNav
           expanded={expanded}
           setExpanded={setExpanded}

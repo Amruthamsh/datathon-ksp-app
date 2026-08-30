@@ -900,9 +900,9 @@ export default function Home() {
                   <div className="relative">
                     <button
                       onClick={() => setShowLocationDetail((v) => !v)}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12.5px] font-medium leading-none text-emerald-800 shadow-sm hover:bg-emerald-100 transition cursor-pointer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12.5px] font-medium leading-none text-ink shadow-sm hover:bg-surface-subtle transition cursor-pointer"
                     >
-                      <MapPin size={13} className="text-emerald-600 shrink-0" />
+                      <MapPin size={13} className="shrink-0 text-success" />
                       <span>
                         {locationCoords ? t("sources.nearMe") : t("sources.myLocation")} ·{" "}
                         {locationRadius} km
@@ -1010,12 +1010,12 @@ export default function Home() {
                   </div>
                 )}
                 {webEnabled && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[12.5px] font-medium leading-none text-sky-800 shadow-sm">
-                    <Globe size={13} className="text-sky-600 shrink-0" />
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12.5px] font-medium leading-none text-ink shadow-sm">
+                    <Globe size={13} className="shrink-0 text-primary" />
                     {t("sources.openWeb")}
                     <button
                       onClick={handleToggleWeb}
-                      className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-sky-100 text-sky-700 hover:bg-sky-200 transition cursor-pointer"
+                      className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition cursor-pointer"
                       title={t("sources.removeOpenWeb")}
                     >
                       <X size={9} strokeWidth={2.5} />
@@ -1030,13 +1030,13 @@ export default function Home() {
                     return (
                       <span
                         key={`${file.name}-${realIdx}`}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[12.5px] font-medium leading-none text-violet-800 shadow-sm"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12.5px] font-medium leading-none text-ink shadow-sm"
                       >
-                        <File size={13} className="text-violet-600 shrink-0" />
+                        <File size={13} className="shrink-0 text-ink-muted" />
                         <span className="max-w-[140px] truncate">
                           {file.name}
                         </span>
-                        <span className="hidden sm:inline text-violet-500 font-normal">
+                        <span className="hidden sm:inline text-ink-muted font-normal">
                           {formatFileSize(file.size)}
                         </span>
                         <button
@@ -1045,7 +1045,7 @@ export default function Home() {
                               prev.filter((_, i) => i !== realIdx),
                             )
                           }
-                          className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition cursor-pointer"
+                          className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition cursor-pointer"
                           title={t("sources.removeFile")}
                         >
                           <X size={9} strokeWidth={2.5} />
@@ -1120,154 +1120,154 @@ export default function Home() {
                 </button>
 
                 {showContextMenu && (
-                  <div className="absolute bottom-full left-0 mb-3 w-[320px] rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-1">
-                    <div className="px-4 pt-4 pb-2">
-                      <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-500">
+                  <div className="absolute bottom-full left-0 mb-2.5 w-[288px] overflow-hidden rounded-popover border border-line bg-surface shadow-lg z-20 animate-in fade-in slide-in-from-bottom-1">
+                    <div className="border-b border-line bg-surface-subtle px-3.5 py-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted">
                         {t("sources.menuTitle")}
                       </p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
+                      <p className="mt-0.5 truncate text-[10.5px] text-ink-muted">
                         {t("sources.menuSubtitle")}
                       </p>
                     </div>
 
                     {/* Crime Database — always on */}
-                    <div className="mx-2 rounded-xl border border-slate-900 bg-slate-900 px-3 py-3 flex items-start gap-3">
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white border border-white/20">
-                        <Database size={15} />
+                    <div className="mx-2 mt-2 flex items-start gap-2.5 rounded-card border border-intel/10 bg-intel-soft px-2.5 py-2.5">
+                      <span className="mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-intel text-white">
+                        <Database size={14} />
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold leading-none text-white">
+                        <p className="text-[12.5px] font-semibold leading-none text-ink">
                           {t("sources.crimeDatabase")}
                         </p>
-                        <p className="text-[11.5px] leading-4 text-slate-300 mt-1">
+                        <p className="mt-1 text-[11px] leading-[15px] text-ink-secondary">
                           {t("sources.crimeDatabaseDesc")}
                         </p>
                       </div>
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
-                        <Check size={12} strokeWidth={3} />
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success text-white">
+                        <Check size={11} strokeWidth={3} />
                       </span>
                     </div>
 
                     {/* My Location row */}
                     <button
                       onClick={handleToggleLocation}
-                      className={`mx-2 mt-2 flex w-[calc(100%-16px)] items-start gap-3 rounded-xl border px-3 py-3 text-left transition cursor-pointer ${
+                      className={`mx-2 mt-1.5 flex w-[calc(100%-16px)] items-start gap-2.5 rounded-card border px-2.5 py-2.5 text-left transition cursor-pointer ${
                         locationEnabled
                           ? "border-emerald-200 bg-emerald-50"
-                          : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
+                          : "border-line bg-surface hover:bg-surface-subtle"
                       }`}
                     >
                       <span
-                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
+                        className={`mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
                           locationEnabled
                             ? "bg-emerald-600 text-white border-emerald-600"
-                            : "bg-slate-50 text-slate-600 border-slate-200"
+                            : "bg-surface-raised text-ink-secondary border-line"
                         }`}
                       >
-                        <MapPin size={15} />
+                        <MapPin size={14} />
                       </span>
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-[13px] font-semibold leading-none ${locationEnabled ? "text-emerald-900" : "text-slate-800"}`}
+                          className={`text-[12.5px] font-semibold leading-none ${locationEnabled ? "text-emerald-900" : "text-ink"}`}
                         >
                           {t("sources.useMyLocation")}
                         </p>
-                        <p className="text-[11.5px] leading-4 text-slate-500 mt-1">
+                        <p className="mt-1 text-[11px] leading-[15px] text-ink-secondary">
                           {t("sources.useMyLocationDesc")}
                         </p>
                         {locationEnabled && locationCoords && (
-                          <p className="text-[11px] font-medium text-emerald-700 mt-1">
+                          <p className="mt-1 text-[10.5px] font-medium text-emerald-700">
                             ● {locationCoords.lat.toFixed(2)},{" "}
                             {locationCoords.lng.toFixed(2)} · {locationRadius}{" "}
                             km
                           </p>
                         )}
                         {locationLoading && (
-                          <p className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1">
-                            <Loader2 size={11} className="animate-spin" />{" "}
+                          <p className="mt-1 flex items-center gap-1 text-[10.5px] text-emerald-600">
+                            <Loader2 size={10} className="animate-spin" />{" "}
                             {t("sources.locating")}
                           </p>
                         )}
                       </div>
                       <span
-                        className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                        className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition ${
                           locationEnabled
                             ? "bg-emerald-600 border-emerald-600 text-white"
-                            : "bg-white border-slate-300"
+                            : "bg-surface border-line-strong"
                         }`}
                       >
-                        {locationEnabled && <Check size={10} strokeWidth={3} />}
+                        {locationEnabled && <Check size={9} strokeWidth={3} />}
                       </span>
                     </button>
 
                     {/* Open Web row */}
                     <button
                       onClick={handleToggleWeb}
-                      className={`mx-2 mt-2 flex w-[calc(100%-16px)] items-start gap-3 rounded-xl border px-3 py-3 text-left transition cursor-pointer ${
+                      className={`mx-2 mt-1.5 flex w-[calc(100%-16px)] items-start gap-2.5 rounded-card border px-2.5 py-2.5 text-left transition cursor-pointer ${
                         webEnabled
                           ? "border-sky-200 bg-sky-50"
-                          : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
+                          : "border-line bg-surface hover:bg-surface-subtle"
                       }`}
                     >
                       <span
-                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
+                        className={`mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
                           webEnabled
                             ? "bg-sky-600 text-white border-sky-600"
-                            : "bg-slate-50 text-slate-600 border-slate-200"
+                            : "bg-surface-raised text-ink-secondary border-line"
                         }`}
                       >
-                        <Globe size={15} />
+                        <Globe size={14} />
                       </span>
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-[13px] font-semibold leading-none ${webEnabled ? "text-sky-900" : "text-slate-800"}`}
+                          className={`text-[12.5px] font-semibold leading-none ${webEnabled ? "text-sky-900" : "text-ink"}`}
                         >
                           {t("sources.openWeb")}
                         </p>
-                        <p className="text-[11.5px] leading-4 text-slate-500 mt-1">
+                        <p className="mt-1 text-[11px] leading-[15px] text-ink-secondary">
                           {t("sources.openWebDesc")}
                         </p>
                       </div>
                       <span
-                        className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                        className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition ${
                           webEnabled
                             ? "bg-sky-600 border-sky-600 text-white"
-                            : "bg-white border-slate-300"
+                            : "bg-surface border-line-strong"
                         }`}
                       >
-                        {webEnabled && <Check size={10} strokeWidth={3} />}
+                        {webEnabled && <Check size={9} strokeWidth={3} />}
                       </span>
                     </button>
 
                     {/* Documents & Evidence row — file intelligence source */}
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className={`mx-2 mt-2 mb-2 flex w-[calc(100%-16px)] items-start gap-3 rounded-xl border px-3 py-3 text-left transition cursor-pointer ${
+                      className={`mx-2 mt-1.5 mb-2 flex w-[calc(100%-16px)] items-start gap-2.5 rounded-card border px-2.5 py-2.5 text-left transition cursor-pointer ${
                         attachedFiles.length > 0
                           ? "border-violet-200 bg-violet-50"
-                          : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
+                          : "border-line bg-surface hover:bg-surface-subtle"
                       }`}
                     >
                       <span
-                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
+                        className={`mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
                           attachedFiles.length > 0
                             ? "bg-violet-600 text-white border-violet-600"
-                            : "bg-slate-50 text-slate-600 border-slate-200"
+                            : "bg-surface-raised text-ink-secondary border-line"
                         }`}
                       >
-                        <Paperclip size={15} />
+                        <Paperclip size={14} />
                       </span>
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-[13px] font-semibold leading-none ${attachedFiles.length > 0 ? "text-violet-900" : "text-slate-800"}`}
+                          className={`text-[12.5px] font-semibold leading-none ${attachedFiles.length > 0 ? "text-violet-900" : "text-ink"}`}
                         >
                           {t("sources.documentsEvidence")}
                         </p>
-                        <p className="text-[11.5px] leading-4 text-slate-500 mt-1">
+                        <p className="mt-1 text-[11px] leading-[15px] text-ink-secondary">
                           {t("sources.documentsEvidenceDesc")}
                         </p>
                         {attachedFiles.length > 0 && (
-                          <p className="text-[11px] font-medium text-violet-700 mt-1">
+                          <p className="mt-1 text-[10.5px] font-medium text-violet-700">
                             {t("sources.filesAttached", {
                               count: attachedFiles.length,
                               names: attachedFiles
@@ -1279,31 +1279,27 @@ export default function Home() {
                               .length > 48
                               ? "…"
                               : ""}
-                            {attachedFiles.map((f) => f.name).join(", ")
-                              .length > 48
-                              ? "…"
-                              : ""}
                           </p>
                         )}
                       </div>
                       <span
-                        className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                        className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition ${
                           attachedFiles.length > 0
                             ? "bg-violet-600 border-violet-600 text-white"
-                            : "bg-white border-slate-300"
+                            : "bg-surface border-line-strong"
                         }`}
                       >
                         {attachedFiles.length > 0 && (
-                          <Check size={10} strokeWidth={3} />
+                          <Check size={9} strokeWidth={3} />
                         )}
                       </span>
                     </button>
 
-                    <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 flex items-center justify-between">
-                      <span className="text-[11px] text-slate-500">
+                    <div className="flex items-center justify-between border-t border-line bg-surface-subtle px-3.5 py-2">
+                      <span className="text-[10.5px] text-ink-muted">
                         {t("sources.footer")}
                       </span>
-                      <span className="text-[11px] font-medium text-slate-600">
+                      <span className="text-[10.5px] font-medium text-ink-secondary">
                         {t("sources.active", {
                           count: [
                             true,
