@@ -6,7 +6,7 @@ import profile from "../assets/profile.svg";
 import LanguageSelector from "./LanguageSelector";
 import { useAuth } from "../auth/AuthContext";
 
-const Header = ({ hideSearch = false }) => {
+const Header = ({ hideSearch = true }) => {
   const { officer, signOut } = useAuth();
   const { t } = useTranslation();
 
@@ -14,9 +14,7 @@ const Header = ({ hideSearch = false }) => {
     <header className="h-12 border-b border-slate-200 bg-white flex items-center justify-between px-6">
       <div className="flex items-center gap-6">
         <img src={logo} alt="Logo" className="h-8 w-8" />
-        <h1 className="text-xl font-semibold text-red-700">
-          {t("app.title")}
-        </h1>
+        <h1 className="text-xl font-semibold text-red-700">{t("app.title")}</h1>
       </div>
       <div className="flex items-center gap-6">
         {!hideSearch && (
@@ -50,8 +48,8 @@ const Header = ({ hideSearch = false }) => {
           </div>
         )}
         <LanguageSelector />
-        <Bell size={24} />
-        <BadgeQuestionMarkIcon size={24} />
+        {/* <Bell size={24} /> */}
+        {/* <BadgeQuestionMarkIcon size={24} /> */}
         <p>{officer?.full_name ?? t("header.unknownUser")}</p>
         <img src={profile} alt="Profile" className="h-8 w-8 rounded-full" />
         <button

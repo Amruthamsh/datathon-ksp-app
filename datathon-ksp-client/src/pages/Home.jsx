@@ -904,7 +904,7 @@ export default function Home() {
                     >
                       <MapPin size={13} className="text-emerald-600 shrink-0" />
                       <span>
-                        {locationCoords ? "Near me" : "My Location"} ·{" "}
+                        {locationCoords ? t("sources.nearMe") : t("sources.myLocation")} ·{" "}
                         {locationRadius} km
                       </span>
                       {locationLoading && (
@@ -917,7 +917,7 @@ export default function Home() {
                     <button
                       onClick={handleToggleLocation}
                       className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-slate-700 text-white hover:bg-slate-900 shadow transition cursor-pointer"
-                      title="Remove location"
+                      title={t("sources.removeLocation")}
                     >
                       <X size={9} strokeWidth={2.5} />
                     </button>
@@ -950,7 +950,7 @@ export default function Home() {
                           ) : locationLoading ? (
                             <p className="text-[13px] text-slate-500 flex items-center gap-1.5">
                               <Loader2 size={13} className="animate-spin" />{" "}
-                              Locating…
+                              {t("sources.locating")}
                             </p>
                           ) : locationError ? (
                             <p className="text-[12px] text-amber-700">
@@ -1012,11 +1012,11 @@ export default function Home() {
                 {webEnabled && (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[12.5px] font-medium leading-none text-sky-800 shadow-sm">
                     <Globe size={13} className="text-sky-600 shrink-0" />
-                    Open Web
+                    {t("sources.openWeb")}
                     <button
                       onClick={handleToggleWeb}
                       className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-sky-100 text-sky-700 hover:bg-sky-200 transition cursor-pointer"
-                      title="Remove Open Web"
+                      title={t("sources.removeOpenWeb")}
                     >
                       <X size={9} strokeWidth={2.5} />
                     </button>
@@ -1046,7 +1046,7 @@ export default function Home() {
                             )
                           }
                           className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition cursor-pointer"
-                          title="Remove file"
+                          title={t("sources.removeFile")}
                         >
                           <X size={9} strokeWidth={2.5} />
                         </button>
@@ -1059,7 +1059,7 @@ export default function Home() {
                     onClick={() => setShowAllFiles(true)}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-medium leading-none text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition cursor-pointer"
                   >
-                    +{attachedFiles.length - 2} more
+                    {t("sources.moreFiles", { count: attachedFiles.length - 2 })}
                     <span className="text-slate-400 font-normal">
                       ·{" "}
                       {formatFileSize(
@@ -1073,7 +1073,7 @@ export default function Home() {
                     onClick={() => setShowAllFiles(false)}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition cursor-pointer"
                   >
-                    Show less
+                    {t("sources.showLess")}
                   </button>
                 )}
                 {attachedFiles.length > 1 && (
@@ -1084,7 +1084,7 @@ export default function Home() {
                     }}
                     className="ml-auto text-[11px] font-medium text-slate-500 hover:text-slate-700 underline underline-offset-2 decoration-slate-300 hover:decoration-slate-500 transition cursor-pointer"
                   >
-                    Clear all
+                    {t("sources.clearAll")}
                   </button>
                 )}
               </div>
@@ -1110,8 +1110,8 @@ export default function Home() {
                       ? "bg-slate-900 text-white border-slate-900 shadow-sm"
                       : "text-slate-600 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
                   }`}
-                  title="Add intelligence sources"
-                  aria-label="Add context"
+                  title={t("sources.addIntelligenceSources")}
+                  aria-label={t("sources.addContext")}
                 >
                   <Plus
                     size={16}
@@ -1123,11 +1123,10 @@ export default function Home() {
                   <div className="absolute bottom-full left-0 mb-3 w-[320px] rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-1">
                     <div className="px-4 pt-4 pb-2">
                       <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-500">
-                        Add Intelligence Sources
+                        {t("sources.menuTitle")}
                       </p>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        CrimeLens augments the KSP case database with contextual
-                        intelligence.
+                        {t("sources.menuSubtitle")}
                       </p>
                     </div>
 
@@ -1138,10 +1137,10 @@ export default function Home() {
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-semibold leading-none text-white">
-                          Crime Database
+                          {t("sources.crimeDatabase")}
                         </p>
                         <p className="text-[11.5px] leading-4 text-slate-300 mt-1">
-                          KSP case records — authoritative internal intelligence
+                          {t("sources.crimeDatabaseDesc")}
                         </p>
                       </div>
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
@@ -1171,10 +1170,10 @@ export default function Home() {
                         <p
                           className={`text-[13px] font-semibold leading-none ${locationEnabled ? "text-emerald-900" : "text-slate-800"}`}
                         >
-                          Use My Location
+                          {t("sources.useMyLocation")}
                         </p>
                         <p className="text-[11.5px] leading-4 text-slate-500 mt-1">
-                          Find nearby incidents, suspects & clusters around me
+                          {t("sources.useMyLocationDesc")}
                         </p>
                         {locationEnabled && locationCoords && (
                           <p className="text-[11px] font-medium text-emerald-700 mt-1">
@@ -1186,7 +1185,7 @@ export default function Home() {
                         {locationLoading && (
                           <p className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1">
                             <Loader2 size={11} className="animate-spin" />{" "}
-                            Locating…
+                            {t("sources.locating")}
                           </p>
                         )}
                       </div>
@@ -1223,10 +1222,10 @@ export default function Home() {
                         <p
                           className={`text-[13px] font-semibold leading-none ${webEnabled ? "text-sky-900" : "text-slate-800"}`}
                         >
-                          Open Web
+                          {t("sources.openWeb")}
                         </p>
                         <p className="text-[11.5px] leading-4 text-slate-500 mt-1">
-                          Search public sources beyond KSP records
+                          {t("sources.openWebDesc")}
                         </p>
                       </div>
                       <span
@@ -1262,19 +1261,24 @@ export default function Home() {
                         <p
                           className={`text-[13px] font-semibold leading-none ${attachedFiles.length > 0 ? "text-violet-900" : "text-slate-800"}`}
                         >
-                          Documents & Evidence
+                          {t("sources.documentsEvidence")}
                         </p>
                         <p className="text-[11.5px] leading-4 text-slate-500 mt-1">
-                          Upload PDFs, images, or case files for analysis
+                          {t("sources.documentsEvidenceDesc")}
                         </p>
                         {attachedFiles.length > 0 && (
                           <p className="text-[11px] font-medium text-violet-700 mt-1">
-                            {attachedFiles.length} file
-                            {attachedFiles.length > 1 ? "s" : ""} attached ·{" "}
-                            {attachedFiles
-                              .map((f) => f.name)
-                              .join(", ")
-                              .slice(0, 48)}
+                            {t("sources.filesAttached", {
+                              count: attachedFiles.length,
+                              names: attachedFiles
+                                .map((f) => f.name)
+                                .join(", ")
+                                .slice(0, 48),
+                            })}
+                            {attachedFiles.map((f) => f.name).join(", ")
+                              .length > 48
+                              ? "…"
+                              : ""}
                             {attachedFiles.map((f) => f.name).join(", ")
                               .length > 48
                               ? "…"
@@ -1297,18 +1301,17 @@ export default function Home() {
 
                     <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 flex items-center justify-between">
                       <span className="text-[11px] text-slate-500">
-                        CrimeLens sources
+                        {t("sources.footer")}
                       </span>
                       <span className="text-[11px] font-medium text-slate-600">
-                        {
-                          [
+                        {t("sources.active", {
+                          count: [
                             true,
                             locationEnabled,
                             webEnabled,
                             attachedFiles.length > 0,
-                          ].filter(Boolean).length
-                        }{" "}
-                        active
+                          ].filter(Boolean).length,
+                        })}
                       </span>
                     </div>
                   </div>
