@@ -585,7 +585,7 @@ export default function InvestigationsQueue() {
               <button
                 key={m.id}
                 onClick={() => setParam("stat", active ? "" : m.id)}
-                className={`relative flex flex-col items-start gap-1 rounded-md px-4 py-3 text-left transition ${active ? "bg-[#1A1A2E] text-white" : `${m.bg} hover:brightness-[0.98]`}`}
+                className={`relative flex flex-col items-start gap-1 rounded-sm px-4 py-3 text-left transition ${active ? "bg-[#1A1A2E] text-white" : `${m.bg} hover:brightness-[0.98]`}`}
                 title={
                   active
                     ? "Click to clear filter"
@@ -740,7 +740,7 @@ export default function InvestigationsQueue() {
                     </td>
                     <td className="px-3 py-2.5 align-top">
                       <span
-                        className={`inline-flex h-5 w-[78px] items-center justify-center whitespace-nowrap rounded-md border px-2 text-[10px] font-bold uppercase tracking-[0.08em] ${box.bg} ${box.fg} ${box.border}`}
+                        className={`inline-flex h-5 w-[78px] items-center justify-center whitespace-nowrap rounded-sm border px-2 text-[10px] font-bold uppercase tracking-[0.08em] ${box.bg} ${box.fg} ${box.border}`}
                       >
                         {box.label}
                       </span>
@@ -768,7 +768,7 @@ export default function InvestigationsQueue() {
                       </div>
                     </td>
                     <td className="px-3 py-2.5 align-top">
-                      <span className="inline-flex w-[148px] justify-center whitespace-nowrap rounded-sm border border-slate-600 bg-white px-2 py-0.5 text-[11px] font-semibold text-[#1A1A2E] group-hover:border-[#1A1A2E] group-hover:bg-[#1A1A2E] group-hover:text-white transition-colors">
+                      <span className="inline-flex w-[148px] justify-center whitespace-nowrap rounded-[2px] border border-slate-600 bg-white px-2 py-0.5 text-[11px] font-semibold text-[#1A1A2E] group-hover:border-[#1A1A2E] group-hover:bg-[#1A1A2E] group-hover:text-white transition-colors">
                         {next}
                       </span>
                     </td>

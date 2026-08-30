@@ -1395,7 +1395,7 @@ export default function Home() {
       </div>
 
       {/* Analysis panel */}
-      <section className="flex-1 min-w-0 overflow-auto bg-linear-to-br from-slate-100 to-slate-200 p-2">
+      <section className="flex-1 min-w-0 overflow-auto">
         <AnalysisPanel analysis={activeAnalysis} />
       </section>
     </div>

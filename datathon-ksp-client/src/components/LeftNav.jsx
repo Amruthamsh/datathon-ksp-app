@@ -120,7 +120,10 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
                     : "opacity-0 group-hover:opacity-100 hover:bg-slate-200"
               }`}
             >
-              <MoreHorizontal size={14} className={isActive ? "text-white" : "text-slate-500"} />
+              <MoreHorizontal
+                size={14}
+                className={isActive ? "text-white" : "text-slate-500"}
+              />
             </button>
 
             {menuOpen && (
@@ -133,7 +136,8 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50"
                 >
-                  <Pencil size={13} className="text-slate-500" /> {t("nav.rename")}
+                  <Pencil size={13} className="text-slate-500" />{" "}
+                  {t("nav.rename")}
                 </button>
                 <button
                   onClick={(e) => {
@@ -166,7 +170,12 @@ const LeftNav = ({
   const location = useLocation();
   const { t } = useTranslation();
 
-  const menuKeys = ["investigations", "crimeIntelligenceMap", "criminalNetworks", "reports"];
+  const menuKeys = [
+    "investigations",
+    "crimeIntelligenceMap",
+    "criminalNetworks",
+    "reports",
+  ];
   const routeMap = {
     [t("nav.investigations")]: "/investigations",
     [t("nav.crimeIntelligenceMap")]: "/crime-intelligence-map",
@@ -243,7 +252,7 @@ const LeftNav = ({
           <>
             <div className="mx-3 my-2 border-t border-slate-200" />
             <div className="px-3">
-              <p className="mb-2 pl-2 text-sm font-semibold tracking-wide text-blue-700">
+              <p className="mb-2 pl-2 text-sm font-semibold tracking-wide text-red-700">
                 {t("nav.recentChats")}
               </p>
 

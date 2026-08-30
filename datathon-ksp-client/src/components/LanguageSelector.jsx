@@ -14,7 +14,7 @@ export default function LanguageSelector() {
         onClick={() => setLang("en")}
         className={`px-3 py-1.5 text-sm transition cursor-pointer ${
           lang === "en"
-            ? "bg-blue-600 text-white"
+            ? "bg-red-700 text-white"
             : "bg-slate-100 hover:bg-slate-200"
         }`}
       >
@@ -25,7 +25,7 @@ export default function LanguageSelector() {
         onClick={() => setLang("kn")}
         className={`px-3 py-1.5 text-sm transition cursor-pointer ${
           lang === "kn"
-            ? "bg-blue-600 text-white"
+            ? "bg-red-700 text-white"
             : "bg-slate-100 hover:bg-slate-200"
         }`}
       >

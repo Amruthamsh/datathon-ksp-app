@@ -100,7 +100,9 @@
     "exportFailed": "Export failed.",
     "pickResponse": "Pick a response with analysis...",
     "noData": "No data available.",
-    "noVisualization": "No visualization available for this result."
+    "noVisualization": "No visualization available for this result.",
+    "aboutThisChart": "About this chart",
+    "aboutThisChartFallback": "Visualization selected to best represent the query result."
   },
   "chart": {
     "noData": "No data available.",
