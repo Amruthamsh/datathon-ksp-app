@@ -536,53 +536,52 @@ export default function InvestigationWorkspace() {
             onClick={() => setCopilotOpen(false)}
           />
           <div className="relative flex h-full w-full max-w-[480px] flex-col border-l border-[#DDE3EC] bg-white shadow-2xl animate-[slideIn_0.2s_ease]">
-            <div className="flex items-center justify-between border-b border-[#DDE3EC] bg-[#F4F6F9] px-4 py-3">
-              <div className="flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center bg-[#1A1A2E] text-white">
-                  <Bot size={14} />
-                </span>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#1A1A2E]">
-                    Case Copilot
-                  </p>
-                  <p className="ksp-mono text-[11px] text-[#6B7280]">
-                    {caseData.CrimeNo}
-                  </p>
-                </div>
+            <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#1A1A2E]">
+                  Case Copilot
+                </p>
+                <p className="ksp-mono text-[11px] text-[#6B7280]">
+                  {caseData.CrimeNo}
+                </p>
               </div>
               <button
                 onClick={() => setCopilotOpen(false)}
-                className="flex h-7 w-7 items-center justify-center border border-[#DDE3EC] bg-white text-[#6B7280] hover:text-[#1A1A2E]"
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition cursor-pointer"
               >
                 <X size={14} />
               </button>
             </div>
             {chatMessages.length === 0 && (
-              <div className="px-4 py-4 border-b border-[#DDE3EC] bg-white">
-                <p className="text-xs font-semibold text-[#374151] mb-2">
+              <div className="px-4 py-4 border-b border-slate-200 bg-white">
+                <p className="text-xs font-semibold text-slate-800 mb-2.5">
                   What can I help investigate?
                 </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {starterPrompts.map((q) => (
+                <div className="flex flex-col gap-2">
+                  {starterPrompts.map((q, idx) => (
                     <button
                       key={q}
                       onClick={() => handleChatSend(q)}
-                      className="border border-[#DDE3EC] bg-white px-2.5 py-1 text-xs font-medium text-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white hover:border-[#1A1A2E] transition"
+                      style={{ animationDelay: `${idx * 60}ms` }}
+                      className="group flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-[13.5px] font-medium leading-5 text-slate-800 shadow-sm transition-all hover:border-red-200 hover:bg-red-50/40 hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
                     >
-                      {q}
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white shadow-sm transition-colors group-hover:bg-red-600">
+                        <ArrowRight size={12} />
+                      </span>
+                      <span className="flex-1">{q}</span>
                     </button>
                   ))}
                 </div>
-                <p className="mt-2 text-[10px] text-[#9CA3AF]">
+                <p className="mt-3 text-[10px] leading-relaxed text-slate-400">
                   Context: {caseData.CrimeGroupName} ·{" "}
                   {caseIntel?.accused?.length || 0} accused ·{" "}
                   {similarCases.length} related · {mock?.fsl.status} FSL
                 </p>
               </div>
             )}
-            <div className="flex-1 overflow-auto p-4 space-y-3 bg-[#F4F6F9]/50">
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-white">
               {chatMessages.length === 0 && (
-                <p className="text-xs leading-relaxed text-[#6B7280]">
+                <p className="text-[13px] leading-6 text-slate-500">
                   Ask about evidence gaps, next steps, similar MO, or trace the
                   accused. CrimeLens has the full case graph — timeline, people,
                   evidence, and {similarCases.length} related FIRs.
@@ -591,33 +590,33 @@ export default function InvestigationWorkspace() {
               {chatMessages.map((m, i) =>
                 m.role === "user" ? (
                   <div key={i} className="flex justify-end">
-                    <div className="max-w-[85%] bg-[#1A1A2E] px-3 py-2 text-sm leading-6 text-white">
+                    <div className="max-w-[85%] rounded-2xl bg-red-50 px-4 py-2.5 text-[14px] leading-6 text-slate-900 shadow-sm">
                       {m.content}
                     </div>
                   </div>
                 ) : (
                   <div key={i} className="flex justify-start">
-                    <div className="max-w-[92%] border border-[#DDE3EC] bg-white px-3.5 py-3 text-sm leading-6 text-[#1A1A2E]">
+                    <div className="max-w-[90%] rounded-2xl bg-slate-100 px-4 py-2.5 text-[14px] leading-6 text-slate-800 shadow-sm">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
                           p: ({ children }) => (
-                            <p className="mb-2 leading-6 last:mb-0">
+                            <p className="mb-1.5 leading-6 last:mb-0">
                               {children}
                             </p>
                           ),
                           strong: ({ children }) => (
-                            <strong className="font-semibold">
+                            <strong className="font-semibold text-slate-900">
                               {children}
                             </strong>
                           ),
                           ul: ({ children }) => (
-                            <ul className="list-disc pl-5 mb-2 space-y-1">
+                            <ul className="list-disc pl-6 mb-1.5 space-y-0.5">
                               {children}
                             </ul>
                           ),
                           ol: ({ children }) => (
-                            <ol className="list-decimal pl-5 mb-2 space-y-1">
+                            <ol className="list-decimal pl-6 mb-1.5 space-y-0.5">
                               {children}
                             </ol>
                           ),
@@ -634,31 +633,35 @@ export default function InvestigationWorkspace() {
               )}
               {chatSending && (
                 <div className="flex justify-start">
-                  <div className="border border-[#DDE3EC] bg-white px-3 py-2 text-xs text-[#6B7280]">
-                    Thinking…
+                  <div className="rounded-2xl bg-slate-100 px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" />
+                      <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: ".15s" }} />
+                      <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: ".3s" }} />
+                    </div>
                   </div>
                 </div>
               )}
             </div>
-            <div className="border-t border-[#DDE3EC] bg-white p-3">
-              <div className="flex items-center gap-2">
+            <div className="sticky bottom-0 border-t border-slate-200 bg-white px-4 py-4">
+              <div className="flex items-end gap-2 rounded-[28px] border border-slate-300 bg-white px-3 py-2 shadow-sm focus-within:border-slate-400 transition">
                 <input
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleChatSend()}
                   placeholder={copilotPlaceholder}
-                  className="flex-1 border border-[#DDE3EC] bg-white px-3 py-2 text-sm placeholder:text-[#9CA3AF] focus:border-[#1A1A2E] focus:outline-none"
+                  className="flex-1 bg-transparent px-2 py-2 text-sm placeholder:text-slate-400 focus:outline-none"
                 />
                 <button
                   onClick={() => handleChatSend()}
                   disabled={chatSending || !chatInput.trim()}
-                  className="flex h-9 w-9 items-center justify-center bg-[#1A1A2E] text-white disabled:opacity-40"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white shadow-sm transition hover:bg-black disabled:opacity-40 cursor-pointer"
                 >
                   <Send size={14} />
                 </button>
               </div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-[10px] text-[#9CA3AF]">
+              <div className="mt-2 flex items-center justify-between px-1">
+                <span className="text-[10px] text-slate-400">
                   Auditable — answers reference case facts, timeline & intel
                 </span>
                 {chatMessages.length > 0 && (
@@ -667,7 +670,7 @@ export default function InvestigationWorkspace() {
                       setChatMessages([]);
                       localStorage.removeItem(chatKey);
                     }}
-                    className="inline-flex items-center gap-1 text-xs text-[#6B7280] hover:text-[#D62828]"
+                    className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-[#D62828] transition cursor-pointer"
                   >
                     <Trash2 size={11} /> Clear
                   </button>
