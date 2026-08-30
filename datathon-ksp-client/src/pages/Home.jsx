@@ -869,7 +869,7 @@ export default function Home() {
                     className="group relative flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-left shadow-sm transition-all duration-200 hover:border-red-200 hover:bg-red-50/40 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 focus-visible:border-red-300 cursor-pointer animate-in fade-in slide-in-from-bottom-1"
                   >
                     {/* Left accent icon */}
-                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-colors duration-200 group-hover:bg-red-600 group-active:bg-red-700">
+                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white shadow-sm transition-colors duration-200 group-hover:bg-red-600 group-active:bg-red-700">
                       <ArrowUpRight size={14} strokeWidth={2.2} />
                     </span>
                     <span className="flex-1 text-[13.5px] font-medium leading-5 text-slate-800 group-hover:text-slate-900">
@@ -904,8 +904,10 @@ export default function Home() {
                     >
                       <MapPin size={13} className="shrink-0 text-success" />
                       <span>
-                        {locationCoords ? t("sources.nearMe") : t("sources.myLocation")} ·{" "}
-                        {locationRadius} km
+                        {locationCoords
+                          ? t("sources.nearMe")
+                          : t("sources.myLocation")}{" "}
+                        · {locationRadius} km
                       </span>
                       {locationLoading && (
                         <Loader2
@@ -1059,7 +1061,9 @@ export default function Home() {
                     onClick={() => setShowAllFiles(true)}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-medium leading-none text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition cursor-pointer"
                   >
-                    {t("sources.moreFiles", { count: attachedFiles.length - 2 })}
+                    {t("sources.moreFiles", {
+                      count: attachedFiles.length - 2,
+                    })}
                     <span className="text-slate-400 font-normal">
                       ·{" "}
                       {formatFileSize(
@@ -1107,7 +1111,7 @@ export default function Home() {
                     locationEnabled ||
                     webEnabled ||
                     attachedFiles.length > 0
-                      ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                      ? "bg-slate-900/90 text-white border-blue-900/90 shadow-sm"
                       : "text-slate-600 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
                   }`}
                   title={t("sources.addIntelligenceSources")}
@@ -1120,30 +1124,30 @@ export default function Home() {
                 </button>
 
                 {showContextMenu && (
-                  <div className="absolute bottom-full left-0 mb-2.5 w-[288px] overflow-hidden rounded-popover border border-line bg-surface shadow-lg z-20 animate-in fade-in slide-in-from-bottom-1">
-                    <div className="border-b border-line bg-surface-subtle px-3.5 py-2.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted">
+                  <div className="absolute bottom-full left-0 mb-2.5 w-[288px] overflow-hidden rounded-popover border border-slate-200 bg-white shadow-xl z-20 animate-in fade-in slide-in-from-bottom-1">
+                    <div className="border-b border-slate-100 bg-slate-50 px-3.5 py-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                         {t("sources.menuTitle")}
                       </p>
-                      <p className="mt-0.5 truncate text-[10.5px] text-ink-muted">
+                      <p className="mt-0.5 truncate text-[10.5px] text-slate-400">
                         {t("sources.menuSubtitle")}
                       </p>
                     </div>
 
                     {/* Crime Database — always on */}
-                    <div className="mx-2 mt-2 flex items-start gap-2.5 rounded-card border border-intel/10 bg-intel-soft px-2.5 py-2.5">
-                      <span className="mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-intel text-white">
+                    <div className="mx-2 mt-2 flex items-start gap-2.5 rounded-card bg-slate-900/90 px-2.5 py-2.5">
+                      <span className="mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white border border-white/20">
                         <Database size={14} />
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12.5px] font-semibold leading-none text-ink">
+                        <p className="text-[12.5px] font-semibold leading-none text-white">
                           {t("sources.crimeDatabase")}
                         </p>
-                        <p className="mt-1 text-[11px] leading-[15px] text-ink-secondary">
+                        <p className="mt-1 text-[11px] leading-3.75 text-white/70">
                           {t("sources.crimeDatabaseDesc")}
                         </p>
                       </div>
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success text-white">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
                         <Check size={11} strokeWidth={3} />
                       </span>
                     </div>
@@ -1153,37 +1157,39 @@ export default function Home() {
                       onClick={handleToggleLocation}
                       className={`mx-2 mt-1.5 flex w-[calc(100%-16px)] items-start gap-2.5 rounded-card border px-2.5 py-2.5 text-left transition cursor-pointer ${
                         locationEnabled
-                          ? "border-emerald-200 bg-emerald-50"
-                          : "border-line bg-surface hover:bg-surface-subtle"
+                          ? "border-slate-900/90 bg-slate-900/90"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                       }`}
                     >
                       <span
                         className={`mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
                           locationEnabled
-                            ? "bg-emerald-600 text-white border-emerald-600"
-                            : "bg-surface-raised text-ink-secondary border-line"
+                            ? "bg-white/10 text-white border-white/20"
+                            : "bg-slate-100 text-slate-600 border-slate-200"
                         }`}
                       >
                         <MapPin size={14} />
                       </span>
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-[12.5px] font-semibold leading-none ${locationEnabled ? "text-emerald-900" : "text-ink"}`}
+                          className={`text-[12.5px] font-semibold leading-none ${locationEnabled ? "text-white" : "text-slate-800"}`}
                         >
                           {t("sources.useMyLocation")}
                         </p>
-                        <p className="mt-1 text-[11px] leading-[15px] text-ink-secondary">
+                        <p
+                          className={`mt-1 text-[11px] leading-[15px] ${locationEnabled ? "text-white/70" : "text-slate-500"}`}
+                        >
                           {t("sources.useMyLocationDesc")}
                         </p>
                         {locationEnabled && locationCoords && (
-                          <p className="mt-1 text-[10.5px] font-medium text-emerald-700">
+                          <p className="mt-1 text-[10.5px] font-medium text-white/80">
                             ● {locationCoords.lat.toFixed(2)},{" "}
                             {locationCoords.lng.toFixed(2)} · {locationRadius}{" "}
                             km
                           </p>
                         )}
                         {locationLoading && (
-                          <p className="mt-1 flex items-center gap-1 text-[10.5px] text-emerald-600">
+                          <p className="mt-1 flex items-center gap-1 text-[10.5px] text-white/80">
                             <Loader2 size={10} className="animate-spin" />{" "}
                             {t("sources.locating")}
                           </p>
@@ -1192,8 +1198,8 @@ export default function Home() {
                       <span
                         className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition ${
                           locationEnabled
-                            ? "bg-emerald-600 border-emerald-600 text-white"
-                            : "bg-surface border-line-strong"
+                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            : "border-slate-300 text-transparent"
                         }`}
                       >
                         {locationEnabled && <Check size={9} strokeWidth={3} />}
@@ -1205,34 +1211,36 @@ export default function Home() {
                       onClick={handleToggleWeb}
                       className={`mx-2 mt-1.5 flex w-[calc(100%-16px)] items-start gap-2.5 rounded-card border px-2.5 py-2.5 text-left transition cursor-pointer ${
                         webEnabled
-                          ? "border-sky-200 bg-sky-50"
-                          : "border-line bg-surface hover:bg-surface-subtle"
+                          ? "border-slate-900/90 bg-slate-900/90"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                       }`}
                     >
                       <span
                         className={`mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
                           webEnabled
-                            ? "bg-sky-600 text-white border-sky-600"
-                            : "bg-surface-raised text-ink-secondary border-line"
+                            ? "bg-white/10 text-white border-white/20"
+                            : "bg-slate-100 text-slate-600 border-slate-200"
                         }`}
                       >
                         <Globe size={14} />
                       </span>
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-[12.5px] font-semibold leading-none ${webEnabled ? "text-sky-900" : "text-ink"}`}
+                          className={`text-[12.5px] font-semibold leading-none ${webEnabled ? "text-white" : "text-slate-800"}`}
                         >
                           {t("sources.openWeb")}
                         </p>
-                        <p className="mt-1 text-[11px] leading-[15px] text-ink-secondary">
+                        <p
+                          className={`mt-1 text-[11px] leading-[15px] ${webEnabled ? "text-white/70" : "text-slate-500"}`}
+                        >
                           {t("sources.openWebDesc")}
                         </p>
                       </div>
                       <span
                         className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition ${
                           webEnabled
-                            ? "bg-sky-600 border-sky-600 text-white"
-                            : "bg-surface border-line-strong"
+                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            : "border-slate-300 text-transparent"
                         }`}
                       >
                         {webEnabled && <Check size={9} strokeWidth={3} />}
@@ -1244,30 +1252,32 @@ export default function Home() {
                       onClick={() => fileInputRef.current?.click()}
                       className={`mx-2 mt-1.5 mb-2 flex w-[calc(100%-16px)] items-start gap-2.5 rounded-card border px-2.5 py-2.5 text-left transition cursor-pointer ${
                         attachedFiles.length > 0
-                          ? "border-violet-200 bg-violet-50"
-                          : "border-line bg-surface hover:bg-surface-subtle"
+                          ? "border-slate-900/90 bg-slate-900/90"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                       }`}
                     >
                       <span
                         className={`mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
                           attachedFiles.length > 0
-                            ? "bg-violet-600 text-white border-violet-600"
-                            : "bg-surface-raised text-ink-secondary border-line"
+                            ? "bg-white/10 text-white border-white/20"
+                            : "bg-slate-100 text-slate-600 border-slate-200"
                         }`}
                       >
                         <Paperclip size={14} />
                       </span>
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-[12.5px] font-semibold leading-none ${attachedFiles.length > 0 ? "text-violet-900" : "text-ink"}`}
+                          className={`text-[12.5px] font-semibold leading-none ${attachedFiles.length > 0 ? "text-white" : "text-slate-800"}`}
                         >
                           {t("sources.documentsEvidence")}
                         </p>
-                        <p className="mt-1 text-[11px] leading-[15px] text-ink-secondary">
+                        <p
+                          className={`mt-1 text-[11px] leading-[15px] ${attachedFiles.length > 0 ? "text-white/70" : "text-slate-500"}`}
+                        >
                           {t("sources.documentsEvidenceDesc")}
                         </p>
                         {attachedFiles.length > 0 && (
-                          <p className="mt-1 text-[10.5px] font-medium text-violet-700">
+                          <p className="mt-1 text-[10.5px] font-medium text-white/80">
                             {t("sources.filesAttached", {
                               count: attachedFiles.length,
                               names: attachedFiles
@@ -1285,8 +1295,8 @@ export default function Home() {
                       <span
                         className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition ${
                           attachedFiles.length > 0
-                            ? "bg-violet-600 border-violet-600 text-white"
-                            : "bg-surface border-line-strong"
+                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            : "border-slate-300 text-transparent"
                         }`}
                       >
                         {attachedFiles.length > 0 && (
@@ -1295,11 +1305,11 @@ export default function Home() {
                       </span>
                     </button>
 
-                    <div className="flex items-center justify-between border-t border-line bg-surface-subtle px-3.5 py-2">
-                      <span className="text-[10.5px] text-ink-muted">
+                    <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-3.5 py-2">
+                      <span className="text-[10.5px] text-slate-500">
                         {t("sources.footer")}
                       </span>
-                      <span className="text-[10.5px] font-medium text-ink-secondary">
+                      <span className="text-[10.5px] font-medium text-slate-600">
                         {t("sources.active", {
                           count: [
                             true,
@@ -1347,7 +1357,7 @@ export default function Home() {
               <button
                 disabled={loading || isStreaming}
                 onClick={() => sendMessage()}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-300 transition cursor-pointer"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white hover:bg-blue-900/90 disabled:bg-slate-300 transition cursor-pointer"
               >
                 <ArrowUp size={18} />
               </button>
