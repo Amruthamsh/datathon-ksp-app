@@ -31,10 +31,30 @@ if not Path(_CONFIGURED_DB_PATH).is_absolute():
 _extract_lock = threading.Lock()
 
 
+def _is_valid_sqlite(p: Path) -> bool:
+    try:
+        if not p.is_file() or p.stat().st_size < 1024:
+            return False
+        con = sqlite3.connect(str(p))
+        try:
+            con.execute("SELECT name FROM sqlite_master LIMIT 1")
+            return True
+        finally:
+            con.close()
+    except Exception:
+        return False
+
+
 def _ensure_database() -> str:
     path = Path(_CONFIGURED_DB_PATH)
-    if path.is_file():
+    if _is_valid_sqlite(path):
         return str(path)
+    # stale 0-byte placeholder from previous build — remove so gz extraction can run
+    if path.is_file() and not _is_valid_sqlite(path):
+        try:
+            path.unlink()
+        except Exception:
+            pass
 
     gz_path = Path(f"{_CONFIGURED_DB_PATH}.gz")
     if not gz_path.is_file():
@@ -42,7 +62,12 @@ def _ensure_database() -> str:
 
     with _extract_lock:
         target = Path(tempfile.gettempdir()) / gz_path.stem
-        if not target.is_file():
+        if not _is_valid_sqlite(target):
+            if target.is_file():
+                try:
+                    target.unlink()
+                except Exception:
+                    pass
             started = time.perf_counter()
             tmp_target = target.with_suffix(".db.tmp")
             with gzip.open(gz_path, "rb") as src, open(tmp_target, "wb") as dst:

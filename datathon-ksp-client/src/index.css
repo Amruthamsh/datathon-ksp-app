@@ -1,1 +1,19 @@
 @import "tailwindcss";
+
+:root {
+  --ksp-ink: #1A1A2E;
+  --ksp-paper: #F4F6F9;
+  --ksp-critical: #D62828;
+  --ksp-high: #F97316;
+  --ksp-done: #2D6A4F;
+  --ksp-muted: #374151;
+  --ksp-rule: #DDE3EC;
+  --ksp-abscond: #FEF3C7;
+}
+
+.ksp-queue, .ksp-workspace {
+  color: var(--ksp-ink);
+}
+.ksp-mono {
+  font-family: inherit;
+}

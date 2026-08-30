@@ -90,7 +90,7 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
             placeholder={t("analysis.filterRows")}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-8 pr-8 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-md border border-slate-200 bg-white py-2 pl-8 pr-8 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
           />
           {filter && (
             <button
@@ -104,14 +104,14 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
         <button
           onClick={handleExportExcel}
           disabled={sorted.length === 0}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+          className="inline-flex items-center gap-2 rounded-md border border-blue-900/90 bg-blue-900/90 px-3.5 py-2 text-xs font-medium text-white shadow-sm transition-all hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         >
-          <Download size={14} className="text-slate-500" />
+          <Download size={14} className="text-white" />
           <span>{t("analysis.exportExcel")}</span>
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200">
+      <div className="overflow-hidden rounded-lg border border-slate-200">
         <div className="max-h-96 overflow-y-auto overflow-x-auto">
           <table className="min-w-full border-collapse text-left text-xs">
             <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
@@ -284,7 +284,7 @@ export default function AnalysisPanel({ analysis }) {
     (analysis.sql_result?.length === 0 && analysis.charts?.length === 0)
   ) {
     return (
-      <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/80 px-8 text-center text-slate-500 shadow-sm">
+      <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white/80 px-8 text-center text-slate-500 shadow-sm">
         {t("analysis.pickResponse")}
       </div>
     );
@@ -293,7 +293,7 @@ export default function AnalysisPanel({ analysis }) {
   const hasCharts = charts.length > 0;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-linear-to-b from-white via-slate-50 to-slate-100 shadow-[0_18px_60px_rgba(15,23,42,0.12)]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden border-l-2 border-slate-200">
       {/* Header */}
       <div className="border-b border-slate-200/80 bg-white/80 px-5 py-4 backdrop-blur z-10">
         <div className="flex items-center justify-between gap-6">
@@ -315,10 +315,10 @@ export default function AnalysisPanel({ analysis }) {
                 : t("analysis.table")}
             </div>
             <div className="relative group">
-              <button className="flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700 cursor-pointer">
+              <button className="flex h-9 items-center gap-2 rounded-md bg-blue-900/90 px-3 text-sm font-medium text-white hover:bg-blue-900 cursor-pointer">
                 <Download size={15} /> {t("analysis.export")}
               </button>
-              <div className="absolute right-0 top-full z-50 pt-2 hidden w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-xl group-hover:block">
+              <div className="absolute right-0 top-full z-50 pt-2 hidden w-44 rounded-md border border-slate-200 bg-white py-1 shadow-xl group-hover:block">
                 <button
                   onClick={() => exportAnalysis("pdf")}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 cursor-pointer"
@@ -338,7 +338,7 @@ export default function AnalysisPanel({ analysis }) {
       </div>
 
       {/* Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-5">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-5 bg-slate-100">
         <section className="space-y-4">
           {hasCharts &&
             charts.map((chartConfig, idx) => {
@@ -347,26 +347,39 @@ export default function AnalysisPanel({ analysis }) {
                 <div
                   key={idx}
                   id={`chart-${idx}`}
-                  className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
+                  className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
                 >
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-slate-800">
-                      {chartConfig.title}
-                    </h3>
-                    <button
-                      onClick={() => handleSaveChart(idx)}
-                      disabled={savingIdx !== null}
-                      className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <Save size={13} />
-                      {savingIdx === idx
-                        ? t("analysis.adding")
-                        : t("analysis.addToReports")}
-                    </button>
+                  <div className="border-b border-slate-200 px-5 py-3.5">
+                    <div className="flex items-center justify-between gap-4">
+                      <h3 className="text-sm font-semibold text-slate-800">
+                        {chartConfig.title}
+                      </h3>
+                      <button
+                        onClick={() => handleSaveChart(idx)}
+                        disabled={savingIdx !== null}
+                        className="flex shrink-0 items-center gap-1.5 rounded-md border border-blue-900/90 bg-blue-900/90 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-900 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <Save size={13} className="text-white" />
+                        {savingIdx === idx
+                          ? t("analysis.adding")
+                          : t("analysis.addToReports")}
+                      </button>
+                    </div>
+                    {(chartConfig.reason || chartConfig.intent) && (
+                      <div className="mt-3 border-t border-slate-100 pt-3">
+                        <p className="text-xs leading-relaxed text-slate-600">
+                          {chartConfig.reason ||
+                            t("analysis.aboutThisChartFallback", {
+                              intent: chartConfig.intent,
+                              defaultValue: `Visualization selected to best represent the query result.`,
+                            })}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div
                     style={{ height: containerHeight }}
-                    className="rounded-2xl bg-linear-to-br from-slate-50 to-slate-100 p-3 flex flex-col overflow-hidden transition-[height] duration-300 ease-out"
+                    className="flex flex-col overflow-hidden bg-white p-4 transition-[height] duration-300 ease-out"
                   >
                     <ChartRenderer rawConfig={chartConfig} rawRows={rows} />
                   </div>
@@ -375,7 +388,7 @@ export default function AnalysisPanel({ analysis }) {
             })}
 
           <details
-            className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
+            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
             open
           >
             <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900">
@@ -392,14 +405,14 @@ export default function AnalysisPanel({ analysis }) {
           </details>
 
           <details
-            className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
+            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
             open
           >
             <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900">
               {t("analysis.sqlQuery")}
             </summary>
             <div className="mt-4">
-              <pre className="overflow-x-hidden whitespace-pre-wrap wrap-break-word rounded-2xl border border-slate-200 bg-slate-950 px-4 py-4 text-xs leading-6 text-slate-100 shadow-inner">
+              <pre className="overflow-x-hidden whitespace-pre-wrap wrap-break-word rounded-lg border border-slate-200 bg-slate-950 px-4 py-4 text-xs leading-6 text-slate-100 shadow-inner">
                 {analysis?.sql_query || t("analysis.noQueryAvailable")}
               </pre>
             </div>

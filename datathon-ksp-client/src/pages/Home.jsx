@@ -12,6 +12,12 @@ import {
   RefreshCw,
   File,
   X,
+  Plus,
+  MapPin,
+  Globe,
+  Database,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import useSpeechRecognition from "../hooks/useSpeechRecognition";
@@ -66,6 +72,19 @@ export default function Home() {
 
   const [attachedFiles, setAttachedFiles] = useState([]);
 
+  // — Intelligence context state —
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [webEnabled, setWebEnabled] = useState(false);
+  const [locationEnabled, setLocationEnabled] = useState(false);
+  const [locationCoords, setLocationCoords] = useState(null);
+  const [locationRadius, setLocationRadius] = useState(5);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+  const [showLocationDetail, setShowLocationDetail] = useState(false);
+  const [showAllFiles, setShowAllFiles] = useState(false);
+  const contextMenuRef = useRef(null);
+  const locationDetailRef = useRef(null);
+
   const layoutRef = useRef(null);
   const [chatWidth, setChatWidth] = useState(() => {
     const saved = Number(localStorage.getItem("ksp-chat-width"));
@@ -81,6 +100,75 @@ export default function Home() {
 
   const { supported, isListening, startListening, stopListening } =
     useSpeechRecognition(handleTranscript);
+
+  // Close popovers on outside click / Esc
+  useEffect(() => {
+    if (!showContextMenu && !showLocationDetail) return;
+    const onDown = (e) => {
+      if (
+        showContextMenu &&
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(e.target)
+      ) {
+        setShowContextMenu(false);
+      }
+      if (
+        showLocationDetail &&
+        locationDetailRef.current &&
+        !locationDetailRef.current.contains(e.target)
+      ) {
+        setShowLocationDetail(false);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setShowContextMenu(false);
+        setShowLocationDetail(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [showContextMenu, showLocationDetail]);
+
+  const handleToggleLocation = useCallback(() => {
+    if (locationEnabled) {
+      setLocationEnabled(false);
+      setLocationCoords(null);
+      setLocationError(null);
+      setShowLocationDetail(false);
+      return;
+    }
+    setLocationLoading(true);
+    setLocationError(null);
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation not supported");
+      setLocationEnabled(true);
+      setLocationLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocationCoords({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+        setLocationEnabled(true);
+        setLocationLoading(false);
+      },
+      (err) => {
+        setLocationError(err.message || "Unable to fetch location");
+        setLocationEnabled(true);
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
+    );
+  }, [locationEnabled]);
+
+  const handleToggleWeb = useCallback(() => setWebEnabled((v) => !v), []);
 
   useEffect(() => {
     // Cancel any fake streaming if user switches conversation / new chat
@@ -191,6 +279,11 @@ export default function Home() {
     el.style.height = "0px";
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [input]);
+
+  // Keep file chips compact — auto-collapse when few files remain
+  useEffect(() => {
+    if (attachedFiles.length <= 2 && showAllFiles) setShowAllFiles(false);
+  }, [attachedFiles.length, showAllFiles]);
 
   // Drag-to-resize chat/analysis panes
   useEffect(() => {
@@ -355,11 +448,25 @@ export default function Home() {
 
     stop();
 
+    // Capture context snapshot for this turn (used for display + backend)
+    const contextSnapshot = {
+      useLocation: locationEnabled,
+      useWeb: webEnabled,
+      location: locationEnabled
+        ? {
+            lat: locationCoords?.lat ?? null,
+            lng: locationCoords?.lng ?? null,
+            radiusKm: locationRadius,
+          }
+        : null,
+    };
+
     setMessages((prev) => [
       ...prev,
       {
         role: "user",
         content: message,
+        context: contextSnapshot,
       },
     ]);
 
@@ -376,6 +483,7 @@ export default function Home() {
         id || null,
         i18n.language,
         filesToSend,
+        contextSnapshot,
       );
 
       const analysis = {
@@ -389,6 +497,12 @@ export default function Home() {
       const meta = {
         message_id: data.message_id,
         created_at: data.created_at,
+        sources: {
+          crimeDatabase: true,
+          location: contextSnapshot.useLocation,
+          web: contextSnapshot.useWeb,
+          locationRadius: contextSnapshot.location?.radiusKm ?? null,
+        },
       };
 
       // Keep loading spinner until API returns, then switch to streaming
@@ -573,6 +687,47 @@ export default function Home() {
                     m.role === "assistant" && (
                       <span className="inline-block w-2 h-4 bg-slate-500 animate-pulse ml-0.5 translate-y-0.5 align-middle" />
                     )}
+                  {/* Per-message intelligence-source badges */}
+                  {m.role === "user" &&
+                    m.context &&
+                    (m.context.useLocation || m.context.useWeb) && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {m.context.useLocation && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase text-emerald-700">
+                            <MapPin size={10} />{" "}
+                            {m.context.location?.radiusKm ?? 5}km radius
+                          </span>
+                        )}
+                        {m.context.useWeb && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase text-sky-700">
+                            <Globe size={10} /> Open Web
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  {m.role === "assistant" &&
+                    m.sources &&
+                    (m.sources.location || m.sources.web) && (
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-slate-200/60 pt-2">
+                        <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-slate-400">
+                          Sources
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 text-white px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
+                          <Database size={10} /> KSP Database
+                        </span>
+                        {m.sources.location && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-800">
+                            <MapPin size={10} /> Location ·{" "}
+                            {m.sources.locationRadius ?? 5}km
+                          </span>
+                        )}
+                        {m.sources.web && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 border border-sky-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-800">
+                            <Globe size={10} /> Open Web
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                   {/* Open Investigation button */}
                   {hasAnalysis && (
@@ -735,54 +890,469 @@ export default function Home() {
           <div className="h-28 shrink-0 pointer-events-none" aria-hidden />
         </div>
 
-        {/* Input Area */}
+        {/* Input Area — intelligence-context aware */}
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4">
-          <div className="flex items-end gap-2 rounded-[28px] border border-slate-300 bg-white px-3 py-2 shadow-sm focus-within:border-blue-500 transition">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 cursor-pointer"
-            >
-              <Paperclip size={18} />
-            </button>
-
-            {supported && (
-              <button
-                onClick={() => {
-                  console.log("Mic button clicked. Listening:", isListening);
-                  if (isListening) stopListening();
-                  else startListening();
-                }}
-                className={`flex h-10 w-10 items-center justify-center rounded-full transition cursor-pointer ${
-                  isListening
-                    ? "bg-red-100 text-red-600 animate-pulse"
-                    : "text-slate-500 hover:bg-slate-100"
-                }`}
-              >
-                {isListening ? <MicOff size={18} /> : <Mic size={18} />}
-              </button>
+          <div className="relative">
+            {/* Context chips row — appears inside the input shell when sources enabled */}
+            {(locationEnabled || webEnabled || attachedFiles.length > 0) && (
+              <div className="flex flex-wrap items-center gap-2 rounded-t-[28px] border border-b-0 border-slate-300 bg-slate-50/70 px-3 pt-2.5 pb-2 -mb-2 max-h-[92px] overflow-y-auto overscroll-contain [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
+                {locationEnabled && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowLocationDetail((v) => !v)}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12.5px] font-medium leading-none text-emerald-800 shadow-sm hover:bg-emerald-100 transition cursor-pointer"
+                    >
+                      <MapPin size={13} className="text-emerald-600 shrink-0" />
+                      <span>
+                        {locationCoords ? "Near me" : "My Location"} ·{" "}
+                        {locationRadius} km
+                      </span>
+                      {locationLoading && (
+                        <Loader2
+                          size={12}
+                          className="animate-spin text-emerald-600"
+                        />
+                      )}
+                    </button>
+                    <button
+                      onClick={handleToggleLocation}
+                      className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-slate-700 text-white hover:bg-slate-900 shadow transition cursor-pointer"
+                      title="Remove location"
+                    >
+                      <X size={9} strokeWidth={2.5} />
+                    </button>
+                    {/* Location detail popover — radius + status */}
+                    {showLocationDetail && (
+                      <div
+                        ref={locationDetailRef}
+                        className="absolute bottom-full left-0 mb-2 w-[300px] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl z-20 animate-in fade-in slide-in-from-bottom-1"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-slate-500">
+                            Location Context
+                          </p>
+                          <button
+                            onClick={() => setShowLocationDetail(false)}
+                            className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 mb-3">
+                          <p className="text-[11px] font-medium tracking-wide uppercase text-slate-500 mb-1">
+                            Current location
+                          </p>
+                          {locationCoords ? (
+                            <p className="text-[13px] font-medium text-slate-800">
+                              {locationCoords.lat.toFixed(4)},{" "}
+                              {locationCoords.lng.toFixed(4)}
+                            </p>
+                          ) : locationLoading ? (
+                            <p className="text-[13px] text-slate-500 flex items-center gap-1.5">
+                              <Loader2 size={13} className="animate-spin" />{" "}
+                              Locating…
+                            </p>
+                          ) : locationError ? (
+                            <p className="text-[12px] text-amber-700">
+                              {locationError}
+                            </p>
+                          ) : (
+                            <p className="text-[13px] text-slate-500">
+                              Detecting location…
+                            </p>
+                          )}
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            Bengaluru, Karnataka — GPS
+                          </p>
+                        </div>
+                        <p className="text-[11px] font-semibold tracking-wide uppercase text-slate-500 mb-2">
+                          Search radius
+                        </p>
+                        <div className="grid grid-cols-4 gap-1.5 mb-3">
+                          {[1, 5, 10, 25].map((r) => (
+                            <button
+                              key={r}
+                              onClick={() => setLocationRadius(r)}
+                              className={`rounded-full px-2 py-1.5 text-[13px] font-medium border transition cursor-pointer ${
+                                locationRadius === r
+                                  ? "bg-slate-900 text-white border-slate-900 shadow"
+                                  : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                              }`}
+                            >
+                              {r} km
+                            </button>
+                          ))}
+                        </div>
+                        <div className="space-y-1.5 text-[11.5px] text-slate-600">
+                          <label className="flex items-center gap-2">
+                            <span className="h-3 w-3 rounded-sm bg-emerald-500 border border-emerald-600 inline-block" />
+                            Crime incidents
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <span className="h-3 w-3 rounded-sm bg-emerald-500 border border-emerald-600 inline-block" />
+                            Crime clusters
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <span className="h-3 w-3 rounded-sm bg-emerald-500 border border-emerald-600 inline-block" />
+                            Police stations
+                          </label>
+                        </div>
+                        {locationError && (
+                          <button
+                            onClick={handleToggleLocation}
+                            className="mt-3 w-full rounded-xl bg-slate-900 text-white text-[13px] font-medium py-2 hover:bg-slate-800 transition cursor-pointer"
+                          >
+                            Retry location
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {webEnabled && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[12.5px] font-medium leading-none text-sky-800 shadow-sm">
+                    <Globe size={13} className="text-sky-600 shrink-0" />
+                    Open Web
+                    <button
+                      onClick={handleToggleWeb}
+                      className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-sky-100 text-sky-700 hover:bg-sky-200 transition cursor-pointer"
+                      title="Remove Open Web"
+                    >
+                      <X size={9} strokeWidth={2.5} />
+                    </button>
+                  </span>
+                )}
+                {/* Files — collapsed by default to keep the input bar compact */}
+                {(showAllFiles ? attachedFiles : attachedFiles.slice(0, 2)).map(
+                  (file, idx) => {
+                    // when collapsed, idx maps to real index 0..1; when expanded, idx is real index
+                    const realIdx = showAllFiles ? idx : idx;
+                    return (
+                      <span
+                        key={`${file.name}-${realIdx}`}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[12.5px] font-medium leading-none text-violet-800 shadow-sm"
+                      >
+                        <File size={13} className="text-violet-600 shrink-0" />
+                        <span className="max-w-[140px] truncate">
+                          {file.name}
+                        </span>
+                        <span className="hidden sm:inline text-violet-500 font-normal">
+                          {formatFileSize(file.size)}
+                        </span>
+                        <button
+                          onClick={() =>
+                            setAttachedFiles((prev) =>
+                              prev.filter((_, i) => i !== realIdx),
+                            )
+                          }
+                          className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition cursor-pointer"
+                          title="Remove file"
+                        >
+                          <X size={9} strokeWidth={2.5} />
+                        </button>
+                      </span>
+                    );
+                  },
+                )}
+                {attachedFiles.length > 2 && !showAllFiles && (
+                  <button
+                    onClick={() => setShowAllFiles(true)}
+                    className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-medium leading-none text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition cursor-pointer"
+                  >
+                    +{attachedFiles.length - 2} more
+                    <span className="text-slate-400 font-normal">
+                      ·{" "}
+                      {formatFileSize(
+                        attachedFiles.slice(2).reduce((a, f) => a + f.size, 0),
+                      )}
+                    </span>
+                  </button>
+                )}
+                {showAllFiles && attachedFiles.length > 2 && (
+                  <button
+                    onClick={() => setShowAllFiles(false)}
+                    className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+                  >
+                    Show less
+                  </button>
+                )}
+                {attachedFiles.length > 1 && (
+                  <button
+                    onClick={() => {
+                      setAttachedFiles([]);
+                      setShowAllFiles(false);
+                    }}
+                    className="ml-auto text-[11px] font-medium text-slate-500 hover:text-slate-700 underline underline-offset-2 decoration-slate-300 hover:decoration-slate-500 transition cursor-pointer"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
             )}
 
-            <textarea
-              ref={textareaRef}
-              value={input}
-              placeholder={t("chat.inputPlaceholder")}
-              className="flex-1 resize-none bg-transparent text-[15px] leading-6 outline-none overflow-y-auto max-h-45 py-2 placeholder:text-slate-400"
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-            />
-
-            <button
-              disabled={loading || isStreaming}
-              onClick={() => sendMessage()}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-300 transition"
+            {/* Main input shell */}
+            <div
+              className={`flex items-end gap-1.5 border bg-white px-3 py-2 shadow-sm transition focus-within:border-slate-400 ${
+                locationEnabled || webEnabled || attachedFiles.length > 0
+                  ? "rounded-b-[28px] border-slate-300"
+                  : "rounded-[28px] border-slate-300"
+              }`}
             >
-              <ArrowUp size={18} />
-            </button>
+              {/* + Context trigger */}
+              <div className="relative shrink-0" ref={contextMenuRef}>
+                <button
+                  onClick={() => setShowContextMenu((v) => !v)}
+                  className={`flex h-10 w-10 items-center justify-center rounded-full border transition cursor-pointer ${
+                    showContextMenu ||
+                    locationEnabled ||
+                    webEnabled ||
+                    attachedFiles.length > 0
+                      ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                      : "text-slate-600 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
+                  }`}
+                  title="Add intelligence sources"
+                  aria-label="Add context"
+                >
+                  <Plus
+                    size={16}
+                    className={`transition ${showContextMenu ? "rotate-45" : ""}`}
+                  />
+                </button>
+
+                {showContextMenu && (
+                  <div className="absolute bottom-full left-0 mb-3 w-[320px] rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-1">
+                    <div className="px-4 pt-4 pb-2">
+                      <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-500">
+                        Add Intelligence Sources
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        CrimeLens augments the KSP case database with contextual
+                        intelligence.
+                      </p>
+                    </div>
+
+                    {/* Crime Database — always on */}
+                    <div className="mx-2 rounded-xl border border-slate-900 bg-slate-900 px-3 py-3 flex items-start gap-3">
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white border border-white/20">
+                        <Database size={15} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-semibold leading-none text-white">
+                          Crime Database
+                        </p>
+                        <p className="text-[11.5px] leading-4 text-slate-300 mt-1">
+                          KSP case records — authoritative internal intelligence
+                        </p>
+                      </div>
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+                        <Check size={12} strokeWidth={3} />
+                      </span>
+                    </div>
+
+                    {/* My Location row */}
+                    <button
+                      onClick={handleToggleLocation}
+                      className={`mx-2 mt-2 flex w-[calc(100%-16px)] items-start gap-3 rounded-xl border px-3 py-3 text-left transition cursor-pointer ${
+                        locationEnabled
+                          ? "border-emerald-200 bg-emerald-50"
+                          : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
+                          locationEnabled
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-slate-50 text-slate-600 border-slate-200"
+                        }`}
+                      >
+                        <MapPin size={15} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-[13px] font-semibold leading-none ${locationEnabled ? "text-emerald-900" : "text-slate-800"}`}
+                        >
+                          Use My Location
+                        </p>
+                        <p className="text-[11.5px] leading-4 text-slate-500 mt-1">
+                          Find nearby incidents, suspects & clusters around me
+                        </p>
+                        {locationEnabled && locationCoords && (
+                          <p className="text-[11px] font-medium text-emerald-700 mt-1">
+                            ● {locationCoords.lat.toFixed(2)},{" "}
+                            {locationCoords.lng.toFixed(2)} · {locationRadius}{" "}
+                            km
+                          </p>
+                        )}
+                        {locationLoading && (
+                          <p className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1">
+                            <Loader2 size={11} className="animate-spin" />{" "}
+                            Locating…
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                          locationEnabled
+                            ? "bg-emerald-600 border-emerald-600 text-white"
+                            : "bg-white border-slate-300"
+                        }`}
+                      >
+                        {locationEnabled && <Check size={10} strokeWidth={3} />}
+                      </span>
+                    </button>
+
+                    {/* Open Web row */}
+                    <button
+                      onClick={handleToggleWeb}
+                      className={`mx-2 mt-2 flex w-[calc(100%-16px)] items-start gap-3 rounded-xl border px-3 py-3 text-left transition cursor-pointer ${
+                        webEnabled
+                          ? "border-sky-200 bg-sky-50"
+                          : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
+                          webEnabled
+                            ? "bg-sky-600 text-white border-sky-600"
+                            : "bg-slate-50 text-slate-600 border-slate-200"
+                        }`}
+                      >
+                        <Globe size={15} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-[13px] font-semibold leading-none ${webEnabled ? "text-sky-900" : "text-slate-800"}`}
+                        >
+                          Open Web
+                        </p>
+                        <p className="text-[11.5px] leading-4 text-slate-500 mt-1">
+                          Search public sources beyond KSP records
+                        </p>
+                      </div>
+                      <span
+                        className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                          webEnabled
+                            ? "bg-sky-600 border-sky-600 text-white"
+                            : "bg-white border-slate-300"
+                        }`}
+                      >
+                        {webEnabled && <Check size={10} strokeWidth={3} />}
+                      </span>
+                    </button>
+
+                    {/* Documents & Evidence row — file intelligence source */}
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`mx-2 mt-2 mb-2 flex w-[calc(100%-16px)] items-start gap-3 rounded-xl border px-3 py-3 text-left transition cursor-pointer ${
+                        attachedFiles.length > 0
+                          ? "border-violet-200 bg-violet-50"
+                          : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
+                          attachedFiles.length > 0
+                            ? "bg-violet-600 text-white border-violet-600"
+                            : "bg-slate-50 text-slate-600 border-slate-200"
+                        }`}
+                      >
+                        <Paperclip size={15} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-[13px] font-semibold leading-none ${attachedFiles.length > 0 ? "text-violet-900" : "text-slate-800"}`}
+                        >
+                          Documents & Evidence
+                        </p>
+                        <p className="text-[11.5px] leading-4 text-slate-500 mt-1">
+                          Upload PDFs, images, or case files for analysis
+                        </p>
+                        {attachedFiles.length > 0 && (
+                          <p className="text-[11px] font-medium text-violet-700 mt-1">
+                            {attachedFiles.length} file
+                            {attachedFiles.length > 1 ? "s" : ""} attached ·{" "}
+                            {attachedFiles
+                              .map((f) => f.name)
+                              .join(", ")
+                              .slice(0, 48)}
+                            {attachedFiles.map((f) => f.name).join(", ")
+                              .length > 48
+                              ? "…"
+                              : ""}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                          attachedFiles.length > 0
+                            ? "bg-violet-600 border-violet-600 text-white"
+                            : "bg-white border-slate-300"
+                        }`}
+                      >
+                        {attachedFiles.length > 0 && (
+                          <Check size={10} strokeWidth={3} />
+                        )}
+                      </span>
+                    </button>
+
+                    <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 flex items-center justify-between">
+                      <span className="text-[11px] text-slate-500">
+                        CrimeLens sources
+                      </span>
+                      <span className="text-[11px] font-medium text-slate-600">
+                        {
+                          [
+                            true,
+                            locationEnabled,
+                            webEnabled,
+                            attachedFiles.length > 0,
+                          ].filter(Boolean).length
+                        }{" "}
+                        active
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {supported && (
+                <button
+                  onClick={() => {
+                    if (isListening) stopListening();
+                    else startListening();
+                  }}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition cursor-pointer ${
+                    isListening
+                      ? "bg-red-100 text-red-600 animate-pulse"
+                      : "text-slate-500 hover:bg-slate-100"
+                  }`}
+                >
+                  {isListening ? <MicOff size={17} /> : <Mic size={17} />}
+                </button>
+              )}
+
+              <textarea
+                ref={textareaRef}
+                value={input}
+                placeholder={t("chat.inputPlaceholder")}
+                className="flex-1 resize-none bg-transparent text-[15px] leading-6 outline-none overflow-y-auto max-h-45 py-2 placeholder:text-slate-400 min-w-0"
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+              />
+
+              <button
+                disabled={loading || isStreaming}
+                onClick={() => sendMessage()}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-300 transition cursor-pointer"
+              >
+                <ArrowUp size={18} />
+              </button>
+            </div>
           </div>
 
           <input
@@ -793,36 +1363,6 @@ export default function Home() {
             accept=".pdf,.xlsx,.xls,.doc,.docx,.png,.jpg,.jpeg,.gif"
             onChange={handleFileSelect}
           />
-
-          {attachedFiles.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {attachedFiles.map((file, idx) => (
-                <div
-                  key={`${file.name}-${idx}`}
-                  className="flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1 text-sm"
-                >
-                  <File size={13} className="text-slate-500 shrink-0" />
-                  <span className="truncate text-slate-700 max-w-[180px]">
-                    {file.name}
-                  </span>
-                  <span className="text-slate-400 shrink-0">
-                    {formatFileSize(file.size)}
-                  </span>
-                  <button
-                    onClick={() =>
-                      setAttachedFiles((prev) =>
-                        prev.filter((_, i) => i !== idx),
-                      )
-                    }
-                    className="ml-0.5 shrink-0 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    title={t("chat.removeFile")}
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
 
           {isListening && (
             <div className="mt-2">
@@ -855,7 +1395,7 @@ export default function Home() {
       </div>
 
       {/* Analysis panel */}
-      <section className="flex-1 min-w-0 overflow-auto bg-linear-to-br from-slate-100 to-slate-200 p-2">
+      <section className="flex-1 min-w-0 overflow-auto">
         <AnalysisPanel analysis={activeAnalysis} />
       </section>
     </div>

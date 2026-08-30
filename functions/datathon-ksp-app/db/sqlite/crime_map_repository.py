@@ -84,14 +84,18 @@ class CrimeMapRepository:
     # ------------------------------------------------------------------
     # Summary Dashboard
     # ------------------------------------------------------------------
-    def get_summary(self):
+    def get_summary(self, date_from=None, date_to=None, crime_head=None,
+                    crime_sub_head_name=None, district=None):
         with get_connection() as conn:
             total_crimes = conn.execute(
                 "SELECT COUNT(*) AS cnt FROM CaseMaster"
             ).fetchone()["cnt"]
 
-            thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-            sixty_days_ago = (datetime.now() - timedelta(days=60)).strftime("%Y-%m-%d")
+            max_date_row = conn.execute("SELECT MAX(CrimeRegisteredDate) AS d FROM CaseMaster").fetchone()
+            ref_date = max_date_row["d"] if max_date_row and max_date_row["d"] else datetime.now().strftime("%Y-%m-%d")
+            ref = datetime.strptime(ref_date, "%Y-%m-%d")
+            thirty_days_ago = (ref - timedelta(days=30)).strftime("%Y-%m-%d")
+            sixty_days_ago = (ref - timedelta(days=60)).strftime("%Y-%m-%d")
 
             recent_crimes = conn.execute(
                 "SELECT COUNT(*) AS cnt FROM CaseMaster WHERE CrimeRegisteredDate >= ?",
@@ -141,7 +145,7 @@ class CrimeMapRepository:
                 (thirty_days_ago,),
             ).fetchone()
 
-            return {
+            data = {
                 "total_crimes": total_crimes,
                 "active_hotspots": recent_crimes,
                 "emerging_hotspots": emerging,
@@ -155,6 +159,157 @@ class CrimeMapRepository:
                     "reason": f"{top_district_row['cnt']} crimes in 30 days" if top_district_row else "",
                 },
             }
+
+            # Contextual insight driven by current map filters
+            data["contextual"] = self._contextual_insight(
+                conn, date_from=date_from, date_to=date_to,
+                crime_head=crime_head,
+                crime_sub_head_name=crime_sub_head_name,
+                district=district,
+            )
+            return data
+
+    def _contextual_insight(self, conn, date_from=None, date_to=None,
+                            crime_head=None, crime_sub_head_name=None,
+                            district=None):
+        """Build a data-backed priority/key-stat/quick-action narrative for the
+        currently filtered view (crime sub-type, date range, district)."""
+        if not (date_from or date_to or crime_head or crime_sub_head_name or district):
+            return None
+
+        base = """
+            FROM CaseMaster cm
+            LEFT JOIN CrimeSubHead s ON cm.CrimeMinorHeadID = s.CrimeSubHeadID
+            LEFT JOIN CrimeHead h ON cm.CrimeMajorHeadID = h.CrimeHeadID
+            LEFT JOIN Unit u ON cm.PoliceStationID = u.UnitID
+            LEFT JOIN District d ON u.DistrictID = d.DistrictID
+            WHERE 1=1
+        """
+        params = []
+        conds = []
+        if date_from:
+            conds.append("cm.CrimeRegisteredDate >= ?")
+            params.append(date_from)
+        if date_to:
+            conds.append("cm.CrimeRegisteredDate <= ?")
+            params.append(date_to)
+        if crime_head:
+            conds.append("cm.CrimeMajorHeadID = ?")
+            params.append(crime_head)
+        if crime_sub_head_name:
+            conds.append("s.CrimeHeadName = ?")
+            params.append(crime_sub_head_name)
+        if district:
+            conds.append("d.DistrictName = ?")
+            params.append(district)
+        where = f"{base} AND " + " AND ".join(conds)
+        q_params = list(params)
+
+        sub = conn.execute(
+            f"SELECT COALESCE(s.CrimeHeadName, h.CrimeGroupName) AS sub_type, "
+            f"COUNT(*) AS cnt {where} GROUP BY sub_type ORDER BY cnt DESC LIMIT 1",
+            q_params,
+        ).fetchone()
+
+        total_row = conn.execute(
+            f"SELECT COUNT(*) AS cnt {where}", q_params
+        ).fetchone()
+        total = total_row["cnt"] if total_row else 0
+
+        if not sub or total == 0:
+            return None
+
+        # Top station concentration within the filtered scope
+        station_row = conn.execute(
+            f"SELECT u.UnitName AS station, d.DistrictName AS district, "
+            f"COUNT(*) AS cnt {where} GROUP BY u.UnitName, d.DistrictName "
+            f"ORDER BY cnt DESC LIMIT 1",
+            q_params,
+        ).fetchone()
+
+        top_type = sub["sub_type"]
+        top_count = sub["cnt"]
+        top_station = station_row["station"] if station_row else None
+        top_district = station_row["district"] if station_row else "Karnataka"
+        station_count = station_row["cnt"] if station_row else 0
+
+        # Change vs prior equal-length window — compare same non-date filters only
+        change = None
+        if date_from and date_to:
+            try:
+                from_dt = datetime.strptime(date_from, "%Y-%m-%d")
+                to_dt = datetime.strptime(date_to, "%Y-%m-%d")
+                span = (to_dt - from_dt).days + 1
+                prev_to = (from_dt - timedelta(days=1)).strftime("%Y-%m-%d")
+                prev_from = (from_dt - timedelta(days=span)).strftime("%Y-%m-%d")
+                # Build prev where without the current date range, keeping other filters
+                prev_conds = []
+                prev_params = []
+                if crime_head:
+                    prev_conds.append("cm.CrimeMajorHeadID = ?")
+                    prev_params.append(crime_head)
+                if crime_sub_head_name:
+                    prev_conds.append("s.CrimeHeadName = ?")
+                    prev_params.append(crime_sub_head_name)
+                if district:
+                    prev_conds.append("d.DistrictName = ?")
+                    prev_params.append(district)
+                prev_where = base
+                if prev_conds:
+                    prev_where += " AND " + " AND ".join(prev_conds)
+                prev_where += " AND cm.CrimeRegisteredDate >= ? AND cm.CrimeRegisteredDate <= ?"
+                prev_params = prev_params + [prev_from, prev_to]
+                prev_row = conn.execute(
+                    f"SELECT COUNT(*) AS cnt {prev_where}",
+                    prev_params,
+                ).fetchone()
+                prev_total = prev_row["cnt"] if prev_row else 0
+                if prev_total > 0:
+                    change = round(((total - prev_total) / prev_total) * 100, 1)
+            except Exception:
+                change = None
+
+        if crime_sub_head_name:
+            priority = f"Spike in {top_type} registered in {top_district}"
+        else:
+            priority = f"{top_type} is the dominant offence in this view ({top_district})"
+        if change is not None and change > 0:
+            priority = f"Spike in {top_type} in {top_district} ({change:+.0f}% vs prior period)"
+
+        key_stat = (
+            f"{station_count} of {total} {top_type} case(s) are concentrated at "
+            f"{top_station} ({top_district})" if top_station else
+            f"{top_count} {top_type} case(s) in view"
+        )
+        quick_action = self._quick_action(top_type, top_district, top_station)
+
+        return {
+            "priority": priority,
+            "key_stat": key_stat,
+            "quick_action": quick_action,
+            "top_sub_type": top_type,
+            "top_district": top_district,
+            "top_station": top_station,
+            "count": total,
+            "top_count": top_count,
+            "change_pct": change,
+        }
+
+    def _quick_action(self, sub_type, district, station):
+        loc = station if station else district
+        mapping = {
+            "Cybercrime / Online Fraud": f"Generate Cyber Awareness SMS for this sector ({loc})",
+            "Cheating": f"Push fraud-awareness advisory to {loc} communities",
+            "Theft": f"Dispatch targeted patrol to historically high-value zones in {loc}",
+            "Burglary": f"Alert watch-beat officers and residents in {loc}",
+            "Vehicle Theft": f"Set up vehicle-check nakabandi around {loc}",
+            "Robbery": f"Deploy quick-response team coverage in {loc}",
+            "Sexual Assault": f"Escalate vigilance and victim-support outreach in {loc}",
+            "Domestic Violence": f"Trigger family-counselling and helpline follow-up in {loc}",
+            "Murder": f"Assign senior investigative review to {loc}",
+            "Dowry Harassment": f"Coordinate with women-protection cell in {loc}",
+        }
+        return mapping.get(sub_type, f"Conduct targeted enforcement drive in {loc}")
 
     # ------------------------------------------------------------------
     # Filters
@@ -243,8 +398,7 @@ class CrimeMapRepository:
                 SELECT AVG(cm.latitude) AS center_lat,
                        AVG(cm.longitude) AS center_lng,
                        COUNT(*) AS crime_count,
-                       ch.CrimeGroupName AS dominant_crime,
-                       MAX(ch.CrimeGroupName) AS crime_type
+                       GROUP_CONCAT(ch.CrimeGroupName, '|') AS crime_types_concat
                 FROM CaseMaster cm
                 LEFT JOIN CrimeHead ch ON cm.CrimeMajorHeadID = ch.CrimeHeadID
                 WHERE cm.latitude IS NOT NULL AND cm.longitude IS NOT NULL
@@ -282,10 +436,17 @@ class CrimeMapRepository:
             rows = conn.execute(sql, params).fetchall()
             result = []
             for r in rows:
+                raw = r["crime_types_concat"] or ""
+                # Compute true modal crime type
+                dominant = "Unknown"
+                if raw:
+                    counts = Counter([x for x in raw.split("|") if x])
+                    if counts:
+                        dominant = counts.most_common(1)[0][0]
                 result.append({
                     "center": [r["center_lat"], r["center_lng"]],
                     "crime_count": r["crime_count"],
-                    "dominant_crime": r["dominant_crime"] or r["crime_type"] or "Unknown",
+                    "dominant_crime": dominant,
                     "radius": min(r["crime_count"] * 0.05, 0.5),
                 })
             return result
@@ -295,17 +456,15 @@ class CrimeMapRepository:
     # ------------------------------------------------------------------
     def get_district_summary(self):
         with get_connection() as conn:
-            thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-            sixty_days_ago = (datetime.now() - timedelta(days=60)).strftime("%Y-%m-%d")
+            max_date_row = conn.execute("SELECT MAX(CrimeRegisteredDate) AS d FROM CaseMaster").fetchone()
+            ref = datetime.strptime(max_date_row["d"], "%Y-%m-%d") if max_date_row and max_date_row["d"] else datetime.now()
+            thirty_days_ago = (ref - timedelta(days=30)).strftime("%Y-%m-%d")
+            sixty_days_ago = (ref - timedelta(days=60)).strftime("%Y-%m-%d")
 
             rows = conn.execute(
                 """
                 SELECT d.DistrictName AS district,
-                       COUNT(*) AS cases,
-                       ROUND(AVG(cm.latitude), 4) AS min_lat,
-                       ROUND(AVG(cm.latitude), 4) AS max_lat,
-                       ROUND(AVG(cm.longitude), 4) AS min_lng,
-                       ROUND(AVG(cm.longitude), 4) AS max_lng
+                       COUNT(*) AS cases
                 FROM CaseMaster cm
                 JOIN Unit u ON cm.PoliceStationID = u.UnitID
                 JOIN District d ON u.DistrictID = d.DistrictID
@@ -333,12 +492,7 @@ class CrimeMapRepository:
                     "district": r["district"],
                     "cases": r["cases"],
                     "change": change,
-                    "bounds": {
-                        "min_lat": r["min_lat"] - 0.1,
-                        "max_lat": r["max_lat"] + 0.1,
-                        "min_lng": r["min_lng"] - 0.1,
-                        "max_lng": r["max_lng"] + 0.1,
-                    },
+                    "bounds": _get_district_bounds(r["district"]),
                 })
 
             return result
@@ -433,8 +587,10 @@ class CrimeMapRepository:
     # ------------------------------------------------------------------
     def get_emerging_hotspots(self):
         with get_connection() as conn:
-            thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-            sixty_days_ago = (datetime.now() - timedelta(days=60)).strftime("%Y-%m-%d")
+            max_date_row = conn.execute("SELECT MAX(CrimeRegisteredDate) AS d FROM CaseMaster").fetchone()
+            ref = datetime.strptime(max_date_row["d"], "%Y-%m-%d") if max_date_row and max_date_row["d"] else datetime.now()
+            thirty_days_ago = (ref - timedelta(days=30)).strftime("%Y-%m-%d")
+            sixty_days_ago = (ref - timedelta(days=60)).strftime("%Y-%m-%d")
 
             rows = conn.execute(
                 """
@@ -659,9 +815,9 @@ class CrimeMapRepository:
             return [dict(r) for r in rows]
 
     # ------------------------------------------------------------------
-    # Heatmap Trends  (current 30d vs previous 30d)
+    # Heatmap Trends  (current period vs previous period)
     # ------------------------------------------------------------------
-    def get_heatmap_trends(self):
+    def get_heatmap_trends(self, date_from=None, date_to=None, district=None, station=None, crime_head=None, gravity=None):
         with get_connection() as conn:
             max_date = conn.execute(
                 "SELECT MAX(CrimeRegisteredDate) AS d FROM CaseMaster"
@@ -670,25 +826,53 @@ class CrimeMapRepository:
                 return []
 
             ref = datetime.strptime(max_date, "%Y-%m-%d")
-            current_start = (ref - timedelta(days=30)).strftime("%Y-%m-%d")
-            previous_start = (ref - timedelta(days=60)).strftime("%Y-%m-%d")
+            if date_to:
+                ref = datetime.strptime(date_to, "%Y-%m-%d")
+
+            if date_from:
+                current_start = date_from
+                period_days = (ref - datetime.strptime(date_from, "%Y-%m-%d")).days
+                if period_days <= 0:
+                    period_days = 30
+                previous_start = (datetime.strptime(date_from, "%Y-%m-%d") - timedelta(days=period_days)).strftime("%Y-%m-%d")
+            else:
+                period_days = 30
+                current_start = (ref - timedelta(days=period_days)).strftime("%Y-%m-%d")
+                previous_start = (ref - timedelta(days=period_days * 2)).strftime("%Y-%m-%d")
+
+            extra_where = ""
+            extra_params = []
+            if district:
+                extra_where += " AND cm.PoliceStationID IN (SELECT UnitID FROM Unit WHERE DistrictID = ?)"
+                extra_params.append(district)
+            if station:
+                extra_where += " AND cm.PoliceStationID = ?"
+                extra_params.append(station)
+            if crime_head:
+                extra_where += " AND cm.CrimeMajorHeadID = ?"
+                extra_params.append(crime_head)
+            if gravity:
+                extra_where += " AND cm.GravityOffenceID = ?"
+                extra_params.append(gravity)
 
             rows = conn.execute(
-                """
+                f"""
                 SELECT ROUND(cm.latitude, 2) AS lat_group,
                        ROUND(cm.longitude, 2) AS lng_group,
                        SUM(CASE WHEN cm.CrimeRegisteredDate >= ? THEN 1 ELSE 0 END) AS current_count,
-                       SUM(CASE WHEN cm.CrimeRegisteredDate >= ? AND cm.CrimeRegisteredDate < ? THEN 1 ELSE 0 END) AS previous_count
+                       SUM(CASE WHEN cm.CrimeRegisteredDate >= ? AND cm.CrimeRegisteredDate < ? THEN 1 ELSE 0 END) AS previous_count,
+                       GROUP_CONCAT(DISTINCT ch.CrimeGroupName) AS crime_types
                 FROM CaseMaster cm
+                LEFT JOIN CrimeHead ch ON cm.CrimeMajorHeadID = ch.CrimeHeadID
                 WHERE cm.latitude IS NOT NULL
                   AND cm.longitude IS NOT NULL
                   AND cm.CrimeRegisteredDate >= ?
+                  {extra_where}
                 GROUP BY lat_group, lng_group
-                HAVING current_count >= 2
                 ORDER BY current_count DESC
-                LIMIT 500
+                LIMIT 1500
                 """,
-                (current_start, previous_start, current_start, previous_start),
+                (current_start, previous_start, current_start, previous_start, *extra_params),
             ).fetchall()
 
             result = []
@@ -702,8 +886,173 @@ class CrimeMapRepository:
                     "current_count": cur,
                     "previous_count": prev,
                     "change_pct": round(change, 1),
+                    "crime_types": r["crime_types"] or "",
                 })
             return result
+
+    # ------------------------------------------------------------------
+    # Individual Crimes (all incidents within a range, aggregated by
+    # location so the map stays responsive over 50k+ rows)
+    # ------------------------------------------------------------------
+    def get_crimes(self, date_from=None, date_to=None, district=None,
+                   crime_head=None, crime_sub_head=None, gravity=None, station=None):
+        with get_connection() as conn:
+            sql = """
+                SELECT ROUND(cm.latitude, 3) AS lat,
+                       ROUND(cm.longitude, 3) AS lng,
+                       COUNT(*) AS count,
+                       GROUP_CONCAT(DISTINCT h.CrimeGroupName) AS crime_types,
+                       MAX(s.CrimeHeadName) AS crime_sub_type,
+                       MAX(go.LookupValue) AS gravity,
+                       MAX(u.UnitName) AS station,
+                       MAX(d.DistrictName) AS district,
+                       MAX(cm.CrimeRegisteredDate) AS date
+                FROM CaseMaster cm
+                LEFT JOIN CrimeHead h ON cm.CrimeMajorHeadID = h.CrimeHeadID
+                LEFT JOIN CrimeSubHead s ON cm.CrimeMinorHeadID = s.CrimeSubHeadID
+                LEFT JOIN GravityOffence go ON cm.GravityOffenceID = go.GravityOffenceID
+                LEFT JOIN Unit u ON cm.PoliceStationID = u.UnitID
+                LEFT JOIN District d ON u.DistrictID = d.DistrictID
+                WHERE cm.latitude IS NOT NULL
+                  AND cm.longitude IS NOT NULL
+            """
+            params = []
+
+            if date_from:
+                sql += " AND cm.CrimeRegisteredDate >= ?"
+                params.append(date_from)
+            if date_to:
+                sql += " AND cm.CrimeRegisteredDate <= ?"
+                params.append(date_to)
+            if district:
+                sql += " AND d.DistrictID = ?"
+                params.append(district)
+            if crime_head:
+                sql += " AND cm.CrimeMajorHeadID = ?"
+                params.append(crime_head)
+            if crime_sub_head:
+                sql += " AND cm.CrimeMinorHeadID = ?"
+                params.append(crime_sub_head)
+            if gravity:
+                sql += " AND cm.GravityOffenceID = ?"
+                params.append(gravity)
+            if station:
+                sql += " AND cm.PoliceStationID = ?"
+                params.append(station)
+
+            sql += (" GROUP BY ROUND(cm.latitude, 3), ROUND(cm.longitude, 3), "
+                    "cm.CrimeMinorHeadID")
+            sql += " ORDER BY count DESC LIMIT 10000"
+
+            rows = conn.execute(sql, params).fetchall()
+            out = []
+            for r in rows:
+                d = dict(r)
+                # Back-compat: pick first crime type from concatenated list
+                if d.get("crime_types"):
+                    d["crime_type"] = d["crime_types"].split(",")[0]
+                else:
+                    d["crime_type"] = None
+                out.append(d)
+            return out
+
+    # ------------------------------------------------------------------
+    # Lightweight Crime Points (all incidents: id + coords + sub-type)
+    # Keeps the map payload small so every incident can be rendered.
+    # ------------------------------------------------------------------
+    def get_crimes_light(self, date_from=None, date_to=None,
+                         district=None, crime_head=None, crime_sub_head=None):
+        with get_connection() as conn:
+            sql = """
+                SELECT cm.CaseMasterID AS id,
+                       cm.latitude AS lat,
+                       cm.longitude AS lng,
+                       COALESCE(s.CrimeHeadName, h.CrimeGroupName) AS sub_type,
+                       cm.CrimeRegisteredDate AS date
+                FROM CaseMaster cm
+                LEFT JOIN CrimeSubHead s ON cm.CrimeMinorHeadID = s.CrimeSubHeadID
+                LEFT JOIN CrimeHead h ON cm.CrimeMajorHeadID = h.CrimeHeadID
+                LEFT JOIN Unit u ON cm.PoliceStationID = u.UnitID
+                LEFT JOIN District d ON u.DistrictID = d.DistrictID
+                WHERE cm.latitude IS NOT NULL
+                  AND cm.longitude IS NOT NULL
+            """
+            params = []
+
+            if date_from:
+                sql += " AND cm.CrimeRegisteredDate >= ?"
+                params.append(date_from)
+            if date_to:
+                sql += " AND cm.CrimeRegisteredDate <= ?"
+                params.append(date_to)
+            if district:
+                sql += " AND d.DistrictID = ?"
+                params.append(district)
+            if crime_head:
+                sql += " AND cm.CrimeMajorHeadID = ?"
+                params.append(crime_head)
+            if crime_sub_head:
+                sql += " AND cm.CrimeMinorHeadID = ?"
+                params.append(crime_sub_head)
+
+            sql += " ORDER BY cm.CrimeRegisteredDate"
+
+            rows = conn.execute(sql, params).fetchall()
+            return [dict(r) for r in rows]
+
+    # ------------------------------------------------------------------
+    # Crime Detail (single FIR by CaseMasterID)
+    # ------------------------------------------------------------------
+    def get_crime_detail(self, case_id):
+        with get_connection() as conn:
+            sql = """
+                SELECT cm.CaseMasterID AS id,
+                       cm.CrimeNo, cm.CaseNo, cm.CrimeRegisteredDate,
+                       cm.IncidentFromDate, cm.IncidentToDate,
+                       h.CrimeGroupName AS crime_type,
+                       s.CrimeHeadName AS sub_type,
+                       go.LookupValue AS gravity,
+                       cs.CaseStatusName AS status,
+                       u.UnitName AS station,
+                       d.DistrictName AS district,
+                       cm.latitude AS lat, cm.longitude AS lng,
+                       cm.BriefFacts
+                FROM CaseMaster cm
+                LEFT JOIN CrimeHead h ON cm.CrimeMajorHeadID = h.CrimeHeadID
+                LEFT JOIN CrimeSubHead s ON cm.CrimeMinorHeadID = s.CrimeSubHeadID
+                LEFT JOIN GravityOffence go ON cm.GravityOffenceID = go.GravityOffenceID
+                LEFT JOIN CaseStatusMaster cs ON cm.CaseStatusID = cs.CaseStatusID
+                LEFT JOIN Unit u ON cm.PoliceStationID = u.UnitID
+                LEFT JOIN District d ON u.DistrictID = d.DistrictID
+                WHERE cm.CaseMasterID = ?
+            """
+            row = conn.execute(sql, (case_id,)).fetchone()
+            return dict(row) if row else None
+
+    # ------------------------------------------------------------------
+    # Timeline Range (bucketed counts for a date range)
+    # ------------------------------------------------------------------
+    def get_timeline_range(self, date_from=None, date_to=None):
+        with get_connection() as conn:
+            sql = """
+                SELECT strftime('%Y-%m', CrimeRegisteredDate) AS month,
+                       COUNT(*) AS cases
+                FROM CaseMaster
+                WHERE CrimeRegisteredDate IS NOT NULL
+            """
+            params = []
+
+            if date_from:
+                sql += " AND CrimeRegisteredDate >= ?"
+                params.append(date_from)
+            if date_to:
+                sql += " AND CrimeRegisteredDate <= ?"
+                params.append(date_to)
+
+            sql += " GROUP BY month ORDER BY month ASC"
+
+            rows = conn.execute(sql, params).fetchall()
+            return [dict(r) for r in rows]
 
     # ------------------------------------------------------------------
     # District Risk Summary (weighted operational risk score)
@@ -858,24 +1207,33 @@ class CrimeMapRepository:
     # ------------------------------------------------------------------
     # Cluster Intelligence (enhanced hotspot detail)
     # ------------------------------------------------------------------
-    def get_cluster_intel(self, lat: float, lng: float):
+    def get_cluster_intel(self, lat: float, lng: float, date_from=None, date_to=None):
         with get_connection() as conn:
-            bounds_lat = 0.05
-            bounds_lng = 0.05
+            # Match the same 0.1° grid used by get_clusters: ROUND(lat,1) groups
+            # Using ROUND equality guarantees heading and breakdown use identical set
+            where_extra = ""
+            params = [lat, lng]
+            if date_from:
+                where_extra += " AND cm.CrimeRegisteredDate >= ?"
+                params.append(date_from)
+            if date_to:
+                where_extra += " AND cm.CrimeRegisteredDate <= ?"
+                params.append(date_to)
 
             cases = conn.execute(
-                """
+                f"""
                 SELECT cm.*, ch.CrimeGroupName, go.LookupValue AS Gravity,
                        u.UnitName, u.DistrictID
                 FROM CaseMaster cm
                 LEFT JOIN CrimeHead ch ON cm.CrimeMajorHeadID = ch.CrimeHeadID
                 LEFT JOIN GravityOffence go ON cm.GravityOffenceID = go.GravityOffenceID
                 LEFT JOIN Unit u ON cm.PoliceStationID = u.UnitID
-                WHERE cm.latitude BETWEEN ? AND ?
-                  AND cm.longitude BETWEEN ? AND ?
+                WHERE ROUND(cm.latitude, 1) = ROUND(?, 1)
+                  AND ROUND(cm.longitude, 1) = ROUND(?, 1)
+                  {where_extra}
                 ORDER BY cm.CrimeRegisteredDate DESC
                 """,
-                (lat - bounds_lat, lat + bounds_lat, lng - bounds_lng, lng + bounds_lng),
+                params,
             ).fetchall()
 
             case_list = [dict(c) for c in cases]
@@ -980,7 +1338,7 @@ class CrimeMapRepository:
             top_crimes = [{"CrimeGroupName": k, "cnt": v} for k, v in crime_counts.most_common(5)]
             dominant_crime = top_crimes[0]["CrimeGroupName"] if top_crimes else "Unknown"
 
-            # Crime trend
+            # Crime trend — same grid as detail
             max_date_row = conn.execute("SELECT MAX(CrimeRegisteredDate) AS d FROM CaseMaster").fetchone()
             if max_date_row["d"]:
                 ref = datetime.strptime(max_date_row["d"], "%Y-%m-%d")
@@ -988,15 +1346,15 @@ class CrimeMapRepository:
                 ps = (ref - timedelta(days=60)).strftime("%Y-%m-%d")
                 cur_area = conn.execute(
                     "SELECT COUNT(*) AS cnt FROM CaseMaster "
-                    "WHERE latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ? "
+                    "WHERE ROUND(latitude,1) = ROUND(?,1) AND ROUND(longitude,1) = ROUND(?,1) "
                     "AND CrimeRegisteredDate >= ?",
-                    (lat - bounds_lat, lat + bounds_lat, lng - bounds_lng, lng + bounds_lng, cs),
+                    (lat, lng, cs),
                 ).fetchone()["cnt"]
                 prev_area = conn.execute(
                     "SELECT COUNT(*) AS cnt FROM CaseMaster "
-                    "WHERE latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ? "
+                    "WHERE ROUND(latitude,1) = ROUND(?,1) AND ROUND(longitude,1) = ROUND(?,1) "
                     "AND CrimeRegisteredDate >= ? AND CrimeRegisteredDate < ?",
-                    (lat - bounds_lat, lat + bounds_lat, lng - bounds_lng, lng + bounds_lng, ps, cs),
+                    (lat, lng, ps, cs),
                 ).fetchone()["cnt"]
                 area_change = cur_area - prev_area
             else:
@@ -1050,10 +1408,9 @@ class CrimeMapRepository:
             }
             hours = time_ranges.get(time_range, list(range(21, 24)) + list(range(0, 6)))
 
-            hour_conditions = " OR ".join(
-                [f"CAST(substr(cm.IncidentFromDate, 12, 2) AS INTEGER) = {h}" for h in hours]
-            )
-
+            # Time range influences priority weighting, not hard filtering
+            # (kept for reason label; strict IncidentFromDate filtering made routes sparse
+            # e.g. Domestic Violence at night -> 1 crime per PS)
             sql = f"""
                 SELECT u.UnitName AS station,
                        d.DistrictName AS district,
@@ -1119,12 +1476,89 @@ class CrimeMapRepository:
             result.sort(key=lambda x: x["priority_score"], reverse=True)
             return result
 
+    def get_prevention_stats(self, crime_label=None, district=None):
+        """Stats for prevention plan: total, trend, top stations, peak window for given crime/district."""
+        with get_connection() as conn:
+            max_date = conn.execute("SELECT MAX(CrimeRegisteredDate) AS d FROM CaseMaster").fetchone()["d"]
+            if not max_date:
+                return {"total_30d": 0, "prev_30d": 0, "change_pct": 0, "top_stations": [], "peak_time": "9 PM — 2 AM", "repeat_offenders": 0}
+            ref = datetime.strptime(max_date, "%Y-%m-%d")
+            cur_start = (ref - timedelta(days=30)).strftime("%Y-%m-%d")
+            prev_start = (ref - timedelta(days=60)).strftime("%Y-%m-%d")
+
+            crime_where = ""
+            crime_params = []
+            if crime_label:
+                crime_where = " AND COALESCE(s.CrimeHeadName, h.CrimeGroupName) = ?"
+                crime_params.append(crime_label)
+            district_where = ""
+            if district:
+                district_where = " AND d.DistrictName = ?"
+
+            # totals
+            total_30d = conn.execute(
+                f"SELECT COUNT(*) AS c FROM CaseMaster cm LEFT JOIN CrimeHead h ON cm.CrimeMajorHeadID=h.CrimeHeadID LEFT JOIN CrimeSubHead s ON cm.CrimeMinorHeadID=s.CrimeSubHeadID JOIN Unit u ON cm.PoliceStationID=u.UnitID JOIN District d ON u.DistrictID=d.DistrictID WHERE cm.CrimeRegisteredDate >= ?{crime_where}{district_where}",
+                [cur_start] + crime_params + ([district] if district else []),
+            ).fetchone()["c"]
+            prev_30d = conn.execute(
+                f"SELECT COUNT(*) AS c FROM CaseMaster cm LEFT JOIN CrimeHead h ON cm.CrimeMajorHeadID=h.CrimeHeadID LEFT JOIN CrimeSubHead s ON cm.CrimeMinorHeadID=s.CrimeSubHeadID JOIN Unit u ON cm.PoliceStationID=u.UnitID JOIN District d ON u.DistrictID=d.DistrictID WHERE cm.CrimeRegisteredDate >= ? AND cm.CrimeRegisteredDate < ?{crime_where}{district_where}",
+                [prev_start, cur_start] + crime_params + ([district] if district else []),
+            ).fetchone()["c"]
+            change = round(((total_30d - prev_30d) / max(prev_30d, 1)) * 100, 1) if prev_30d else (100.0 if total_30d else 0)
+
+            top = conn.execute(
+                f"SELECT u.UnitName AS station, COUNT(*) AS cnt FROM CaseMaster cm LEFT JOIN CrimeHead h ON cm.CrimeMajorHeadID=h.CrimeHeadID LEFT JOIN CrimeSubHead s ON cm.CrimeMinorHeadID=s.CrimeSubHeadID JOIN Unit u ON cm.PoliceStationID=u.UnitID JOIN District d ON u.DistrictID=d.DistrictID WHERE cm.CrimeRegisteredDate >= ?{crime_where}{district_where} GROUP BY u.UnitName ORDER BY cnt DESC LIMIT 5",
+                [cur_start] + crime_params + ([district] if district else []),
+            ).fetchall()
+            top_stations = [{"station": r["station"], "count": r["cnt"]} for r in top]
+
+            # peak window
+            hours = []
+            rows = conn.execute(
+                f"SELECT cm.IncidentFromDate FROM CaseMaster cm LEFT JOIN CrimeHead h ON cm.CrimeMajorHeadID=h.CrimeHeadID LEFT JOIN CrimeSubHead s ON cm.CrimeMinorHeadID=s.CrimeSubHeadID JOIN Unit u ON cm.PoliceStationID=u.UnitID JOIN District d ON u.DistrictID=d.DistrictID WHERE cm.IncidentFromDate IS NOT NULL AND cm.CrimeRegisteredDate >= ?{crime_where}{district_where}",
+                [cur_start] + crime_params + ([district] if district else []),
+            ).fetchall()
+            for r in rows:
+                try:
+                    h = int(r["IncidentFromDate"].split(" ")[-1].split(":")[0])
+                    hours.append(h)
+                except:
+                    pass
+            peak = "9 PM — 2 AM"
+            if hours:
+                from collections import Counter as _Counter
+                hc = _Counter(hours)
+                buckets = {
+                    "6 AM — 12 PM": sum(hc.get(x,0) for x in range(6,12)),
+                    "12 PM — 5 PM": sum(hc.get(x,0) for x in range(12,17)),
+                    "5 PM — 9 PM": sum(hc.get(x,0) for x in range(17,21)),
+                    "9 PM — 2 AM": sum(hc.get(x,0) for x in list(range(21,24))+list(range(0,6))),
+                }
+                peak = max(buckets, key=buckets.get)
+
+            # repeat offender areas
+            repeat = conn.execute(
+                f"SELECT COUNT(*) AS c FROM (SELECT a.AccusedName FROM Accused a JOIN CaseMaster cm ON a.CaseMasterID=cm.CaseMasterID LEFT JOIN CrimeSubHead s ON cm.CrimeMinorHeadID=s.CrimeSubHeadID LEFT JOIN CrimeHead h ON cm.CrimeMajorHeadID=h.CrimeHeadID JOIN Unit u ON cm.PoliceStationID=u.UnitID JOIN District d ON u.DistrictID=d.DistrictID WHERE a.AccusedName IS NOT NULL AND cm.CrimeRegisteredDate >= ?{crime_where}{district_where} GROUP BY a.AccusedName HAVING COUNT(DISTINCT a.CaseMasterID) > 1)",
+                [cur_start] + crime_params + ([district] if district else []),
+            ).fetchone()["c"]
+
+            return {
+                "total_30d": total_30d,
+                "prev_30d": prev_30d,
+                "change_pct": change,
+                "top_stations": top_stations,
+                "peak_time": peak,
+                "repeat_offenders": repeat,
+            }
+
     # ------------------------------------------------------------------
     # Network Overlay (union-find clustering)
     # ------------------------------------------------------------------
     def get_network_overlay_enhanced(self):
         with get_connection() as conn:
-            ninety_days_ago = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
+            max_date_row = conn.execute("SELECT MAX(CrimeRegisteredDate) AS d FROM CaseMaster").fetchone()
+            ref = datetime.strptime(max_date_row["d"], "%Y-%m-%d") if max_date_row and max_date_row["d"] else datetime.now()
+            ninety_days_ago = (ref - timedelta(days=90)).strftime("%Y-%m-%d")
 
             pairs = conn.execute(
                 """
@@ -1220,3 +1654,198 @@ class CrimeMapRepository:
             for i, r in enumerate(result):
                 r["network_name"] = f"Network {chr(65 + i)}" if i < 26 else f"Network {i + 1}"
             return result[:20]
+
+    # ------------------------------------------------------------------
+    # Intelligence — POI / Socio-economic / Weather / Enhanced Risk
+    # ------------------------------------------------------------------
+    def _ensure_intel(self):
+        try:
+            from db.sqlite.intelligence_schema import ensure_intelligence_tables
+            ensure_intelligence_tables()
+        except Exception:
+            pass
+
+    def get_pois(self, district: str = None, poi_type: str = None, limit: int = 5000):
+        self._ensure_intel()
+        with get_connection() as conn:
+            try:
+                sql = "SELECT PoiID, DistrictID, DistrictName, POIType, POIName, Latitude as lat, Longitude as lng, RiskWeight, Source FROM DistrictPOI WHERE 1=1"
+                params=[]
+                if district:
+                    sql += " AND DistrictName=?"
+                    params.append(district)
+                if poi_type:
+                    sql += " AND POIType=?"
+                    params.append(poi_type)
+                sql += " LIMIT ?"
+                params.append(limit)
+                rows = conn.execute(sql, params).fetchall()
+                return [dict(r) for r in rows]
+            except Exception:
+                return []
+
+    def get_poi_stats(self):
+        self._ensure_intel()
+        with get_connection() as conn:
+            try:
+                rows = conn.execute("""
+                    SELECT DistrictName as district, POIType as poi_type, COUNT(*) as cnt, AVG(RiskWeight) as avg_risk
+                    FROM DistrictPOI GROUP BY DistrictName, POIType
+                """).fetchall()
+                # also totals per district
+                totals = conn.execute("""
+                    SELECT DistrictName as district, COUNT(*) as total, SUM(RiskWeight) as risk_sum
+                    FROM DistrictPOI GROUP BY DistrictName
+                """).fetchall()
+                return {"by_district_type": [dict(r) for r in rows], "totals": [dict(r) for r in totals]}
+            except Exception:
+                return {"by_district_type": [], "totals": []}
+
+    def get_socio_economic(self, district: str = None, year: int = None):
+        self._ensure_intel()
+        with get_connection() as conn:
+            try:
+                sql = "SELECT RecordID, DistrictID, DistrictName as district, Year as year, Population as population, PopulationDensity as population_density, UnemploymentRate as unemployment_rate, PerCapitaIncome as per_capita_income, LiteracyRate as literacy_rate, Source as source, UpdatedAt as updated_at FROM DistrictSocioEconomic WHERE 1=1"
+                params=[]
+                if district:
+                    sql += " AND DistrictName=?"
+                    params.append(district)
+                if year:
+                    sql += " AND Year=?"
+                    params.append(year)
+                sql += " ORDER BY Year DESC"
+                rows = conn.execute(sql, params).fetchall()
+                if not year and not district:
+                    seen={}
+                    for r in rows:
+                        d=dict(r)
+                        if d["district"] not in seen:
+                            seen[d["district"]] = d
+                    return list(seen.values())
+                if district and not year and len(rows) > 1:
+                    return [dict(rows[0])]
+                return [dict(r) for r in rows]
+            except Exception as e:
+                return []
+
+    def get_weather(self, district: str = None, days: int = 14):
+        self._ensure_intel()
+        with get_connection() as conn:
+            try:
+                if district:
+                    rows = conn.execute("""
+                        SELECT DistrictName as district, Date as date, AvgTemp as avg_temp, MaxTemp as max_temp, MinTemp as min_temp, Rainfall as rainfall, Humidity as humidity
+                        FROM DistrictWeather WHERE DistrictName=? ORDER BY Date DESC LIMIT ?
+                    """, (district, days)).fetchall()
+                else:
+                    rows = conn.execute("""
+                        SELECT DistrictName as district, Date as date, AvgTemp as avg_temp, Rainfall as rainfall, Humidity as humidity
+                        FROM DistrictWeather ORDER BY Date DESC LIMIT ?
+                    """, (days*3,)).fetchall()
+                return [dict(r) for r in rows]
+            except Exception:
+                return []
+
+    def get_district_risk_enhanced(self):
+        """Enhanced risk = base crime risk blended with live socio-economic + POI + weather multipliers."""
+        self._ensure_intel()
+        base = self.get_district_risk_summary()
+        if not base:
+            return []
+        with get_connection() as conn:
+            try:
+                # fetch latest socio
+                socio = {}
+                try:
+                    for r in conn.execute("SELECT DistrictName, UnemploymentRate, PopulationDensity, PerCapitaIncome, LiteracyRate FROM DistrictSocioEconomic WHERE Year=(SELECT MAX(Year) FROM DistrictSocioEconomic)").fetchall():
+                        socio[r["DistrictName"]] = dict(r)
+                except Exception:
+                    pass
+                poi_totals={}
+                poi_liquor={}
+                try:
+                    for r in conn.execute("SELECT DistrictName, COUNT(*) as total, SUM(CASE WHEN POIType='Liquor_Store' THEN 1 ELSE 0 END) as liquor, SUM(RiskWeight) as risk_sum FROM DistrictPOI GROUP BY DistrictName").fetchall():
+                        poi_totals[r["DistrictName"]] = dict(r)
+                        poi_liquor[r["DistrictName"]] = r["liquor"] or 0
+                except Exception:
+                    pass
+                weather_avg={}
+                try:
+                    for r in conn.execute("SELECT DistrictName, AVG(Rainfall) as avg_rain, AVG(AvgTemp) as avg_temp FROM DistrictWeather WHERE Date >= date('now','-14 days') GROUP BY DistrictName").fetchall():
+                        weather_avg[r["DistrictName"]] = dict(r)
+                except Exception:
+                    # fallback to open-meteo table may be empty initially
+                    pass
+                max_poi = max([v["total"] for v in poi_totals.values()], default=1)
+                enhanced=[]
+                for entry in base:
+                    d = entry["district"]
+                    s = socio.get(d, {})
+                    unemp = s.get("UnemploymentRate", 7.0) or 7.0
+                    # unemployment multiplier: >7% adds risk, <5% reduces
+                    unemp_bonus = (unemp - 7.0) * 3.5  # 10% -> +10.5
+                    # POI bonus: normalize liquor density and total risk sum
+                    p = poi_totals.get(d, {"total": 0, "risk_sum": 0, "liquor": 0})
+                    poi_density_norm = (p["total"] / max_poi * 12) if max_poi else 0
+                    liquor_bonus = min(8, (p["liquor"] or 0) * 0.6)
+                    poi_bonus = poi_density_norm * 0.5 + liquor_bonus * 0.5
+                    # weather: heavy rain -> + property crime risk, heat -> + assault
+                    w = weather_avg.get(d, {})
+                    rain = w.get("avg_rain", 2.0) or 2.0
+                    temp = w.get("avg_temp", 28) or 28
+                    weather_bonus = 0
+                    if rain and rain > 8:
+                        weather_bonus += 4  # monsoon property theft
+                    if rain and rain < 1 and temp and temp > 34:
+                        weather_bonus += 3  # heat -> assault
+                    # literacy negative correlation
+                    literacy = s.get("LiteracyRate", 75) or 75
+                    literacy_bonus = (75 - literacy) * 0.15
+                    enhanced_score = entry["risk_score"] + unemp_bonus + poi_bonus + weather_bonus + literacy_bonus
+                    enhanced_score = max(5, min(98, round(enhanced_score,1)))
+                    # level
+                    if enhanced_score >= 75:
+                        lvl="CRITICAL"
+                    elif enhanced_score >= 50:
+                        lvl="HIGH"
+                    elif enhanced_score >= 25:
+                        lvl="MEDIUM"
+                    else:
+                        lvl="LOW"
+                    e = dict(entry)
+                    e["risk_score_base"] = entry["risk_score"]
+                    e["risk_score"] = enhanced_score
+                    e["risk_score_enhanced"] = enhanced_score
+                    e["risk_level"] = lvl
+                    e["multipliers"] = {
+                        "unemployment_rate": round(unemp,1),
+                        "unemployment_bonus": round(unemp_bonus,1),
+                        "poi_total": p["total"],
+                        "poi_liquor": p["liquor"],
+                        "poi_bonus": round(poi_bonus,1),
+                        "weather_rain_14d_avg": round(rain,1) if rain else None,
+                        "weather_temp_14d_avg": round(temp,1) if temp else None,
+                        "weather_bonus": round(weather_bonus,1),
+                        "literacy_rate": round(literacy,1) if literacy else None,
+                    }
+                    # human readable drivers
+                    drivers=[]
+                    if unemp_bonus > 4:
+                        drivers.append(f"Unemployment {unemp}% (+{round(unemp_bonus)} risk)")
+                    if liquor_bonus > 3:
+                        drivers.append(f"{p['liquor']} liquor outlets clustered (+{round(liquor_bonus)} )")
+                    if weather_bonus>0:
+                        drivers.append(f"Weather pattern (+{weather_bonus}) rain {round(rain,1)}mm" if rain>8 else f"Heat {round(temp,1)}°C (+{weather_bonus})")
+                    if poi_bonus>5:
+                        drivers.append(f"High POI density {p['total']} (+{round(poi_bonus,1)})")
+                    e["risk_drivers"] = drivers
+                    if s:
+                        e["socio"] = {"population_density": s.get("PopulationDensity"), "per_capita_income": s.get("PerCapitaIncome"), "literacy_rate": s.get("LiteracyRate"), "unemployment_rate": s.get("UnemploymentRate")}
+                    enhanced.append(e)
+                enhanced.sort(key=lambda x: x["risk_score"], reverse=True)
+                for i, r in enumerate(enhanced):
+                    r["rank"] = i+1
+                return enhanced
+            except Exception as e:
+                logger.warning("enhanced risk failed %s", e)
+                return base
