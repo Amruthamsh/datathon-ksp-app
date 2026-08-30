@@ -390,7 +390,7 @@ export default function CrimeIntelligenceMap() {
   }, [viewMode, showNetworks]);
 
   return (
-    <div className="flex h-full bg-slate-50 text-slate-900 font-sans">
+    <div className="flex h-full bg-[#F4F6F9] text-slate-900 font-sans">
       <main className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 flex flex-col p-6 overflow-hidden gap-4">
           <div className="flex items-center justify-between">
@@ -403,13 +403,13 @@ export default function CrimeIntelligenceMap() {
               </p>
             </div>
             {/* <button onClick={() => setShowPatrolModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-900 text-white rounded-full text-xs font-bold hover:bg-[#1e2e6b] transition-colors shadow-sm">
               <Route className="h-4 w-4" /> {t("crimeMap.generatePatrolPlan")}
             </button> */}
           </div>
 
           <div className="flex-1 flex gap-4 min-h-0 relative">
-            <div className="flex-1 bg-slate-200 rounded-xl border border-slate-200 relative overflow-hidden shadow-inner flex flex-col">
+            <div className="flex-1 bg-[#E5E7EB] rounded-xl border border-[#E5E7EB] relative overflow-hidden shadow-inner flex flex-col">
               <MapView
                 viewState={viewState}
                 onViewStateChange={setViewState}
@@ -483,14 +483,6 @@ export default function CrimeIntelligenceMap() {
             <RightPanel
               selectedSpot={selectedSpot}
               hotspotDetail={hotspotDetail}
-              viewMode={viewMode}
-              showNetworks={showNetworks}
-              onToggleNetworks={() => setShowNetworks((v) => !v)}
-              onChangeViewMode={(m) => {
-                setViewMode(m);
-                setSelectedSpot(null);
-                setHotspotDetail(null);
-              }}
               onClose={() => {
                 setSelectedSpot(null);
                 setHotspotDetail(null);
@@ -561,41 +553,41 @@ function LayerSwitcher({
   const intelReady = intelligenceStatus?.poi_total && Number(intelligenceStatus.poi_total) > 0;
 
   return (
-    <div className="absolute top-4 left-4 bg-white rounded-lg shadow-md border border-slate-200 p-1 flex flex-col gap-1 z-10 w-52 max-h-[calc(100%-6rem)] overflow-y-auto">
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
+    <div className="absolute top-4 left-4 bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-1.5 flex flex-col gap-1 z-10 w-52 max-h-[calc(100%-6rem)] overflow-y-auto">
+      <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-[0.08em] px-2 py-1">
         {t("crimeMap.layers.title")}
       </span>
       {modes.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
           onClick={() => onModeChange(id)}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md text-left transition-colors flex items-center gap-2 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-full text-left transition-colors flex items-center gap-2 ${
             viewMode === id
-              ? "bg-blue-50 text-blue-700 font-semibold"
-              : "text-slate-600 hover:bg-slate-50"
+              ? "bg-[#1A1A2E] text-white shadow-sm"
+              : "text-slate-600 hover:bg-slate-50 border border-transparent hover:border-[#E5E7EB]"
           }`}
         >
           <Icon className="h-3 w-3" /> {label}
         </button>
       ))}
-      <div className="border-t border-slate-100 mt-1 pt-1">
+      <div className="border-t border-[#E5E7EB] mt-1 pt-1">
         <label
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-md ${networkDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-50 cursor-pointer"}`}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${networkDisabled ? "opacity-40 cursor-not-allowed border-transparent" : "hover:bg-slate-50 cursor-pointer border-transparent hover:border-[#E5E7EB]"}`}
         >
           <input
             type="checkbox"
             checked={showNetworks}
             onChange={onToggleNetworks}
             disabled={networkDisabled}
-            className="rounded border-slate-300 text-blue-600 w-3.5 h-3.5 disabled:opacity-50"
+            className="rounded border-slate-300 text-blue-900 w-3.5 h-3.5 disabled:opacity-50 accent-blue-900"
             title={
               networkDisabled
                 ? "Network overlay is unavailable in District Risk view"
                 : undefined
             }
           />
-          <span className="text-xs font-medium text-slate-700">
-            <Users className="h-3 w-3 inline mr-1" />{" "}
+          <span className="text-xs font-bold text-[#1A1A2E] flex items-center gap-1">
+            <Users className="h-3 w-3" />{" "}
             {t("crimeMap.layers.networkOverlay")}
           </span>
         </label>
@@ -606,27 +598,27 @@ function LayerSwitcher({
         )}
       </div>
       {/* Predictive Intelligence — POI overlays */}
-      <div className="border-t border-slate-100 mt-1 pt-1">
-        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider px-2 py-1 flex items-center gap-1">
-          <Database className="h-3 w-3" /> Predictive Intel
-          {intelReady && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500" title="Live OSM data loaded" />}
+      <div className="border-t border-[#E5E7EB] mt-1 pt-1">
+        <span className="text-[10px] font-bold text-[#1A1A2E] uppercase tracking-[0.08em] px-2 py-1 flex items-center gap-1">
+          <Database className="h-3 w-3 text-blue-900" /> Predictive Intel
+          {intelReady && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-red-700" title="Live OSM data loaded" />}
           {!intelReady && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400" title="No POI data yet — click refresh" />}
         </span>
         {poiTypes.map((p) => (
-          <label key={p.id} className="flex items-center gap-2 px-3 py-1 rounded-md hover:bg-slate-50 cursor-pointer">
-            <input type="checkbox" checked={!!poiFilters?.[p.id]} onChange={() => onTogglePoi(p.id)} className="rounded border-slate-300 text-emerald-600 w-3.5 h-3.5" />
+          <label key={p.id} className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-slate-50 cursor-pointer border border-transparent hover:border-[#E5E7EB]">
+            <input type="checkbox" checked={!!poiFilters?.[p.id]} onChange={() => onTogglePoi(p.id)} className="rounded border-slate-300 text-blue-900 w-3.5 h-3.5 accent-blue-900" />
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-            <span className="text-xs font-medium text-slate-700 flex-1">{p.label}</span>
+            <span className="text-xs font-bold text-[#1A1A2E] flex-1">{p.label}</span>
             <span className="text-[9px] font-bold text-slate-400">×{p.weight}</span>
           </label>
         ))}
-        <label className="flex items-center gap-2 px-3 py-1 rounded-md hover:bg-slate-50 cursor-pointer mt-1">
-          <input type="checkbox" checked={!!showSocioOverlay} onChange={onToggleSocio} className="rounded border-slate-300 text-emerald-600 w-3.5 h-3.5" />
-          <CloudRain className="h-3 w-3 text-sky-600" />
-          <span className="text-xs font-medium text-slate-700">Socio-Economic tint</span>
+        <label className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-slate-50 cursor-pointer mt-1 border border-transparent hover:border-[#E5E7EB]">
+          <input type="checkbox" checked={!!showSocioOverlay} onChange={onToggleSocio} className="rounded border-slate-300 text-blue-900 w-3.5 h-3.5 accent-blue-900" />
+          <CloudRain className="h-3 w-3 text-blue-900" />
+          <span className="text-xs font-bold text-[#1A1A2E]">Socio-Economic tint</span>
         </label>
         <div className="px-2 py-1.5 mt-1">
-          <button onClick={onRefreshIntel} disabled={refreshingIntel} className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 bg-emerald-600 text-white rounded-md text-[11px] font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+          <button onClick={onRefreshIntel} disabled={refreshingIntel} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-900 text-white rounded-full text-[11px] font-bold hover:bg-[#1e2e6b] disabled:opacity-50 transition-colors shadow-sm">
             <RefreshCw className={`h-3 w-3 ${refreshingIntel ? 'animate-spin' : ''}`} /> {refreshingIntel ? 'Refreshing…' : 'Refresh Live Data'}
           </button>
           {intelligenceStatus && (
@@ -647,6 +639,14 @@ LayerSwitcher.propTypes = {
   onModeChange: PropTypes.func.isRequired,
   showNetworks: PropTypes.bool.isRequired,
   onToggleNetworks: PropTypes.func.isRequired,
+  poiFilters: PropTypes.object,
+  onTogglePoi: PropTypes.func,
+  showSocioOverlay: PropTypes.bool,
+  onToggleSocio: PropTypes.func,
+  intelligenceStatus: PropTypes.object,
+  onRefreshIntel: PropTypes.func,
+  refreshingIntel: PropTypes.bool,
+  enhancedRisk: PropTypes.array,
 };
 
 /* ── Crime Category Legend ─────────────────────────────────────── */
@@ -704,14 +704,14 @@ function CrimeLegend({
   const allSelected = !selectedHeads || selectedHeads.size === heads.length;
 
   return (
-    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur rounded-lg shadow-md border border-slate-200 p-3 z-20 w-56 max-h-[calc(100%-12rem)] flex flex-col">
+    <div className="absolute top-4 right-4 bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-3 z-20 w-56 max-h-[calc(100%-12rem)] flex flex-col">
       <div className="flex items-center justify-between mb-2 shrink-0">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+        <span className="text-[10px] font-bold text-[#1A1A2E] uppercase tracking-[0.08em]">
           {t("crimeMap.legend.crimeTypes")}
         </span>
         <button
           onClick={onToggleAll}
-          className="text-[10px] font-bold text-blue-600 hover:text-blue-700"
+          className="text-[10px] font-black uppercase tracking-wide text-blue-900 hover:text-red-700 border border-[#E5E7EB] rounded-full px-2 py-0.5 bg-white hover:border-red-200 hover:bg-red-50 transition-colors"
         >
           {allSelected ? t("crimeMap.legend.none") : t("crimeMap.legend.all")}
         </button>
@@ -727,7 +727,7 @@ function CrimeLegend({
               className="flex items-center gap-2 text-left w-full rounded px-1.5 py-1 hover:bg-slate-100 transition-colors"
             >
               <span
-                className="w-3 h-3 rounded-full shrink-0"
+                className="w-3 h-3 rounded-full shrink-0 border border-white shadow-sm"
                 style={{
                   backgroundColor: active
                     ? colorMap[h.sub_type] || headColor(h.sub_type)
@@ -735,8 +735,8 @@ function CrimeLegend({
                 }}
               />
               <span
-                className={`text-xs font-medium ${
-                  active ? "text-slate-700" : "text-slate-300 line-through"
+                className={`text-xs font-bold ${
+                  active ? "text-[#1A1A2E]" : "text-slate-300 line-through"
                 }`}
               >
                 {h.sub_type}
@@ -840,8 +840,8 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
         .range-dual input[type="range"]::-webkit-slider-thumb {
           -webkit-appearance: none; appearance: none;
           width: 14px; height: 14px; border-radius: 9999px;
-          background: #fff; border: 2px solid #2563eb;
-          box-shadow: 0 1px 4px rgba(37,99,235,0.22);
+          background: #fff; border: 2px solid #1e3a8a;
+          box-shadow: 0 1px 4px rgba(30,58,138,0.22);
           cursor: pointer; pointer-events: auto; margin-top: -5px;
           transition: transform 0.12s;
         }
@@ -851,38 +851,38 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
         }
         .range-dual input[type="range"]::-moz-range-thumb {
           width: 12px; height: 12px; border-radius: 9999px;
-          background: #fff; border: 2px solid #2563eb;
-          box-shadow: 0 1px 4px rgba(37,99,235,0.22);
+          background: #fff; border: 2px solid #1e3a8a;
+          box-shadow: 0 1px 4px rgba(30,58,138,0.22);
           cursor: pointer; pointer-events: auto;
         }
       `}</style>
-      <div className="absolute bottom-2.5 left-3 right-3 bg-white/95 backdrop-blur rounded-lg shadow-md border border-slate-200 px-2.5 py-2 z-10">
+      <div className="absolute bottom-2.5 left-3 right-3 bg-white rounded-xl shadow-sm border border-[#E5E7EB] px-2.5 py-2 z-10">
         <div className="flex items-center justify-between mb-1.5 gap-2">
-          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1 shrink-0">
-            <Clock className="h-3 w-3 text-slate-400" />{" "}
+          <p className="text-[10px] font-bold text-[#1A1A2E] uppercase tracking-[0.08em] flex items-center gap-1 shrink-0">
+            <Clock className="h-3 w-3 text-blue-900" />{" "}
             {t("crimeMap.dateRange.title")}
           </p>
-          <span className="text-[11px] font-bold text-white bg-slate-900 px-2 py-0.5 rounded-full whitespace-nowrap">
+          <span className="text-[11px] font-bold text-white bg-blue-900 px-2.5 py-0.5 rounded-full whitespace-nowrap">
             {rangeLabel}
           </span>
         </div>
 
-        <div className="rounded-lg bg-slate-50 border border-slate-100 px-2.5 py-2">
+        <div className="rounded-xl bg-[#F4F6F9] border border-[#E5E7EB] px-2.5 py-2">
           <div className="flex items-center justify-between mb-1.5">
             {/* <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">
-              <span className="w-1 h-1 rounded-full bg-blue-600" />
+              <span className="w-1 h-1 rounded-full bg-blue-900" />
               {t("crimeMap.dateRange.from")} {formatMonthLabel(months[safeLo])}
             </span>
             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">
               {t("crimeMap.dateRange.to")} {formatMonthLabel(months[safeHi])}
-              <span className="w-1 h-1 rounded-full bg-blue-600" />
+              <span className="w-1 h-1 rounded-full bg-blue-900" />
             </span> */}
           </div>
 
           <div className="relative">
             <div className="absolute top-[7px] left-0 right-0 h-[4px] rounded-full bg-slate-200" />
             <div
-              className="absolute top-[7px] h-[4px] rounded-full bg-blue-600"
+              className="absolute top-[7px] h-[4px] rounded-full bg-blue-900"
               style={{ left: `${loPct}%`, width: `${selectedWidth}%` }}
             />
             <div className="range-dual">
@@ -1387,10 +1387,6 @@ MapView.propTypes = {
 function RightPanel({
   selectedSpot,
   hotspotDetail,
-  viewMode,
-  showNetworks,
-  onToggleNetworks,
-  onChangeViewMode,
   onClose,
   summary,
   onOpenPatrol,
@@ -1399,16 +1395,10 @@ function RightPanel({
 }) {
   if (!selectedSpot) {
     return (
-      <div className="w-96 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden">
+      <div className="w-96 bg-white rounded-xl border border-[#E5E7EB] shadow-sm flex flex-col min-h-0 overflow-hidden">
         <DefaultPanel
           summary={summary}
-          onOpenPatrol={onOpenPatrol}
-          viewMode={viewMode}
-          showNetworks={showNetworks}
-          onToggleNetworks={onToggleNetworks}
-          onChangeViewMode={onChangeViewMode}
           enhancedRisk={enhancedRisk}
-          token={token}
         />
       </div>
     );
@@ -1416,7 +1406,7 @@ function RightPanel({
 
   if (selectedSpot.type === "POI") {
     return (
-      <div className="w-96 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden">
+      <div className="w-96 bg-white rounded-xl border border-[#E5E7EB] shadow-sm flex flex-col min-h-0 overflow-hidden">
         <POIPanel spot={selectedSpot} onClose={onClose} onOpenPatrol={onOpenPatrol} />
       </div>
     );
@@ -1424,7 +1414,7 @@ function RightPanel({
 
   if (selectedSpot.type === "Trend" || selectedSpot.type === "Crime") {
     return (
-      <div className="w-96 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden">
+      <div className="w-96 bg-white rounded-xl border border-[#E5E7EB] shadow-sm flex flex-col min-h-0 overflow-hidden">
         <TrendPanel
           spot={selectedSpot}
           onClose={onClose}
@@ -1436,7 +1426,7 @@ function RightPanel({
 
   if (selectedSpot.type === "District") {
     return (
-      <div className="w-96 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden">
+      <div className="w-96 bg-white rounded-xl border border-[#E5E7EB] shadow-sm flex flex-col min-h-0 overflow-hidden">
         <DistrictPanel
           spot={selectedSpot}
           onClose={onClose}
@@ -1450,7 +1440,7 @@ function RightPanel({
 
   if (selectedSpot.type === "Criminal Network") {
     return (
-      <div className="w-96 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden">
+      <div className="w-96 bg-white rounded-xl border border-[#E5E7EB] shadow-sm flex flex-col min-h-0 overflow-hidden">
         <NetworkPanel spot={selectedSpot} onClose={onClose} />
       </div>
     );
@@ -1458,7 +1448,7 @@ function RightPanel({
 
   // Cluster / Hotspot
   return (
-    <div className="w-96 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden">
+    <div className="w-96 bg-white rounded-xl border border-[#E5E7EB] shadow-sm flex flex-col min-h-0 overflow-hidden">
       <ClusterPanel
         spot={selectedSpot}
         detail={hotspotDetail}
@@ -1472,10 +1462,6 @@ function RightPanel({
 RightPanel.propTypes = {
   selectedSpot: PropTypes.object,
   hotspotDetail: PropTypes.object,
-  viewMode: PropTypes.string,
-  showNetworks: PropTypes.bool,
-  onToggleNetworks: PropTypes.func,
-  onChangeViewMode: PropTypes.func,
   onClose: PropTypes.func.isRequired,
   summary: PropTypes.object,
   onOpenPatrol: PropTypes.func.isRequired,
@@ -1487,16 +1473,9 @@ RightPanel.propTypes = {
 
 function DefaultPanel({
   summary,
-  onOpenPatrol,
-  viewMode,
-  showNetworks,
-  onToggleNetworks,
-  onChangeViewMode,
   enhancedRisk,
-  token,
 }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const hp = summary?.highest_priority_district;
   // Socio-economic state lens derived live from enhancedRisk
   const socioLens = useMemo(() => {
@@ -1515,16 +1494,15 @@ function DefaultPanel({
   }, [enhancedRisk]);
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-      <div className="p-4 border-b border-slate-100 shrink-0">
-        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
+      <div className="p-4 border-b border-[#E5E7EB] bg-[#FAFBFC] shrink-0">
+        <span className="text-[10px] font-bold text-blue-900 uppercase tracking-[0.08em]">
           {t("crimeMap.summary.operationalSummary")}
         </span>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 overscroll-contain">
         {summary?.contextual && (
-          <div className="bg-amber-50/70 border border-amber-200 rounded-lg p-3.5 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
-            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1">
+          <div className="bg-[#FFFBEB] border border-amber-200 rounded-xl p-3.5 shadow-sm">
+            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-[0.08em] mb-1">
               {t("crimeMap.summary.filteredPriority")}
             </p>
             <p className="text-sm font-bold text-slate-900 leading-snug">
@@ -1544,48 +1522,45 @@ function DefaultPanel({
         )}
 
         {hp && (
-          <div className="bg-red-50/60 border border-red-100 rounded-lg p-3.5 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />
-            <p className="text-[10px] font-bold text-red-700 uppercase tracking-wider mb-1">
+          <div className="bg-white border border-[#E5E7EB] rounded-xl p-3.5 shadow-sm">
+            <p className="text-[10px] font-bold text-red-700 uppercase tracking-[0.08em] mb-1">
               {t("crimeMap.summary.todaysHighestPriority")}
             </p>
-            <p className="text-sm font-bold text-slate-900">{hp.name}</p>
+            <p className="text-sm font-bold text-[#1A1A2E]">{hp.name}</p>
             <p className="text-xs text-slate-500 mt-0.5">{hp.reason}</p>
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-2">
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-            <p className="text-[10px] font-medium text-slate-500">
+          <div className={`p-3 rounded-sm border ${summary?.today_risk === "HIGH" ? "bg-red-400 border-red-400" : summary?.today_risk === "MEDIUM" ? "bg-orange-300 border-orange-300" : "bg-blue-900/90 border-blue-900/90"}`}>
+            <p className={`text-[10px] font-bold uppercase tracking-[0.08em] ${summary?.today_risk ? "text-white/85" : "text-white/85"}`}>
               {t("crimeMap.summary.todaysRisk")}
             </p>
-            <p
-              className={`text-lg font-black ${summary?.today_risk === "HIGH" ? "text-red-600" : summary?.today_risk === "MEDIUM" ? "text-amber-600" : "text-green-600"}`}
-            >
+            <p className="text-lg font-black text-white">
               {summary?.today_risk || "—"}
             </p>
           </div>
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-            <p className="text-[10px] font-medium text-slate-500">
+          <div className="p-3 bg-orange-300 rounded-sm border border-orange-300">
+            <p className="text-[10px] font-bold text-slate-800 uppercase tracking-[0.08em]">
               {t("crimeMap.summary.emergingHotspots")}
             </p>
-            <p className="text-lg font-black text-amber-500">
+            <p className="text-lg font-black text-slate-900">
               {formatNumber(summary?.emerging_hotspots)}
             </p>
           </div>
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-            <p className="text-[10px] font-medium text-slate-500">
+          <div className="p-3 bg-blue-900/90 rounded-sm border border-blue-900/90">
+            <p className="text-[10px] font-bold text-white/85 uppercase tracking-[0.08em]">
               {t("crimeMap.summary.repeatOffenders")}
             </p>
-            <p className="text-lg font-black text-slate-900">
+            <p className="text-lg font-black text-white">
               {formatNumber(summary?.repeat_offender_areas)}
             </p>
           </div>
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-            <p className="text-[10px] font-medium text-slate-500">
+          <div className="p-3 bg-white rounded-sm border border-[#DDE3EC]">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-[0.08em]">
               {t("crimeMap.summary.crimes30d")}
             </p>
-            <p className="text-lg font-black text-slate-900">
+            <p className="text-lg font-black text-[#1A1A2E]">
               {formatNumber(summary?.active_hotspots)}
             </p>
           </div>
@@ -1671,90 +1646,6 @@ function DefaultPanel({
           </div>
         )}
 
-        <div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-            {t("crimeMap.summary.quickActions")}
-          </p>
-          <div className="space-y-2 text-left">
-            {viewMode !== "Clusters" && (
-              <button
-                onClick={() => onChangeViewMode && onChangeViewMode("Clusters")}
-                className="w-full text-left px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-600 font-medium shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-1.5"
-              >
-                <Target className="h-3 w-3" />{" "}
-                {t("crimeMap.summary.switchToCluster")}
-              </button>
-            )}
-            {viewMode !== "Administrative" && !showNetworks && (
-              <button
-                onClick={() => onToggleNetworks && onToggleNetworks()}
-                className="w-full text-left px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-600 font-medium shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-1.5"
-              >
-                <Users className="h-3 w-3" />{" "}
-                {t("crimeMap.summary.enableNetwork")}
-              </button>
-            )}
-            {summary?.contextual?.top_sub_type ? (
-              <button
-                onClick={() =>
-                  onOpenPatrol({
-                    crimeFocus: getHeadIdForSubType(
-                      summary.contextual.top_sub_type,
-                    ),
-                    crimeLabel: summary.contextual.top_sub_type,
-                    area: summary.contextual.top_district || hp?.name || "",
-                    timeRange: "night",
-                    title:
-                      summary.contextual.quick_action ||
-                      summary.contextual.priority,
-                  })
-                }
-                className="w-full text-left px-2.5 py-2.5 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
-              >
-                <Route className="h-3.5 w-3.5 shrink-0" />
-                <span className="leading-tight">
-                  Response Plan — {summary.contextual.top_sub_type}
-                  {summary.contextual.top_district
-                    ? ` · ${summary.contextual.top_district}`
-                    : ""}
-                </span>
-              </button>
-            ) : hp ? (
-              <button
-                onClick={() =>
-                  onOpenPatrol({
-                    crimeFocus: null,
-                    crimeLabel: null,
-                    area: hp.name,
-                    timeRange: "night",
-                    title: `Highest priority: ${hp.name} — ${hp.reason}`,
-                  })
-                }
-                className="w-full text-left px-2.5 py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-slate-800 transition-colors flex items-center gap-2"
-              >
-                <Route className="h-3.5 w-3.5 shrink-0" />
-                <span className="leading-tight">Patrol plan — {hp.name}</span>
-              </button>
-            ) : null}
-            <button
-              onClick={() => {
-                const risk = summary?.today_risk || "N/A";
-                const hotspots = summary?.emerging_hotspots ?? "N/A";
-                const repeat = summary?.repeat_offender_areas ?? "N/A";
-                const crimes = summary?.active_hotspots ?? "N/A";
-                const priority = hp?.name
-                  ? `${hp.name} — ${hp.reason}`
-                  : "None identified";
-                const msg = `Provide a comprehensive overview of current crime trends and emerging hotspots across Karnataka. Today's risk level: ${risk}. Emerging hotspots: ${hotspots}. Repeat offender areas: ${repeat}. Crimes in last 30 days: ${crimes}. Highest priority district: ${priority}. Highlight the most critical areas requiring immediate attention and recommend resource deployment strategies.`;
-                navigate("/", { state: { initialMessage: msg } });
-              }}
-              className="w-full text-left px-2.5 py-2 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-700 font-semibold shadow-sm hover:bg-amber-100 transition-colors"
-            >
-              <Sparkles className="h-3 w-3 inline mr-1.5" />{" "}
-              {t("crimeMap.askAI.deepDive")}
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -1762,13 +1653,7 @@ function DefaultPanel({
 
 DefaultPanel.propTypes = {
   summary: PropTypes.object,
-  onOpenPatrol: PropTypes.func.isRequired,
-  viewMode: PropTypes.string,
-  showNetworks: PropTypes.bool,
-  onToggleNetworks: PropTypes.func,
-  onChangeViewMode: PropTypes.func,
   enhancedRisk: PropTypes.array,
-  token: PropTypes.string,
 };
 
 /* ── Trend Panel ────────────────────────────────────────────────── */
@@ -1784,7 +1669,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
           id={spot.id || "…"}
           name={spot.sub_type || "Loading…"}
           type="Crime"
-          typeColor="bg-blue-50 text-blue-700 border-blue-100"
+          typeColor="bg-blue-900 text-white border-blue-900"
           typeIcon={<Shield size={10} />}
           onClose={onClose}
         />
@@ -1811,7 +1696,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
           t("crimeMap.legend.crimeTypes")
         }
         type="Crime"
-        typeColor="bg-blue-50 text-blue-700 border-blue-100"
+        typeColor="bg-blue-900 text-white border-blue-900"
         typeIcon={<Shield size={10} />}
         onClose={onClose}
         subtitle={
@@ -1824,7 +1709,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
       />
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-4">
         <div className="grid grid-cols-2 gap-2">
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
             <p className="text-[10px] font-medium text-slate-500">
               {isCrime
                 ? t("crimeMap.detail.crimeType")
@@ -1836,7 +1721,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
                 : formatNumber(spot.count || spot.current_count || 1)}
             </p>
           </div>
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
             <p className="text-[10px] font-medium text-slate-500">
               {t("crimeMap.crimes.gravity")}
             </p>
@@ -1849,7 +1734,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
         {isCrime && (
           <>
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+              <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
                 <p className="text-[10px] font-medium text-slate-500">
                   {t("crimeMap.detail.status")}
                 </p>
@@ -1857,7 +1742,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
                   {spot.status || "—"}
                 </p>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+              <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
                 <p className="text-[10px] font-medium text-slate-500">
                   {t("crimeMap.detail.incidentDate")}
                 </p>
@@ -1868,7 +1753,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+              <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
                 <p className="text-[10px] font-medium text-slate-500">
                   {t("crimeMap.crimes.station")}
                 </p>
@@ -1876,7 +1761,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
                   {spot.station || "—"}
                 </p>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+              <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
                 <p className="text-[10px] font-medium text-slate-500">
                   {t("crimeMap.crimes.district")}
                 </p>
@@ -1886,7 +1771,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
               </div>
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+            <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
               <p className="text-[10px] font-medium text-slate-500 mb-1">
                 {t("crimeMap.detail.coordinates")}
               </p>
@@ -1896,7 +1781,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
             </div>
 
             {spot.BriefFacts && (
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+              <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
                 <p className="text-[10px] font-medium text-slate-500 mb-1">
                   {t("crimeMap.detail.briefFacts")}
                 </p>
@@ -1923,7 +1808,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
                 title: `${spot.sub_type || spot.crime_type} — ${spot.district || spot.station || ""}`,
               })
             }
-            className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+            className="w-full py-2.5 bg-white border border-slate-600 text-[#1A1A2E] rounded-sm text-xs font-bold hover:border-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white transition-colors shadow-sm flex items-center justify-center gap-1.5"
           >
             <Route className="h-3.5 w-3.5" />
             Patrol: {spot.sub_type || spot.crime_type}
@@ -1935,10 +1820,9 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
             const msg = `Analyze this FIR: Crime No ${spot.CrimeNo || "N/A"}, ${spot.sub_type || spot.crime_type || "crime"}, registered ${spot.CrimeRegisteredDate || spot.date || "unknown"}. Status: ${spot.status || "unknown"}. Gravity: ${spot.gravity || "unknown"}. Station: ${spot.station || "unknown"}, District: ${spot.district || "Karnataka"}. Coordinates: ${spot.lat}, ${spot.lng}. Brief facts: ${spot.BriefFacts || "N/A"}. Identify factors and recommend investigation/intervention actions.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full py-2 bg-amber-50 border border-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          className="w-full py-3 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 hover:shadow-md text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5"
         >
-          <Sparkles className="h-3.5 w-3.5" />{" "}
-          {t("crimeMap.askAI.trendAnalysis")}
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white group-hover:bg-red-700 transition-colors"><Sparkles className="h-3.5 w-3.5" /></span> {t("crimeMap.askAI.trendAnalysis")}
         </button>
       </div>
     </>
@@ -1992,7 +1876,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
         id={`DISTRICT`}
         name={spot.name}
         type="District"
-        typeColor="bg-slate-100 text-slate-700 border-slate-200"
+        typeColor="bg-blue-900 text-white border-blue-900"
         typeIcon={<Shield size={10} />}
         onClose={onClose}
         subtitle={`Rank #${spot.rank || "—"} of 31 districts`}
@@ -2015,7 +1899,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
             <p className="text-[10px] font-medium text-slate-500">
               {t("crimeMap.district.crimeCount")}
             </p>
@@ -2023,7 +1907,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               {formatNumber(spot.crime_count)}
             </p>
           </div>
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
             <p className="text-[10px] font-medium text-slate-500">
               {t("crimeMap.summary.repeatOffenders")}
             </p>
@@ -2031,7 +1915,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               {formatNumber(spot.repeat_offenders)}
             </p>
           </div>
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
             <p className="text-[10px] font-medium text-slate-500">
               {t("crimeMap.district.pendingInvestigations")}
             </p>
@@ -2039,7 +1923,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               {formatNumber(spot.pending_investigations)}
             </p>
           </div>
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
             <p className="text-[10px] font-medium text-slate-500">
               {t("crimeMap.district.trend")}
             </p>
@@ -2053,7 +1937,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
         </div>
 
         {spot.top_crime && (
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
             <p className="text-[10px] font-medium text-slate-500">
               Top Crime Category
             </p>
@@ -2159,7 +2043,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
                     <div key={metric.label} className={`bg-white rounded-lg border p-2.5 ${isBad ? 'border-red-200 bg-red-50/40' : isGood ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200'}`}>
                       <div className="flex items-center justify-between">
                         <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{metric.label}</p>
-                        <span className={`text-[9px] font-black px-1 py-0.5 rounded ${isBad ? 'bg-red-600 text-white' : isGood ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{metric.delta>0?'+':''}{metric.delta.toFixed(1)}% vs avg</span>
+                        <span className={`text-[9px] font-black px-1 py-0.5 rounded ${isBad ? 'bg-red-700 text-white' : isGood ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{metric.delta>0?'+':''}{metric.delta.toFixed(1)}% vs avg</span>
                       </div>
                       <p className="text-sm font-black text-slate-900 mt-1 tabular-nums">{metric.fmt ? metric.fmt(metric.value) : `${Number(metric.value).toFixed(1)}${metric.unit}`}</p>
                       <div className="mt-1.5 h-1.5 bg-slate-100 rounded-full overflow-hidden relative">
@@ -2251,7 +2135,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               title: `${spot.top_crime || "All crimes"} in ${spot.name}`,
             })
           }
-          className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 bg-white border border-slate-600 text-[#1A1A2E] rounded-sm text-xs font-bold hover:border-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white transition-colors shadow-sm flex items-center justify-center gap-1.5"
         >
           <Route className="h-3.5 w-3.5" />
           {spot.top_crime
@@ -2267,10 +2151,9 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
             const msg = `Provide a deep dive analysis of crime in ${spot.name} district. Enhanced risk score: ${Math.round(spot.risk_score)} (${spot.risk_level}) base ${spot.risk_score_base ? Math.round(spot.risk_score_base) : 'N/A'}. Crime count: ${spot.crime_count}. Repeat offenders: ${spot.repeat_offenders}. Pending: ${spot.pending_investigations}. Trend: ${(spot.change_pct||0)>0?'+':''}${spot.change_pct||0}%. Top crime: ${spot.top_crime||'N/A'}. Rank: ${spot.rank||'N/A'}.\nLive drivers: ${drivers || 'None'}\nSocio-economic (live): ${se}\n${poi}\n${wx}\nCorrelate socio-economic unemployment, POI liquor/ATM density, and monsoon/heat weather with the crime pattern and recommend targeted patrols near liquor/ATM clusters and socio interventions.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full py-2 bg-amber-50 border border-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          className="w-full py-3 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 hover:shadow-md text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5"
         >
-          <Sparkles className="h-3.5 w-3.5" />{" "}
-          {t("crimeMap.askAI.districtAnalysis")}
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white group-hover:bg-red-700 transition-colors"><Sparkles className="h-3.5 w-3.5" /></span> {t("crimeMap.askAI.districtAnalysis")}
         </button>
       </div>
     </>
@@ -2298,7 +2181,7 @@ function RiskBar({ label, value }) {
       </div>
       <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
         <div
-          className="h-full bg-blue-500 rounded-full transition-all"
+          className="h-full bg-blue-900 rounded-full transition-all"
           style={{ width: `${value}%` }}
         />
       </div>
@@ -2314,7 +2197,7 @@ RiskBar.propTypes = {
 function POIPanel({ spot, onClose, onOpenPatrol }) {
   const navigate = useNavigate();
   const typeColor = {
-    Liquor_Store: "bg-amber-50 text-amber-700 border-amber-200",
+    Liquor_Store: "bg-amber-50 text-amber-800 border-amber-200",
     ATM: "bg-blue-50 text-blue-700 border-blue-200",
     Bank: "bg-violet-50 text-violet-700 border-violet-200",
     Bus_Stop: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -2331,8 +2214,8 @@ function POIPanel({ spot, onClose, onOpenPatrol }) {
           <p className="text-[11px] mt-1 opacity-80">Live data via OpenStreetMap Overpass · OSM ID {spot.id}</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100"><p className="text-[10px] text-slate-500">Coordinates</p><p className="text-xs font-bold">{Number(spot.lat).toFixed(4)}, {Number(spot.lng).toFixed(4)}</p></div>
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100"><p className="text-[10px] text-slate-500">District</p><p className="text-xs font-bold">{spot.district || '—'}</p></div>
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]"><p className="text-[10px] text-slate-500">Coordinates</p><p className="text-xs font-bold">{Number(spot.lat).toFixed(4)}, {Number(spot.lng).toFixed(4)}</p></div>
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]"><p className="text-[10px] text-slate-500">District</p><p className="text-xs font-bold">{spot.district || '—'}</p></div>
         </div>
         <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
           <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Predictive Insight</p>
@@ -2344,8 +2227,8 @@ function POIPanel({ spot, onClose, onOpenPatrol }) {
             {spot.poi_type==='Railway_Station' && "Stations funnel inter-district movement — check repeat offender transit."}
           </p>
         </div>
-        <button onClick={()=> onOpenPatrol && onOpenPatrol({ area: spot.district || '', crimeFocus: spot.poi_type==='Liquor_Store'?4 : spot.poi_type==='ATM'?2 : null, crimeLabel: spot.poi_type==='Liquor_Store' ? 'Public Order' : spot.poi_type==='ATM' ? 'Theft' : null, timeRange: 'evening', title: `POI patrol · ${spot.name}` })} className="w-full py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 flex items-center justify-center gap-1.5"><Route className="h-3.5 w-3.5" /> Patrol near this POI</button>
-        <button onClick={()=> { const msg=`Analyze this POI in Karnataka crime context: Type ${spot.poi_type}, Name ${spot.name}, District ${spot.district}, Coords ${spot.lat},${spot.lng}, Risk weight ${spot.risk_weight}. Explain its criminogenic relevance and suggest mitigation.`; navigate('/', { state:{ initialMessage: msg }}); }} className="w-full py-2 bg-amber-50 border border-amber-100 text-amber-700 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /> Ask AI about this POI</button>
+        <button onClick={()=> onOpenPatrol && onOpenPatrol({ area: spot.district || '', crimeFocus: spot.poi_type==='Liquor_Store'?4 : spot.poi_type==='ATM'?2 : null, crimeLabel: spot.poi_type==='Liquor_Store' ? 'Public Order' : spot.poi_type==='ATM' ? 'Theft' : null, timeRange: 'evening', title: `POI patrol · ${spot.name}` })} className="w-full py-2.5 bg-white border border-slate-600 text-[#1A1A2E] rounded-sm text-xs font-bold hover:border-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white transition-colors shadow-sm flex items-center justify-center gap-1.5"><Route className="h-3.5 w-3.5" /> Patrol near this POI</button>
+        <button onClick={()=> { const msg=`Analyze this POI in Karnataka crime context: Type ${spot.poi_type}, Name ${spot.name}, District ${spot.district}, Coords ${spot.lat},${spot.lng}, Risk weight ${spot.risk_weight}. Explain its criminogenic relevance and suggest mitigation.`; navigate('/', { state:{ initialMessage: msg }}); }} className="w-full py-3 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 hover:shadow-md text-xs font-bold flex items-center justify-center gap-1.5"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white group-hover:bg-red-700 transition-colors"><Sparkles className="h-3.5 w-3.5" /></span> Ask AI about this POI</button>
       </div>
     </>
   );
@@ -2367,7 +2250,7 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
         id={`CLS`}
         name={displayName}
         type="Hotspot"
-        typeColor="bg-red-50 text-red-700 border-red-100"
+        typeColor="bg-red-700 text-white border-red-700"
         typeIcon={<AlertTriangle size={10} />}
         onClose={onClose}
       />
@@ -2375,7 +2258,7 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
         {detail ? (
           <>
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+              <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
                 <p className="text-[10px] font-medium text-slate-500">
                   {t("crimeMap.cluster.totalIncidents")}
                 </p>
@@ -2383,7 +2266,7 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
                   {formatNumber(detail.crime_count)}
                 </p>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+              <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
                 <p className="text-[10px] font-medium text-slate-500">
                   {t("crimeMap.cluster.peakWindow")}
                 </p>
@@ -2460,11 +2343,10 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
             )}
 
             {detail.risk_factors?.length > 0 && (
-              <div className="bg-blue-50/60 border border-blue-100 rounded-lg p-3.5 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+              <div className="bg-[#EFF6FF] border border-blue-100 rounded-xl p-3.5 shadow-sm">
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <Zap size={14} className="text-blue-600" />
-                  <span className="text-[10px] font-bold text-blue-900 uppercase tracking-wider">
+                  <span className="text-[10px] font-bold text-blue-900 uppercase tracking-[0.08em]">
                     {t("crimeMap.cluster.whyGrowing")}
                   </span>
                 </div>
@@ -2498,7 +2380,7 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
               title: dominant ? `${dominant} hotspot` : "Cluster hotspot",
             });
           }}
-          className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 bg-white border border-slate-600 text-[#1A1A2E] rounded-sm text-xs font-bold hover:border-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white transition-colors shadow-sm flex items-center justify-center gap-1.5"
         >
           <Route className="h-3.5 w-3.5" />
           {detail?.dominant_crime || spot.dominant_crime
@@ -2518,10 +2400,9 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
               const msg = `Provide a deep dive analysis of this crime hotspot. Total incidents: ${detail.crime_count}. Peak time: ${detail.peak_time}. Repeat offenders: ${detail.repeat_offenders}. Linked investigations: ${detail.linked_investigations}. Active networks: ${detail.active_networks}. Top crimes: ${topCrimes || "N/A"}. Nearby stations: ${stations || "N/A"}. Risk factors: ${risks || "N/A"}. Identify patterns, correlations between risk factors, and recommend enforcement actions.`;
               navigate("/", { state: { initialMessage: msg } });
             }}
-            className="w-full py-2 bg-amber-50 border border-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+            className="w-full py-3 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 hover:shadow-md text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5"
           >
-            <Sparkles className="h-3.5 w-3.5" />{" "}
-            {t("crimeMap.askAI.clusterAnalysis")}
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white group-hover:bg-red-700 transition-colors"><Sparkles className="h-3.5 w-3.5" /></span> {t("crimeMap.askAI.clusterAnalysis")}
           </button>
         )}
       </div>
@@ -2547,13 +2428,13 @@ function NetworkPanel({ spot, onClose }) {
         id={spot.network_name || "NET"}
         name={spot.network_name || "Network"}
         type="Network"
-        typeColor="bg-red-50 text-red-700 border-red-100"
+        typeColor="bg-red-700 text-white border-red-700"
         typeIcon={<Users size={10} />}
         onClose={onClose}
       />
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-4">
         <div className="grid grid-cols-2 gap-2">
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
             <p className="text-[10px] font-medium text-slate-500">
               {t("crimeMap.network.members")}
             </p>
@@ -2561,7 +2442,7 @@ function NetworkPanel({ spot, onClose }) {
               {spot.member_count}
             </p>
           </div>
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
             <p className="text-[10px] font-medium text-slate-500">
               {t("crimeMap.network.totalFirs")}
             </p>
@@ -2643,7 +2524,7 @@ function NetworkPanel({ spot, onClose }) {
       <div className="p-4 border-t border-slate-100 flex flex-col gap-2 bg-white">
         <button
           onClick={() => navigate("/networks")}
-          className="w-full py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors shadow-sm"
+          className="w-full py-3 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-[#991b1b] transition-colors shadow-sm"
         >
           <Users className="h-3.5 w-3.5 inline mr-1.5" />{" "}
           {t("crimeMap.network.openInNetworks")}
@@ -2658,10 +2539,9 @@ function NetworkPanel({ spot, onClose }) {
             const msg = `Provide a deep dive analysis of the criminal network "${spot.network_name}". Members: ${spot.member_count}. Total FIRs: ${spot.total_firs}. Risk level: ${spot.risk}. Districts covered: ${districts || "N/A"}. Top members: ${members || "N/A"}. Identify key operatives, communication patterns, operational structure, and recommend disruption strategies.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full py-2 bg-amber-50 border border-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          className="w-full py-3 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 hover:shadow-md text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5"
         >
-          <Sparkles className="h-3.5 w-3.5" />{" "}
-          {t("crimeMap.askAI.networkAnalysis")}
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white group-hover:bg-red-700 transition-colors"><Sparkles className="h-3.5 w-3.5" /></span> {t("crimeMap.askAI.networkAnalysis")}
         </button>
       </div>
     </>
@@ -2764,7 +2644,9 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
         });
         setRoutes(res2.data || []);
         setGenerated(true);
-      } catch {}
+      } catch (e2) {
+        console.error("Legacy patrol fallback failed", e2);
+      }
     } finally {
       setLoading(false);
     }
@@ -2829,18 +2711,18 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-[560px] max-h-[80vh] flex flex-col overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex justify-between items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40">
+      <div className="bg-white rounded-2xl shadow-2xl border border-[#E5E7EB] w-[560px] max-h-[80vh] flex flex-col overflow-hidden">
+        <div className="p-5 border-b border-[#E5E7EB] bg-[#FAFBFC] flex justify-between items-center">
           <div>
-            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-blue-900 uppercase tracking-[0.08em]">
               {t("crimeMap.patrol.title")}
             </span>
-            <h2 className="text-base font-bold text-slate-900 mt-0.5">
+            <h2 className="text-base font-bold text-[#1A1A2E] mt-0.5">
               {t("crimeMap.patrol.subtitle")}
             </h2>
             {initialContext?.crimeLabel && (
-              <p className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full inline-flex items-center gap-1.5 px-2.5 py-1 mt-2">
+              <p className="text-xs font-bold text-white bg-blue-900 border border-blue-900 rounded-full inline-flex items-center gap-1.5 px-2.5 py-1 mt-2">
                 <Shield className="h-3 w-3" />
                 {initialContext.crimeLabel}
                 {initialContext.area ? ` · ${initialContext.area}` : ""}
@@ -2857,7 +2739,7 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E7EB] bg-white text-slate-500 hover:bg-slate-50 hover:text-[#1A1A2E] transition"
           >
             <X size={18} />
           </button>
@@ -2867,7 +2749,7 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
           {!generated ? (
             <>
               <div>
-                <label className="text-xs font-bold text-slate-700 mb-2 block">
+                <label className="text-[11px] font-bold text-[#1A1A2E] uppercase tracking-wide mb-2 block">
                   {t("crimeMap.patrol.timeOfDay")}
                 </label>
                 <div className="grid grid-cols-4 gap-2">
@@ -2875,9 +2757,9 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
                     <button
                       key={opt.value}
                       onClick={() => setTimeRange(opt.value)}
-                      className={`p-2.5 rounded-lg border text-center transition-colors ${
+                      className={`p-2.5 rounded-xl border text-center transition-colors ${
                         timeRange === opt.value
-                          ? "bg-blue-50 border-blue-300 text-blue-700"
+                          ? "bg-[#1A1A2E] border-[#1A1A2E] text-white shadow-sm"
                           : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
                       }`}
                     >
@@ -2891,22 +2773,22 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 mb-2 block">
+                <label className="text-[11px] font-bold text-[#1A1A2E] uppercase tracking-wide mb-2 block">
                   {t("crimeMap.patrol.unitsAvailable")}
                 </label>
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setUnits(Math.max(1, units - 1))}
-                    className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 font-bold"
+                    className="w-8 h-8 rounded-full border border-[#DDE3EC] bg-white flex items-center justify-center text-[#1A1A2E] hover:border-[#1A1A2E] hover:bg-slate-50 font-bold transition"
                   >
                     -
                   </button>
-                  <span className="text-xl font-black text-slate-900 w-8 text-center">
+                  <span className="text-xl font-black text-[#1A1A2E] w-8 text-center">
                     {units}
                   </span>
                   <button
                     onClick={() => setUnits(Math.min(20, units + 1))}
-                    className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 font-bold"
+                    className="w-8 h-8 rounded-full border border-[#DDE3EC] bg-white flex items-center justify-center text-[#1A1A2E] hover:border-[#1A1A2E] hover:bg-slate-50 font-bold transition"
                   >
                     +
                   </button>
@@ -2914,13 +2796,13 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 mb-2 block">
+                <label className="text-[11px] font-bold text-[#1A1A2E] uppercase tracking-wide mb-2 block">
                   {t("crimeMap.patrol.crimeFocus")}
                 </label>
                 <select
                   value={crimeFocus || ""}
                   onChange={(e) => setCrimeFocus(e.target.value || null)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-xl border border-[#DDE3EC] text-sm text-[#1A1A2E] bg-white focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-blue-900"
                 >
                   {getCrimeHeads(t).map((ch) => (
                     <option key={ch.id ?? "all"} value={ch.id ?? ""}>
@@ -2931,13 +2813,13 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 mb-2 block">
+                <label className="text-[11px] font-bold text-[#1A1A2E] uppercase tracking-wide mb-2 block">
                   {t("crimeMap.patrol.area")}
                 </label>
                 <select
                   value={area}
                   onChange={(e) => setArea(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-xl border border-[#DDE3EC] text-sm text-[#1A1A2E] bg-white focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-blue-900"
                 >
                   <option value="">{t("crimeMap.patrol.allDistricts")}</option>
                   {districts.map((d) => (
@@ -3196,7 +3078,7 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
             <button
               onClick={handleGenerate}
               disabled={loading}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-[#1A1A2E] text-white rounded-full text-xs font-bold hover:bg-blue-900 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -3217,14 +3099,14 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
             <div className="flex gap-2">
               <button
                 onClick={handleExportPDF}
-                className="flex-1 py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 bg-orange-300 text-slate-900 rounded-sm text-xs font-bold hover:bg-orange-400 transition-colors shadow-sm flex items-center justify-center gap-1.5 border border-orange-300"
               >
                 <FileText className="h-3.5 w-3.5" />{" "}
                 {t("crimeMap.patrol.exportPdf")}
               </button>
               <button
                 onClick={handleExportExcel}
-                className="flex-1 py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 bg-orange-300 text-slate-900 rounded-sm text-xs font-bold hover:bg-orange-400 transition-colors shadow-sm flex items-center justify-center gap-1.5 border border-orange-300"
               >
                 <Download className="h-3.5 w-3.5" />{" "}
                 {t("crimeMap.patrol.exportExcel")}
@@ -3252,10 +3134,9 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
                   const msg = `Analyze this prevention & response plan for ${crimeLabel} in ${area || "All Districts"}.\n\nParameters: Time: ${timeLabel} | Units: ${units} | Crime: ${crimeLabel}\nStats: ${JSON.stringify(stats)}\n${adv}\n\nRoutes (${routes.length}):\n${routeSummary}\n\nAssess effectiveness, gaps, and suggest adjustments tailored to this crime category.`;
                   navigate("/", { state: { initialMessage: msg } });
                 }}
-                className="flex-1 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5"
               >
-                <Sparkles className="h-3.5 w-3.5" />{" "}
-                {t("crimeMap.askAI.patrolInsights")}
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white group-hover:bg-red-700 transition-colors"><Sparkles className="h-3.5 w-3.5" /></span> {t("crimeMap.askAI.patrolInsights")}
               </button>
               {/* <button
                 onClick={onClose}
@@ -3290,17 +3171,17 @@ function PanelHeader({
   subtitle,
 }) {
   return (
-    <div className="p-4 border-b border-slate-100 flex justify-between items-start shrink-0">
+    <div className="p-4 border-b border-[#E5E7EB] bg-[#FAFBFC] flex justify-between items-start shrink-0">
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-bold text-slate-400">{id}</span>
+          <span className="text-xs font-bold text-[#6B7280] ksp-mono">{id}</span>
           <span
-            className={`px-2 py-0.5 text-[10px] font-bold rounded flex items-center gap-1 border ${typeColor}`}
+            className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] flex items-center gap-1 border ${typeColor}`}
           >
             {typeIcon} {type.toUpperCase()}
           </span>
         </div>
-        <h2 className="text-base font-bold text-slate-900">{name}</h2>
+        <h2 className="text-base font-bold text-[#1A1A2E]">{name}</h2>
         {subtitle && (
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
             {subtitle}
@@ -3309,9 +3190,9 @@ function PanelHeader({
       </div>
       <button
         onClick={onClose}
-        className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+        className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E5E7EB] bg-white text-slate-500 hover:bg-slate-50 hover:text-[#1A1A2E] transition"
       >
-        <X size={16} />
+        <X size={14} />
       </button>
     </div>
   );
