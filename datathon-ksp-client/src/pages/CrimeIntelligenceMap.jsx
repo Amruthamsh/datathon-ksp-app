@@ -186,7 +186,13 @@ export default function CrimeIntelligenceMap() {
     bearing: 0,
   });
   // Intelligence overlays
-  const [poiFilters, setPoiFilters] = useState({ ATM: true, Bank: false, Liquor_Store: true, Bus_Stop: false, Railway_Station: false });
+  const [poiFilters, setPoiFilters] = useState({
+    ATM: true,
+    Bank: false,
+    Liquor_Store: true,
+    Bus_Stop: false,
+    Railway_Station: false,
+  });
   const [showSocioOverlay, setShowSocioOverlay] = useState(false);
   const [enhancedRisk, setEnhancedRisk] = useState([]);
   const [intelligenceStatus, setIntelligenceStatus] = useState(null);
@@ -315,8 +321,14 @@ export default function CrimeIntelligenceMap() {
   // Intelligence data — enhanced risk + status (live ETL)
   useEffect(() => {
     if (!token) return;
-    crimeMapApi.getDistrictRiskEnhanced(token).then((r)=> setEnhancedRisk(r.data||[])).catch(()=>{});
-    crimeMapApi.getIntelligenceStatus(token).then((r)=> setIntelligenceStatus(r.data)).catch(()=>{});
+    crimeMapApi
+      .getDistrictRiskEnhanced(token)
+      .then((r) => setEnhancedRisk(r.data || []))
+      .catch(() => {});
+    crimeMapApi
+      .getIntelligenceStatus(token)
+      .then((r) => setIntelligenceStatus(r.data))
+      .catch(() => {});
   }, [token]);
 
   const handleRefreshIntel = useCallback(async () => {
@@ -327,8 +339,10 @@ export default function CrimeIntelligenceMap() {
       if (r.data?.status) setIntelligenceStatus(r.data.status);
       // reload enhanced risk after refresh
       const er = await crimeMapApi.getDistrictRiskEnhanced(token);
-      setEnhancedRisk(er.data||[]);
-    } catch(e){ console.error("intel refresh failed", e); }
+      setEnhancedRisk(er.data || []);
+    } catch (e) {
+      console.error("intel refresh failed", e);
+    }
     setRefreshingIntel(false);
   }, [token, refreshingIntel]);
 
@@ -403,7 +417,7 @@ export default function CrimeIntelligenceMap() {
               </p>
             </div>
             {/* <button onClick={() => setShowPatrolModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-900 text-white rounded-full text-xs font-bold hover:bg-[#1e2e6b] transition-colors shadow-sm">
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-900/90 text-white rounded-full text-xs font-bold hover:bg-blue-900 transition-colors shadow-sm">
               <Route className="h-4 w-4" /> {t("crimeMap.generatePatrolPlan")}
             </button> */}
           </div>
@@ -453,9 +467,11 @@ export default function CrimeIntelligenceMap() {
                 showNetworks={showNetworks}
                 onToggleNetworks={() => setShowNetworks(!showNetworks)}
                 poiFilters={poiFilters}
-                onTogglePoi={(k)=> setPoiFilters(p=> ({...p, [k]: !p[k]}))}
+                onTogglePoi={(k) =>
+                  setPoiFilters((p) => ({ ...p, [k]: !p[k] }))
+                }
                 showSocioOverlay={showSocioOverlay}
-                onToggleSocio={()=> setShowSocioOverlay(v=>!v)}
+                onToggleSocio={() => setShowSocioOverlay((v) => !v)}
                 intelligenceStatus={intelligenceStatus}
                 onRefreshIntel={handleRefreshIntel}
                 refreshingIntel={refreshingIntel}
@@ -464,11 +480,34 @@ export default function CrimeIntelligenceMap() {
 
               {showSocioOverlay && (
                 <div className="absolute bottom-[5.2rem] left-4 bg-white/95 backdrop-blur rounded-lg shadow-md border border-slate-200 px-3 py-2 z-10 flex items-center gap-3">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1"><Building2 className="h-3 w-3 text-violet-600" /> Unemployment</span>
-                  <span className="flex items-center gap-1 text-[10px] font-semibold"><span className="w-3 h-3 rounded-sm" style={{background:'#14b8a6'}} /> 5–6%</span>
-                  <span className="flex items-center gap-1 text-[10px] font-semibold"><span className="w-3 h-3 rounded-sm" style={{background:'#f59e0b'}} /> 7–8%</span>
-                  <span className="flex items-center gap-1 text-[10px] font-semibold"><span className="w-3 h-3 rounded-sm" style={{background:'#8b5cf6'}} /> 9%+ </span>
-                  <span className="text-[9px] text-slate-400 ml-1">violet border = critical · deeper violet = lower literacy</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                    <Building2 className="h-3 w-3 text-violet-600" />{" "}
+                    Unemployment
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] font-semibold">
+                    <span
+                      className="w-3 h-3 rounded-sm"
+                      style={{ background: "#14b8a6" }}
+                    />{" "}
+                    5–6%
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] font-semibold">
+                    <span
+                      className="w-3 h-3 rounded-sm"
+                      style={{ background: "#f59e0b" }}
+                    />{" "}
+                    7–8%
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] font-semibold">
+                    <span
+                      className="w-3 h-3 rounded-sm"
+                      style={{ background: "#8b5cf6" }}
+                    />{" "}
+                    9%+{" "}
+                  </span>
+                  <span className="text-[9px] text-slate-400 ml-1">
+                    violet border = critical · deeper violet = lower literacy
+                  </span>
                 </div>
               )}
 
@@ -544,13 +583,38 @@ function LayerSwitcher({
 
   const networkDisabled = viewMode === "Administrative";
   const poiTypes = [
-    { id: "Liquor_Store", label: "Liquor Shops", icon: Beer, weight: 5, color: "#b45309" },
+    {
+      id: "Liquor_Store",
+      label: "Liquor Shops",
+      icon: Beer,
+      weight: 5,
+      color: "#b45309",
+    },
     { id: "ATM", label: "ATMs", icon: Landmark, weight: 3, color: "#2563eb" },
-    { id: "Bus_Stop", label: "Bus Stops", icon: Bus, weight: 2, color: "#16a34a" },
-    { id: "Bank", label: "Banks", icon: Building2, weight: 2, color: "#7c3aed" },
-    { id: "Railway_Station", label: "Railway", icon: MapPin, weight: 2, color: "#dc2626" },
+    {
+      id: "Bus_Stop",
+      label: "Bus Stops",
+      icon: Bus,
+      weight: 2,
+      color: "#16a34a",
+    },
+    {
+      id: "Bank",
+      label: "Banks",
+      icon: Building2,
+      weight: 2,
+      color: "#7c3aed",
+    },
+    {
+      id: "Railway_Station",
+      label: "Railway",
+      icon: MapPin,
+      weight: 2,
+      color: "#dc2626",
+    },
   ];
-  const intelReady = intelligenceStatus?.poi_total && Number(intelligenceStatus.poi_total) > 0;
+  const intelReady =
+    intelligenceStatus?.poi_total && Number(intelligenceStatus.poi_total) > 0;
 
   return (
     <div className="absolute top-4 left-4 bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-1.5 flex flex-col gap-1 z-10 w-52 max-h-[calc(100%-6rem)] overflow-y-auto">
@@ -563,7 +627,7 @@ function LayerSwitcher({
           onClick={() => onModeChange(id)}
           className={`px-3 py-1.5 text-xs font-bold rounded-full text-left transition-colors flex items-center gap-2 ${
             viewMode === id
-              ? "bg-[#1A1A2E] text-white shadow-sm"
+              ? "bg-blue-900/90 text-white shadow-sm"
               : "text-slate-600 hover:bg-slate-50 border border-transparent hover:border-[#E5E7EB]"
           }`}
         >
@@ -587,8 +651,7 @@ function LayerSwitcher({
             }
           />
           <span className="text-xs font-bold text-[#1A1A2E] flex items-center gap-1">
-            <Users className="h-3 w-3" />{" "}
-            {t("crimeMap.layers.networkOverlay")}
+            <Users className="h-3 w-3" /> {t("crimeMap.layers.networkOverlay")}
           </span>
         </label>
         {networkDisabled && (
@@ -601,33 +664,78 @@ function LayerSwitcher({
       <div className="border-t border-[#E5E7EB] mt-1 pt-1">
         <span className="text-[10px] font-bold text-[#1A1A2E] uppercase tracking-[0.08em] px-2 py-1 flex items-center gap-1">
           <Database className="h-3 w-3 text-blue-900" /> Predictive Intel
-          {intelReady && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-red-700" title="Live OSM data loaded" />}
-          {!intelReady && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400" title="No POI data yet — click refresh" />}
+          {intelReady && (
+            <span
+              className="ml-auto w-1.5 h-1.5 rounded-full bg-red-700"
+              title="Live OSM data loaded"
+            />
+          )}
+          {!intelReady && (
+            <span
+              className="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400"
+              title="No POI data yet — click refresh"
+            />
+          )}
         </span>
         {poiTypes.map((p) => (
-          <label key={p.id} className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-slate-50 cursor-pointer border border-transparent hover:border-[#E5E7EB]">
-            <input type="checkbox" checked={!!poiFilters?.[p.id]} onChange={() => onTogglePoi(p.id)} className="rounded border-slate-300 text-blue-900 w-3.5 h-3.5 accent-blue-900" />
-            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-            <span className="text-xs font-bold text-[#1A1A2E] flex-1">{p.label}</span>
-            <span className="text-[9px] font-bold text-slate-400">×{p.weight}</span>
+          <label
+            key={p.id}
+            className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-slate-50 cursor-pointer border border-transparent hover:border-[#E5E7EB]"
+          >
+            <input
+              type="checkbox"
+              checked={!!poiFilters?.[p.id]}
+              onChange={() => onTogglePoi(p.id)}
+              className="rounded border-slate-300 text-blue-900 w-3.5 h-3.5 accent-blue-900"
+            />
+            <span
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{ backgroundColor: p.color }}
+            />
+            <span className="text-xs font-bold text-[#1A1A2E] flex-1">
+              {p.label}
+            </span>
+            <span className="text-[9px] font-bold text-slate-400">
+              ×{p.weight}
+            </span>
           </label>
         ))}
         <label className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-slate-50 cursor-pointer mt-1 border border-transparent hover:border-[#E5E7EB]">
-          <input type="checkbox" checked={!!showSocioOverlay} onChange={onToggleSocio} className="rounded border-slate-300 text-blue-900 w-3.5 h-3.5 accent-blue-900" />
+          <input
+            type="checkbox"
+            checked={!!showSocioOverlay}
+            onChange={onToggleSocio}
+            className="rounded border-slate-300 text-blue-900 w-3.5 h-3.5 accent-blue-900"
+          />
           <CloudRain className="h-3 w-3 text-blue-900" />
-          <span className="text-xs font-bold text-[#1A1A2E]">Socio-Economic tint</span>
+          <span className="text-xs font-bold text-[#1A1A2E]">
+            Socio-Economic tint
+          </span>
         </label>
         <div className="px-2 py-1.5 mt-1">
-          <button onClick={onRefreshIntel} disabled={refreshingIntel} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-900 text-white rounded-full text-[11px] font-bold hover:bg-[#1e2e6b] disabled:opacity-50 transition-colors shadow-sm">
-            <RefreshCw className={`h-3 w-3 ${refreshingIntel ? 'animate-spin' : ''}`} /> {refreshingIntel ? 'Refreshing…' : 'Refresh Live Data'}
+          <button
+            onClick={onRefreshIntel}
+            disabled={refreshingIntel}
+            className="mx-auto flex items-center justify-center gap-1 px-3.5 py-1.5 bg-blue-900/90 text-white rounded-full text-[10px] font-bold tracking-wide hover:bg-blue-900 disabled:opacity-50 transition-colors shadow-sm"
+          >
+            <RefreshCw
+              className={`h-3 w-3 ${refreshingIntel ? "animate-spin" : ""}`}
+            />{" "}
+            {refreshingIntel ? "Refreshing…" : "Refresh Live Data"}
           </button>
           {intelligenceStatus && (
             <p className="text-[9px] text-slate-400 mt-1 text-center">
-              POIs: {intelligenceStatus.poi_total || 0} · Weather: {intelligenceStatus.weather_rows || 0}
-              {intelligenceStatus.poi_last_refresh && ` · ${new Date(intelligenceStatus.poi_last_refresh).toLocaleDateString()}`}
+              POIs: {intelligenceStatus.poi_total || 0} · Weather:{" "}
+              {intelligenceStatus.weather_rows || 0}
+              {intelligenceStatus.poi_last_refresh &&
+                ` · ${new Date(intelligenceStatus.poi_last_refresh).toLocaleDateString()}`}
             </p>
           )}
-          {enhancedRisk?.length>0 && <p className="text-[9px] text-emerald-600 font-semibold text-center mt-0.5">Enhanced risk active</p>}
+          {enhancedRisk?.length > 0 && (
+            <p className="text-[9px] text-emerald-600 font-semibold text-center mt-0.5">
+              Enhanced risk active
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -839,10 +947,10 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
         }
         .range-dual input[type="range"]::-webkit-slider-thumb {
           -webkit-appearance: none; appearance: none;
-          width: 14px; height: 14px; border-radius: 9999px;
+          width: 12px; height: 12px; border-radius: 9999px;
           background: #fff; border: 2px solid #1e3a8a;
           box-shadow: 0 1px 4px rgba(30,58,138,0.22);
-          cursor: pointer; pointer-events: auto; margin-top: -5px;
+          cursor: pointer; pointer-events: auto; margin-top: -4px;
           transition: transform 0.12s;
         }
         .range-dual input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.08); }
@@ -856,33 +964,33 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
           cursor: pointer; pointer-events: auto;
         }
       `}</style>
-      <div className="absolute bottom-2.5 left-3 right-3 bg-white rounded-xl shadow-sm border border-[#E5E7EB] px-2.5 py-2 z-10">
+      <div className="absolute bottom-3 left-3 right-3 bg-white rounded-2xl shadow-lg border border-[#E5E7EB] px-3 py-2.5 z-10">
         <div className="flex items-center justify-between mb-1.5 gap-2">
           <p className="text-[10px] font-bold text-[#1A1A2E] uppercase tracking-[0.08em] flex items-center gap-1 shrink-0">
             <Clock className="h-3 w-3 text-blue-900" />{" "}
             {t("crimeMap.dateRange.title")}
           </p>
-          <span className="text-[11px] font-bold text-white bg-blue-900 px-2.5 py-0.5 rounded-full whitespace-nowrap">
+          <span className="text-[10px] font-bold tracking-wide text-white bg-blue-900/90 px-3 py-1 rounded-full whitespace-nowrap shadow-sm">
             {rangeLabel}
           </span>
         </div>
 
-        <div className="rounded-xl bg-[#F4F6F9] border border-[#E5E7EB] px-2.5 py-2">
+        <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
           <div className="flex items-center justify-between mb-1.5">
             {/* <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">
-              <span className="w-1 h-1 rounded-full bg-blue-900" />
+              <span className="w-1 h-1 rounded-full bg-blue-900/90" />
               {t("crimeMap.dateRange.from")} {formatMonthLabel(months[safeLo])}
             </span>
             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">
               {t("crimeMap.dateRange.to")} {formatMonthLabel(months[safeHi])}
-              <span className="w-1 h-1 rounded-full bg-blue-900" />
+              <span className="w-1 h-1 rounded-full bg-blue-900/90" />
             </span> */}
           </div>
 
           <div className="relative">
             <div className="absolute top-[7px] left-0 right-0 h-[4px] rounded-full bg-slate-200" />
             <div
-              className="absolute top-[7px] h-[4px] rounded-full bg-blue-900"
+              className="absolute top-[7px] h-[4px] rounded-full bg-blue-900/90"
               style={{ left: `${loPct}%`, width: `${selectedWidth}%` }}
             />
             <div className="range-dual">
@@ -911,12 +1019,12 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between mt-1 text-[9px] font-semibold text-slate-400">
-            <span className="bg-slate-100 px-1 py-0.5 rounded">
+          <div className="flex items-center justify-between mt-2 text-[10px] font-bold text-slate-400 tracking-wide">
+            <span className="bg-white border border-slate-200 px-1.5 py-0.5 rounded-full text-[10px]">
               {formatMonthLabel(months[0])}
             </span>
             <span className="text-slate-300 text-[8px]">{months.length}m</span>
-            <span className="bg-slate-100 px-1 py-0.5 rounded">
+            <span className="bg-white border border-slate-200 px-1.5 py-0.5 rounded-full text-[10px]">
               {formatMonthLabel(months[last])}
             </span>
           </div>
@@ -991,14 +1099,22 @@ function MapView({
   // Fetch live POIs (OSM)
   useEffect(() => {
     if (!token) return;
-    const activeTypes = Object.entries(poiFilters || {}).filter(([,v])=>v).map(([k])=>k);
-    if (!activeTypes.length) { setPoiData([]); return; }
+    const activeTypes = Object.entries(poiFilters || {})
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+    if (!activeTypes.length) {
+      setPoiData([]);
+      return;
+    }
     // fetch all then filter client-side for speed (single request) — limit 5000 covers 31 districts
-    crimeMapApi.getPOIs(token, { limit: 5000 }).then((r)=>{
-      const all = r.data||[];
-      const filtered = all.filter(d=> activeTypes.includes(d.POIType));
-      setPoiData(filtered);
-    }).catch(()=>{});
+    crimeMapApi
+      .getPOIs(token, { limit: 5000 })
+      .then((r) => {
+        const all = r.data || [];
+        const filtered = all.filter((d) => activeTypes.includes(d.POIType));
+        setPoiData(filtered);
+      })
+      .catch(() => {});
   }, [token, poiFilters]);
 
   const crimePointsData = useMemo(
@@ -1041,7 +1157,8 @@ function MapView({
           change_pct: d.change_pct,
           top_crime: d.top_crime,
           rank: d.rank,
-          unemployment_rate: d.multipliers?.unemployment_rate ?? d.socio?.unemployment_rate,
+          unemployment_rate:
+            d.multipliers?.unemployment_rate ?? d.socio?.unemployment_rate,
           literacy_rate: d.socio?.literacy_rate,
           population_density: d.socio?.population_density,
           per_capita_income: d.socio?.per_capita_income,
@@ -1140,21 +1257,34 @@ function MapView({
             // interpolate unemployment 5-10% to color ramp
             const t = Math.max(0, Math.min(1, (u - 5) / 5));
             // low unemp teal, mid amber, high violet — highly visible
-            if (t < 0.33) return [20, 184, 166, viewMode === "Administrative" ? 0 : 55]; // teal (~5-6.6%)
-            if (t < 0.66) return [245, 158, 11, viewMode === "Administrative" ? 0 : 60]; // amber (~6.6-8.3%)
+            if (t < 0.33)
+              return [20, 184, 166, viewMode === "Administrative" ? 0 : 55]; // teal (~5-6.6%)
+            if (t < 0.66)
+              return [245, 158, 11, viewMode === "Administrative" ? 0 : 60]; // amber (~6.6-8.3%)
             // high unemployment: violet with literacy alpha boost (lower literacy = more opaque)
-            const alpha = viewMode === "Administrative" ? 0 : Math.round(55 + (75 - lit) * 1.2);
+            const alpha =
+              viewMode === "Administrative"
+                ? 0
+                : Math.round(55 + (75 - lit) * 1.2);
             return [139, 92, 246, Math.max(50, Math.min(95, alpha))];
           },
           getLineColor: [139, 92, 246, 60],
           getLineWidth: 1,
           // show socio tooltip even in Administrative (district click still works via next layer)
-          onClick: viewMode !== "Administrative" ? (info) => {
-            if (info.object) {
-              const p = info.object.properties;
-              onSelectSpot({ id: p.name, name: p.name, type: "District", ...p });
-            }
-          } : undefined,
+          onClick:
+            viewMode !== "Administrative"
+              ? (info) => {
+                  if (info.object) {
+                    const p = info.object.properties;
+                    onSelectSpot({
+                      id: p.name,
+                      name: p.name,
+                      type: "District",
+                      ...p,
+                    });
+                  }
+                }
+              : undefined,
         }),
       );
     }
@@ -1179,7 +1309,12 @@ function MapView({
             if (!showSocioOverlay) return base;
             // Socio tint: blend violet haze proportional to unemployment premium over 7%
             const premium = Math.max(0, u - 7); // 0-~4
-            const violet = [139, 92, 246, Math.round(Math.min(75, 18 + premium * 14))];
+            const violet = [
+              139,
+              92,
+              246,
+              Math.round(Math.min(75, 18 + premium * 14)),
+            ];
             // alpha blend: mix base + violet (simple avg for visibility)
             if (premium > 0.5) {
               const mix = Math.min(0.45, premium * 0.12);
@@ -1306,28 +1441,41 @@ function MapView({
         Railway_Station: [220, 38, 38, 200],
       };
       const grouped = {};
-      poiData.forEach((p)=> { (grouped[p.POIType]=grouped[p.POIType]||[]).push(p); });
-      Object.entries(grouped).forEach(([type, data])=>{
-        activeLayers.push(new ScatterplotLayer({
-          id: `poi-${type}`,
-          data,
-          getPosition: (d)=> [d.lng, d.lat],
-          getRadius: type==="Liquor_Store" ? 6 : 5,
-          radiusMinPixels: type==="Liquor_Store" ? 5 : 4,
-          radiusMaxPixels: 9,
-          getFillColor: poiColors[type] || [100,116,139,180],
-          getLineColor: [255,255,255,220],
-          stroked: true,
-          lineWidthMinPixels: 1,
-          pickable: true,
-          autoHighlight: true,
-          onClick: (info)=>{
-            if (info.object) {
-              const d=info.object;
-              onSelectSpot({ id: `POI-${d.PoiID}`, name: d.POIName || d.POIType, type: "POI", poi_type: d.POIType, risk_weight: d.RiskWeight, lat: d.lat, lng: d.lng, district: d.DistrictName });
-            }
-          },
-        }));
+      poiData.forEach((p) => {
+        (grouped[p.POIType] = grouped[p.POIType] || []).push(p);
+      });
+      Object.entries(grouped).forEach(([type, data]) => {
+        activeLayers.push(
+          new ScatterplotLayer({
+            id: `poi-${type}`,
+            data,
+            getPosition: (d) => [d.lng, d.lat],
+            getRadius: type === "Liquor_Store" ? 6 : 5,
+            radiusMinPixels: type === "Liquor_Store" ? 5 : 4,
+            radiusMaxPixels: 9,
+            getFillColor: poiColors[type] || [100, 116, 139, 180],
+            getLineColor: [255, 255, 255, 220],
+            stroked: true,
+            lineWidthMinPixels: 1,
+            pickable: true,
+            autoHighlight: true,
+            onClick: (info) => {
+              if (info.object) {
+                const d = info.object;
+                onSelectSpot({
+                  id: `POI-${d.PoiID}`,
+                  name: d.POIName || d.POIType,
+                  type: "POI",
+                  poi_type: d.POIType,
+                  risk_weight: d.RiskWeight,
+                  lat: d.lat,
+                  lng: d.lng,
+                  district: d.DistrictName,
+                });
+              }
+            },
+          }),
+        );
       });
     }
 
@@ -1399,6 +1547,7 @@ function RightPanel({
         <DefaultPanel
           summary={summary}
           enhancedRisk={enhancedRisk}
+          onOpenPatrol={onOpenPatrol}
         />
       </div>
     );
@@ -1407,7 +1556,11 @@ function RightPanel({
   if (selectedSpot.type === "POI") {
     return (
       <div className="w-96 bg-white rounded-xl border border-[#E5E7EB] shadow-sm flex flex-col min-h-0 overflow-hidden">
-        <POIPanel spot={selectedSpot} onClose={onClose} onOpenPatrol={onOpenPatrol} />
+        <POIPanel
+          spot={selectedSpot}
+          onClose={onClose}
+          onOpenPatrol={onOpenPatrol}
+        />
       </div>
     );
   }
@@ -1471,26 +1624,39 @@ RightPanel.propTypes = {
 
 /* ── Default Panel (nothing selected) ──────────────────────────── */
 
-function DefaultPanel({
-  summary,
-  enhancedRisk,
-}) {
+function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const hp = summary?.highest_priority_district;
   // Socio-economic state lens derived live from enhancedRisk
   const socioLens = useMemo(() => {
     if (!enhancedRisk || !enhancedRisk.length) return null;
-    const vals = enhancedRisk.filter(d=> d.socio);
+    const vals = enhancedRisk.filter((d) => d.socio);
     if (!vals.length) return null;
-    const avg = (arr) => arr.reduce((a,b)=>a+b,0)/arr.length;
-    const avgUnemp = avg(vals.map(d=> d.socio.unemployment_rate));
-    const avgLit = avg(vals.map(d=> d.socio.literacy_rate));
-    const avgDensity = avg(vals.map(d=> d.socio.population_density));
-    const avgIncome = avg(vals.map(d=> d.socio.per_capita_income));
-    const sortedUnemp = [...vals].sort((a,b)=> b.socio.unemployment_rate - a.socio.unemployment_rate);
-    const sortedLit = [...vals].sort((a,b)=> a.socio.literacy_rate - b.socio.literacy_rate);
-    const highRiskHighUnemp = vals.filter(d=> d.risk_score>=50 && d.socio.unemployment_rate> avgUnemp).length;
-    return { avgUnemp, avgLit, avgDensity, avgIncome, topUnemp: sortedUnemp.slice(0,3), lowLit: sortedLit.slice(0,3), highRiskHighUnemp, vals };
+    const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const avgUnemp = avg(vals.map((d) => d.socio.unemployment_rate));
+    const avgLit = avg(vals.map((d) => d.socio.literacy_rate));
+    const avgDensity = avg(vals.map((d) => d.socio.population_density));
+    const avgIncome = avg(vals.map((d) => d.socio.per_capita_income));
+    const sortedUnemp = [...vals].sort(
+      (a, b) => b.socio.unemployment_rate - a.socio.unemployment_rate,
+    );
+    const sortedLit = [...vals].sort(
+      (a, b) => a.socio.literacy_rate - b.socio.literacy_rate,
+    );
+    const highRiskHighUnemp = vals.filter(
+      (d) => d.risk_score >= 50 && d.socio.unemployment_rate > avgUnemp,
+    ).length;
+    return {
+      avgUnemp,
+      avgLit,
+      avgDensity,
+      avgIncome,
+      topUnemp: sortedUnemp.slice(0, 3),
+      lowLit: sortedLit.slice(0, 3),
+      highRiskHighUnemp,
+      vals,
+    };
   }, [enhancedRisk]);
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -1532,8 +1698,12 @@ function DefaultPanel({
         )}
 
         <div className="grid grid-cols-2 gap-2">
-          <div className={`p-3 rounded-sm border ${summary?.today_risk === "HIGH" ? "bg-red-400 border-red-400" : summary?.today_risk === "MEDIUM" ? "bg-orange-300 border-orange-300" : "bg-blue-900/90 border-blue-900/90"}`}>
-            <p className={`text-[10px] font-bold uppercase tracking-[0.08em] ${summary?.today_risk ? "text-white/85" : "text-white/85"}`}>
+          <div
+            className={`p-3 rounded-sm border ${summary?.today_risk === "HIGH" ? "bg-red-400 border-red-400" : summary?.today_risk === "MEDIUM" ? "bg-orange-300 border-orange-300" : "bg-blue-900/90 border-blue-900/90"}`}
+          >
+            <p
+              className={`text-[10px] font-bold uppercase tracking-[0.08em] ${summary?.today_risk ? "text-white/85" : "text-white/85"}`}
+            >
               {t("crimeMap.summary.todaysRisk")}
             </p>
             <p className="text-lg font-black text-white">
@@ -1568,84 +1738,225 @@ function DefaultPanel({
 
         {/* ── Socio-Economic Intelligence — State Lens ── */}
         {socioLens ? (
-          <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-sky-50 p-3.5 space-y-3 overflow-hidden">
+          <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-slate-100 via-white to-sky-50 p-3.5 space-y-3 overflow-hidden">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-black tracking-widest uppercase text-violet-700 flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> Socio-Economic Intelligence — Live</p>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-600 text-white">{socioLens.vals.length} districts</span>
+              <p className="text-[10px] font-black tracking-widest uppercase text-red-700 flex items-center gap-1.5">
+                Socio-Economic Intelligence
+              </p>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-900/90 text-white">
+                {socioLens.vals.length} districts
+              </span>
             </div>
             {/* state averages */}
             <div className="grid grid-cols-4 gap-2">
               <div className="bg-white rounded-lg border border-violet-100 p-2 text-center">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Avg Unemp</p>
-                <p className="text-sm font-black text-violet-700">{socioLens.avgUnemp.toFixed(1)}%</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                  Avg Unemp
+                </p>
+                <p className="text-sm font-black text-red-700">
+                  {socioLens.avgUnemp.toFixed(1)}%
+                </p>
                 <p className="text-[9px] text-slate-500">state mean</p>
               </div>
               <div className="bg-white rounded-lg border border-sky-100 p-2 text-center">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Avg Literacy</p>
-                <p className="text-sm font-black text-sky-700">{socioLens.avgLit.toFixed(1)}%</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                  Avg Literacy
+                </p>
+                <p className="text-sm font-black text-sky-700">
+                  {socioLens.avgLit.toFixed(1)}%
+                </p>
                 <p className="text-[9px] text-slate-500">state mean</p>
               </div>
               <div className="bg-white rounded-lg border border-slate-100 p-2 text-center">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Avg Density</p>
-                <p className="text-sm font-black text-slate-900">{Math.round(socioLens.avgDensity)}</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                  Avg Density
+                </p>
+                <p className="text-sm font-black text-slate-900">
+                  {Math.round(socioLens.avgDensity)}
+                </p>
                 <p className="text-[9px] text-slate-500">per km²</p>
               </div>
               <div className="bg-white rounded-lg border border-amber-100 p-2 text-center">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Avg Income</p>
-                <p className="text-xs font-black text-amber-700">₹{(socioLens.avgIncome/1000).toFixed(0)}k</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                  Avg Income
+                </p>
+                <p className="text-xs font-black text-amber-700">
+                  ₹{(socioLens.avgIncome / 1000).toFixed(0)}k
+                </p>
                 <p className="text-[9px] text-slate-500">per capita</p>
               </div>
             </div>
             {/* how it affects risk — correlation insight */}
             <div className="bg-white rounded-lg border border-slate-200 p-3 flex gap-3">
               <div className="flex-1">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Correlation</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Correlation
+                </p>
                 <p className="text-xs font-semibold text-slate-800 leading-snug mt-1">
-                  <span className="font-black text-violet-700">{socioLens.highRiskHighUnemp}</span> high-risk districts sit above mean unemployment. Economic stress is the strongest live multiplier.
+                  <span className="font-black text-red-700">
+                    {socioLens.highRiskHighUnemp}
+                  </span>{" "}
+                  high-risk districts sit above mean unemployment. Economic
+                  stress is the strongest live multiplier.
                 </p>
                 <div className="mt-2 flex items-center gap-1">
-                  <span className="text-[9px] font-bold text-slate-500">Formula:</span>
-                  <span className="text-[10px] font-mono bg-slate-900 text-violet-200 px-1.5 py-0.5 rounded">Enhanced = Base + (Unemp-7)×3.5 + POI + Weather + Literacy</span>
+                  <span className="text-[9px] font-bold text-slate-500">
+                    Formula:
+                  </span>
+                  <span className="text-[10px] font-mono bg-slate-900 text-violet-200 px-1.5 py-0.5 rounded">
+                    Enhanced = Base + (Unemp-7)×3.5 + POI + Weather + Literacy
+                  </span>
                 </div>
               </div>
               <div className="w-20 grid grid-cols-3 gap-0.5 items-end h-12">
-                {socioLens.vals.slice(0,9).sort((a,b)=>a.socio.unemployment_rate-b.socio.unemployment_rate).map((d,i)=>{
-                  const h = 14 + (d.socio.unemployment_rate-5)*5;
-                  const col = d.risk_score>=50 ? '#8b5cf6' : '#14b8a6';
-                  return <div key={i} title={`${d.district}: ${d.socio.unemployment_rate}% → risk ${Math.round(d.risk_score)}`} className="rounded-sm" style={{height: `${Math.min(48,h)}px`, background: col}} />
-                })}
+                {socioLens.vals
+                  .slice(0, 9)
+                  .sort(
+                    (a, b) =>
+                      a.socio.unemployment_rate - b.socio.unemployment_rate,
+                  )
+                  .map((d, i) => {
+                    const h = 14 + (d.socio.unemployment_rate - 5) * 5;
+                    const col = d.risk_score >= 50 ? "#8b5cf6" : "#14b8a6";
+                    return (
+                      <div
+                        key={i}
+                        title={`${d.district}: ${d.socio.unemployment_rate}% → risk ${Math.round(d.risk_score)}`}
+                        className="rounded-sm"
+                        style={{
+                          height: `${Math.min(48, h)}px`,
+                          background: col,
+                        }}
+                      />
+                    );
+                  })}
               </div>
             </div>
             {/* top drivers */}
             <div className="grid grid-cols-2 gap-2">
               <div className="min-w-0">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-red-600 mb-1 truncate">Highest unemployment → risk +</p>
-                {socioLens.topUnemp.map(d=>(
-                  <div key={d.district} className="flex items-center justify-between gap-1 bg-white border border-red-100 rounded px-2 py-1.5 mb-1 min-w-0 overflow-hidden">
-                    <span className="text-xs font-semibold text-slate-800 truncate min-w-0 flex-1">{d.district}</span>
-                    <span className="text-xs font-black text-red-600 shrink-0 whitespace-nowrap tabular-nums">{Number(d.socio.unemployment_rate).toFixed(1)}% <span className="font-medium text-slate-400">→</span> <span className="font-bold text-slate-600">{Math.round(d.risk_score)}</span></span>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-red-600 mb-1 truncate">
+                  Highest unemployment → risk +
+                </p>
+                {socioLens.topUnemp.map((d) => (
+                  <div
+                    key={d.district}
+                    className="flex items-center justify-between gap-1 bg-white border border-red-100 rounded px-2 py-1.5 mb-1 min-w-0 overflow-hidden"
+                  >
+                    <span className="text-xs font-semibold text-slate-800 truncate min-w-0 flex-1">
+                      {d.district}
+                    </span>
+                    <span className="text-xs font-black text-red-600 shrink-0 whitespace-nowrap tabular-nums">
+                      {Number(d.socio.unemployment_rate).toFixed(1)}%{" "}
+                      <span className="font-medium text-slate-400">→</span>{" "}
+                      <span className="font-bold text-slate-600">
+                        {Math.round(d.risk_score)}
+                      </span>
+                    </span>
                   </div>
                 ))}
               </div>
               <div className="min-w-0">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-sky-600 mb-1 truncate">Lowest literacy → vulnerability</p>
-                {socioLens.lowLit.map(d=>(
-                  <div key={d.district} className="flex items-center justify-between gap-1 bg-white border border-sky-100 rounded px-2 py-1.5 mb-1 min-w-0 overflow-hidden">
-                    <span className="text-xs font-semibold text-slate-800 truncate min-w-0 flex-1">{d.district}</span>
-                    <span className="text-xs font-black text-sky-700 shrink-0 whitespace-nowrap tabular-nums">{Number(d.socio.literacy_rate).toFixed(1)}%</span>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-sky-600 mb-1 truncate">
+                  Lowest literacy → vulnerability
+                </p>
+                {socioLens.lowLit.map((d) => (
+                  <div
+                    key={d.district}
+                    className="flex items-center justify-between gap-1 bg-white border border-sky-100 rounded px-2 py-1.5 mb-1 min-w-0 overflow-hidden"
+                  >
+                    <span className="text-xs font-semibold text-slate-800 truncate min-w-0 flex-1">
+                      {d.district}
+                    </span>
+                    <span className="text-xs font-black text-sky-700 shrink-0 whitespace-nowrap tabular-nums">
+                      {Number(d.socio.literacy_rate).toFixed(1)}%
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
-            <p className="text-[9px] text-slate-400 text-center">Live via OpenStreetMap + Open-Meteo + data.gov.in · tint toggle shows this on map</p>
+            <p className="text-[9px] text-slate-400 text-center">
+              Live via OpenStreetMap + Open-Meteo + data.gov.in · tint toggle
+              shows this on map
+            </p>
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-center">
-            <p className="text-xs font-semibold text-slate-600 flex items-center justify-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Loading socio-economic intelligence…</p>
-            <p className="text-[10px] text-slate-400 mt-1">Refresh Live Data if empty (Overpass + Open-Meteo)</p>
+            <p className="text-xs font-semibold text-slate-600 flex items-center justify-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" /> Loading
+              socio-economic intelligence…
+            </p>
+            <p className="text-[10px] text-slate-400 mt-1">
+              Refresh Live Data if empty (Overpass + Open-Meteo)
+            </p>
           </div>
         )}
 
+        <div className="pt-4 border-t border-[#E5E7EB] space-y-3">
+          {summary?.contextual?.top_sub_type ? (
+            <button
+              onClick={() =>
+                onOpenPatrol({
+                  crimeFocus: getHeadIdForSubType(
+                    summary.contextual.top_sub_type,
+                  ),
+                  crimeLabel: summary.contextual.top_sub_type,
+                  area: summary.contextual.top_district || hp?.name || "",
+                  timeRange: "night",
+                  title:
+                    summary.contextual.quick_action ||
+                    summary.contextual.priority,
+                })
+              }
+              className="w-full py-2.5 px-4 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center gap-2 border border-red-700"
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                <Route className="h-3.5 w-3.5" />
+              </span>
+              Response Plan — {summary.contextual.top_sub_type}
+              {summary.contextual.top_district
+                ? ` · ${summary.contextual.top_district}`
+                : ""}
+            </button>
+          ) : hp ? (
+            <button
+              onClick={() =>
+                onOpenPatrol({
+                  crimeFocus: null,
+                  crimeLabel: null,
+                  area: hp.name,
+                  timeRange: "night",
+                  title: `Highest priority: ${hp.name} — ${hp.reason}`,
+                })
+              }
+              className="w-full py-2.5 px-4 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center gap-2 border border-red-700"
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                <Route className="h-3.5 w-3.5" />
+              </span>
+              Patrol plan — {hp.name}
+            </button>
+          ) : null}
+          <button
+            onClick={() => {
+              const risk = summary?.today_risk || "N/A";
+              const hotspots = summary?.emerging_hotspots ?? "N/A";
+              const repeat = summary?.repeat_offender_areas ?? "N/A";
+              const crimes = summary?.active_hotspots ?? "N/A";
+              const priority = hp?.name
+                ? `${hp.name} — ${hp.reason}`
+                : "None identified";
+              const msg = `Provide a deep dive analysis of crime in ${hp?.name || summary?.contextual?.top_district || "Karnataka"} district. Today's risk: ${risk}. Hotspots: ${hotspots}. Repeat: ${repeat}. Crimes 30d: ${crimes}. Priority: ${priority}. Highlight critical areas and recommend deployment.`;
+              navigate("/", { state: { initialMessage: msg } });
+            }}
+            className="group w-full py-2.5 px-4 bg-white border border-[#DDE3EC] text-[#1A1A2E] rounded-full text-xs font-bold hover:border-blue-900/90 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+          >
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+              <Sparkles className="h-3.5 w-3.5" />
+            </span>
+            Analyze This District
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1654,6 +1965,7 @@ function DefaultPanel({
 DefaultPanel.propTypes = {
   summary: PropTypes.object,
   enhancedRisk: PropTypes.array,
+  onOpenPatrol: PropTypes.func,
 };
 
 /* ── Trend Panel ────────────────────────────────────────────────── */
@@ -1669,7 +1981,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
           id={spot.id || "…"}
           name={spot.sub_type || "Loading…"}
           type="Crime"
-          typeColor="bg-blue-900 text-white border-blue-900"
+          typeColor="bg-blue-900/90 text-white border-blue-900/90"
           typeIcon={<Shield size={10} />}
           onClose={onClose}
         />
@@ -1696,7 +2008,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
           t("crimeMap.legend.crimeTypes")
         }
         type="Crime"
-        typeColor="bg-blue-900 text-white border-blue-900"
+        typeColor="bg-blue-900/90 text-white border-blue-900/90"
         typeIcon={<Shield size={10} />}
         onClose={onClose}
         subtitle={
@@ -1808,7 +2120,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
                 title: `${spot.sub_type || spot.crime_type} — ${spot.district || spot.station || ""}`,
               })
             }
-            className="w-full py-2.5 bg-white border border-slate-600 text-[#1A1A2E] rounded-sm text-xs font-bold hover:border-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white transition-colors shadow-sm flex items-center justify-center gap-1.5"
+            className="w-full py-2.5 px-4 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center gap-2 border border-red-700"
           >
             <Route className="h-3.5 w-3.5" />
             Patrol: {spot.sub_type || spot.crime_type}
@@ -1820,9 +2132,12 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
             const msg = `Analyze this FIR: Crime No ${spot.CrimeNo || "N/A"}, ${spot.sub_type || spot.crime_type || "crime"}, registered ${spot.CrimeRegisteredDate || spot.date || "unknown"}. Status: ${spot.status || "unknown"}. Gravity: ${spot.gravity || "unknown"}. Station: ${spot.station || "unknown"}, District: ${spot.district || "Karnataka"}. Coordinates: ${spot.lat}, ${spot.lng}. Brief facts: ${spot.BriefFacts || "N/A"}. Identify factors and recommend investigation/intervention actions.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full py-3 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 hover:shadow-md text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          className="group w-full py-2.5 px-4 bg-white border border-[#DDE3EC] text-[#1A1A2E] rounded-full text-xs font-bold hover:border-blue-900/90 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
         >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white group-hover:bg-red-700 transition-colors"><Sparkles className="h-3.5 w-3.5" /></span> {t("crimeMap.askAI.trendAnalysis")}
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+            <Sparkles className="h-3.5 w-3.5" />
+          </span>{" "}
+          {t("crimeMap.askAI.trendAnalysis")}
         </button>
       </div>
     </>
@@ -1846,12 +2161,23 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
 
   useEffect(() => {
     if (!token || !spot?.name) return;
-    crimeMapApi.getSocioEconomic(token, { district: spot.name }).then(r=> setSocio((r.data||[])[0]||null)).catch(()=>{});
-    crimeMapApi.getWeather(token, { district: spot.name, days: 7 }).then(r=> setWeather(r.data||[])).catch(()=>{});
-    crimeMapApi.getPOIStats(token).then(r=>{
-      const tot = (r.data?.totals||[]).find(x=> x.district===spot.name);
-      setPoiCount(tot||null);
-    }).catch(()=>{});
+    crimeMapApi
+      .getSocioEconomic(token, { district: spot.name })
+      .then((r) => setSocio((r.data || [])[0] || null))
+      .catch(() => {});
+    crimeMapApi
+      .getWeather(token, { district: spot.name, days: 7 })
+      .then((r) => setWeather(r.data || []))
+      .catch(() => {});
+    crimeMapApi
+      .getPOIStats(token)
+      .then((r) => {
+        const tot = (r.data?.totals || []).find(
+          (x) => x.district === spot.name,
+        );
+        setPoiCount(tot || null);
+      })
+      .catch(() => {});
   }, [token, spot?.name]);
 
   const m = spot.multipliers || {};
@@ -1876,7 +2202,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
         id={`DISTRICT`}
         name={spot.name}
         type="District"
-        typeColor="bg-blue-900 text-white border-blue-900"
+        typeColor="bg-blue-900/90 text-white border-blue-900/90"
         typeIcon={<Shield size={10} />}
         onClose={onClose}
         subtitle={`Rank #${spot.rank || "—"} of 31 districts`}
@@ -1970,22 +2296,47 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
             />
             {isEnhanced && (
               <>
-                <RiskBar label={`Unemployment ${m.unemployment_rate ?? '—'}%`} value={Math.min(100, Math.max(0, 50 + (m.unemployment_bonus||0)*4))} />
-                <RiskBar label={`POI density (${m.poi_total ?? 0} pts)`} value={Math.min(100, (m.poi_bonus||0)*8)} />
-                {m.weather_bonus ? <RiskBar label={`Weather (rain ${m.weather_rain_14d_avg}mm)`} value={Math.min(100, (m.weather_bonus||0)*20)} /> : null}
+                <RiskBar
+                  label={`Unemployment ${m.unemployment_rate ?? "—"}%`}
+                  value={Math.min(
+                    100,
+                    Math.max(0, 50 + (m.unemployment_bonus || 0) * 4),
+                  )}
+                />
+                <RiskBar
+                  label={`POI density (${m.poi_total ?? 0} pts)`}
+                  value={Math.min(100, (m.poi_bonus || 0) * 8)}
+                />
+                {m.weather_bonus ? (
+                  <RiskBar
+                    label={`Weather (rain ${m.weather_rain_14d_avg}mm)`}
+                    value={Math.min(100, (m.weather_bonus || 0) * 20)}
+                  />
+                ) : null}
               </>
             )}
           </div>
         </div>
 
         {/* Predictive Intelligence drivers */}
-        {isEnhanced && spot.risk_drivers?.length>0 && (
+        {isEnhanced && spot.risk_drivers?.length > 0 && (
           <div className="bg-emerald-50/70 border border-emerald-100 rounded-lg p-3">
-            <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5 flex items-center gap-1"><Zap className="h-3 w-3" /> Why risk is {spot.risk_level.toLowerCase()} (enhanced)</p>
+            <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <Zap className="h-3 w-3" /> Why risk is{" "}
+              {spot.risk_level.toLowerCase()} (enhanced)
+            </p>
             <ul className="text-xs text-slate-700 space-y-1">
-              {spot.risk_drivers.map((d,i)=><li key={i}>• {d}</li>)}
+              {spot.risk_drivers.map((d, i) => (
+                <li key={i}>• {d}</li>
+              ))}
             </ul>
-            {spot.risk_score_base!=null && <p className="text-[10px] text-slate-500 mt-1">Base score {Math.round(spot.risk_score_base)} → Enhanced {Math.round(spot.risk_score)} (Δ {(spot.risk_score - spot.risk_score_base).toFixed(1)})</p>}
+            {spot.risk_score_base != null && (
+              <p className="text-[10px] text-slate-500 mt-1">
+                Base score {Math.round(spot.risk_score_base)} → Enhanced{" "}
+                {Math.round(spot.risk_score)} (Δ{" "}
+                {(spot.risk_score - spot.risk_score_base).toFixed(1)})
+              </p>
+            )}
           </div>
         )}
 
@@ -1995,62 +2346,179 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
           if (!s) {
             return (
               <div className="rounded-xl border border-dashed border-violet-200 bg-violet-50/40 p-3 text-center">
-                <p className="text-xs font-bold text-violet-700 flex items-center justify-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Socio-economic live data pending for {spot.name}</p>
-                <p className="text-[11px] text-slate-600 mt-1">No row in DistrictSocioEconomic — tap <span className="font-bold">Refresh Live Data</span> in Layers to ingest OSM + Open-Meteo + data.gov.in for all 31 districts.</p>
-                <p className="text-[10px] text-slate-400 mt-1">Fallback: state means will show once refreshed. Enhanced risk currently uses base score only.</p>
+                <p className="text-xs font-bold text-violet-700 flex items-center justify-center gap-1.5">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Socio-economic
+                  live data pending for {spot.name}
+                </p>
+                <p className="text-[11px] text-slate-600 mt-1">
+                  No row in DistrictSocioEconomic — tap{" "}
+                  <span className="font-bold">Refresh Live Data</span> in Layers
+                  to ingest OSM + Open-Meteo + data.gov.in for all 31 districts.
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Fallback: state means will show once refreshed. Enhanced risk
+                  currently uses base score only.
+                </p>
               </div>
             );
           }
           // state averages from enhancedRisk
-          const all = (enhancedRisk||[]).filter(d=>d.socio);
-          const avg = (k) => all.length ? all.reduce((a,d)=>a+(d.socio[k]||0),0)/all.length : null;
-          const avgUnemp = avg('unemployment_rate');
-          const avgLit = avg('literacy_rate');
-          const avgDensity = avg('population_density');
-          const avgIncome = avg('per_capita_income');
-          const delta = (v, av) => av ? ((v-av)/av*100) : 0;
-          const dUnemp = s.unemployment_rate!=null && avgUnemp ? delta(s.unemployment_rate, avgUnemp) : 0;
-          const dLit = s.literacy_rate!=null && avgLit ? delta(s.literacy_rate, avgLit) : 0;
-          const dDensity = s.population_density!=null && avgDensity ? delta(s.population_density, avgDensity) : 0;
-          const dIncome = s.per_capita_income!=null && avgIncome ? delta(s.per_capita_income, avgIncome) : 0;
+          const all = (enhancedRisk || []).filter((d) => d.socio);
+          const avg = (k) =>
+            all.length
+              ? all.reduce((a, d) => a + (d.socio[k] || 0), 0) / all.length
+              : null;
+          const avgUnemp = avg("unemployment_rate");
+          const avgLit = avg("literacy_rate");
+          const avgDensity = avg("population_density");
+          const avgIncome = avg("per_capita_income");
+          const delta = (v, av) => (av ? ((v - av) / av) * 100 : 0);
+          const dUnemp =
+            s.unemployment_rate != null && avgUnemp
+              ? delta(s.unemployment_rate, avgUnemp)
+              : 0;
+          const dLit =
+            s.literacy_rate != null && avgLit
+              ? delta(s.literacy_rate, avgLit)
+              : 0;
+          const dDensity =
+            s.population_density != null && avgDensity
+              ? delta(s.population_density, avgDensity)
+              : 0;
+          const dIncome =
+            s.per_capita_income != null && avgIncome
+              ? delta(s.per_capita_income, avgIncome)
+              : 0;
           // risk equation
-          const base = spot.risk_score_base ?? (spot.risk_score - (m.unemployment_bonus||0) - (m.poi_bonus||0) - (m.weather_bonus||0));
+          const base =
+            spot.risk_score_base ??
+            spot.risk_score -
+              (m.unemployment_bonus || 0) -
+              (m.poi_bonus || 0) -
+              (m.weather_bonus || 0);
           const bonuses = [
-            { label: 'Base', val: base, color: 'bg-slate-800' },
-            { label: `Unemp ${m.unemployment_rate ?? s.unemployment_rate}%`, val: m.unemployment_bonus||0, color: 'bg-violet-600' },
-            { label: `POI ${m.poi_total||0}`, val: m.poi_bonus||0, color: 'bg-amber-500' },
-            { label: 'Weather', val: m.weather_bonus||0, color: 'bg-sky-500' },
-          ].filter(b=> b.val!==0 || b.label==='Base');
-          const total = bonuses.reduce((a,b)=>a+b.val,0);
+            { label: "Base", val: base, color: "bg-slate-800" },
+            {
+              label: `Unemp ${m.unemployment_rate ?? s.unemployment_rate}%`,
+              val: m.unemployment_bonus || 0,
+              color: "bg-violet-600",
+            },
+            {
+              label: `POI ${m.poi_total || 0}`,
+              val: m.poi_bonus || 0,
+              color: "bg-amber-500",
+            },
+            {
+              label: "Weather",
+              val: m.weather_bonus || 0,
+              color: "bg-sky-500",
+            },
+          ].filter((b) => b.val !== 0 || b.label === "Base");
+          const total = bonuses.reduce((a, b) => a + b.val, 0);
           return (
             <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-sky-50 p-3.5 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black tracking-widest uppercase text-violet-700 flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> Socio-Economic Intelligence — Live</p>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-600 text-white">Year {s.year || new Date().getFullYear()}</span>
+                <p className="text-[10px] font-black tracking-widest uppercase text-violet-700 flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5" /> Socio-Economic
+                  Intelligence — Live
+                </p>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-600 text-white">
+                  Year {s.year || new Date().getFullYear()}
+                </span>
               </div>
 
               {/* 4 metrics vs state average */}
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: 'Unemployment', value: s.unemployment_rate, unit: '%', avg: avgUnemp, delta: dUnemp, inv: true, icon: '◉' },
-                  { label: 'Literacy', value: s.literacy_rate, unit: '%', avg: avgLit, delta: dLit, inv: false },
-                  { label: 'Density', value: s.population_density, unit: '/km²', avg: avgDensity, delta: dDensity },
-                  { label: 'Per-capita', value: s.per_capita_income, unit: '₹', avg: avgIncome, delta: dIncome, fmt: (v)=> `₹${(v/1000).toFixed(0)}k` },
-                ].map(metric=> {
-                  const isBad = metric.inv ? metric.delta > 8 : metric.delta < -8;
-                  const isGood = metric.inv ? metric.delta < -8 : metric.delta > 8;
+                  {
+                    label: "Unemployment",
+                    value: s.unemployment_rate,
+                    unit: "%",
+                    avg: avgUnemp,
+                    delta: dUnemp,
+                    inv: true,
+                    icon: "◉",
+                  },
+                  {
+                    label: "Literacy",
+                    value: s.literacy_rate,
+                    unit: "%",
+                    avg: avgLit,
+                    delta: dLit,
+                    inv: false,
+                  },
+                  {
+                    label: "Density",
+                    value: s.population_density,
+                    unit: "/km²",
+                    avg: avgDensity,
+                    delta: dDensity,
+                  },
+                  {
+                    label: "Per-capita",
+                    value: s.per_capita_income,
+                    unit: "₹",
+                    avg: avgIncome,
+                    delta: dIncome,
+                    fmt: (v) => `₹${(v / 1000).toFixed(0)}k`,
+                  },
+                ].map((metric) => {
+                  const isBad = metric.inv
+                    ? metric.delta > 8
+                    : metric.delta < -8;
+                  const isGood = metric.inv
+                    ? metric.delta < -8
+                    : metric.delta > 8;
                   return (
-                    <div key={metric.label} className={`bg-white rounded-lg border p-2.5 ${isBad ? 'border-red-200 bg-red-50/40' : isGood ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200'}`}>
+                    <div
+                      key={metric.label}
+                      className={`bg-white rounded-lg border p-2.5 ${isBad ? "border-red-200 bg-red-50/40" : isGood ? "border-emerald-200 bg-emerald-50/30" : "border-slate-200"}`}
+                    >
                       <div className="flex items-center justify-between">
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{metric.label}</p>
-                        <span className={`text-[9px] font-black px-1 py-0.5 rounded ${isBad ? 'bg-red-700 text-white' : isGood ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{metric.delta>0?'+':''}{metric.delta.toFixed(1)}% vs avg</span>
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                          {metric.label}
+                        </p>
+                        <span
+                          className={`text-[9px] font-black px-1 py-0.5 rounded ${isBad ? "bg-red-700 text-white" : isGood ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"}`}
+                        >
+                          {metric.delta > 0 ? "+" : ""}
+                          {metric.delta.toFixed(1)}% vs avg
+                        </span>
                       </div>
-                      <p className="text-sm font-black text-slate-900 mt-1 tabular-nums">{metric.fmt ? metric.fmt(metric.value) : `${Number(metric.value).toFixed(1)}${metric.unit}`}</p>
+                      <p className="text-sm font-black text-slate-900 mt-1 tabular-nums">
+                        {metric.fmt
+                          ? metric.fmt(metric.value)
+                          : `${Number(metric.value).toFixed(1)}${metric.unit}`}
+                      </p>
                       <div className="mt-1.5 h-1.5 bg-slate-100 rounded-full overflow-hidden relative">
-                        <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, Math.max(8, (metric.value / (metric.avg*1.4))*100))}%`, background: metric.label==='Unemployment' ? '#7c3aed' : metric.label==='Literacy' ? '#0284c7' : metric.label==='Density' ? '#334155' : '#d97706' }} />
-                        <div className="absolute top-0 bottom-0 w-0.5 bg-slate-900" style={{ left: `${Math.min(100, Math.max(0, (metric.avg / (metric.avg*1.4))*100))}%` }} title={`State avg ${metric.avg?.toFixed(1)}`} />
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${Math.min(100, Math.max(8, (metric.value / (metric.avg * 1.4)) * 100))}%`,
+                            background:
+                              metric.label === "Unemployment"
+                                ? "#7c3aed"
+                                : metric.label === "Literacy"
+                                  ? "#0284c7"
+                                  : metric.label === "Density"
+                                    ? "#334155"
+                                    : "#d97706",
+                          }}
+                        />
+                        <div
+                          className="absolute top-0 bottom-0 w-0.5 bg-slate-900"
+                          style={{
+                            left: `${Math.min(100, Math.max(0, (metric.avg / (metric.avg * 1.4)) * 100))}%`,
+                          }}
+                          title={`State avg ${metric.avg?.toFixed(1)}`}
+                        />
                       </div>
-                      <p className="text-[9px] text-slate-400 mt-1">State avg {metric.fmt ? metric.fmt(metric.avg) : `${metric.avg?.toFixed(1)}${metric.unit}`}</p>
+                      <p className="text-[9px] text-slate-400 mt-1">
+                        State avg{" "}
+                        {metric.fmt
+                          ? metric.fmt(metric.avg)
+                          : `${metric.avg?.toFixed(1)}${metric.unit}`}
+                      </p>
                     </div>
                   );
                 })}
@@ -2058,37 +2526,83 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
 
               {/* How it affects risk — equation */}
               <div className="bg-slate-900 rounded-lg p-3 text-white">
-                <p className="text-[9px] font-black tracking-widest uppercase text-violet-300 mb-2">How this district’s economy lifts risk</p>
+                <p className="text-[9px] font-black tracking-widest uppercase text-violet-300 mb-2">
+                  How this district’s economy lifts risk
+                </p>
                 <div className="flex items-center gap-1 flex-wrap text-xs font-mono">
-                  <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700">{Math.round(base)}</span>
-                  {bonuses.slice(1).map(b=>(
+                  <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700">
+                    {Math.round(base)}
+                  </span>
+                  {bonuses.slice(1).map((b) => (
                     <span key={b.label} className="flex items-center gap-1">
                       <span className="text-slate-500">+</span>
-                      <span className={`px-2 py-1 rounded text-white font-bold ${b.color}`}>{b.val>0?'+':''}{b.val.toFixed(1)} <span className="font-normal text-[10px] opacity-80">{b.label.split(' ')[0]}</span></span>
+                      <span
+                        className={`px-2 py-1 rounded text-white font-bold ${b.color}`}
+                      >
+                        {b.val > 0 ? "+" : ""}
+                        {b.val.toFixed(1)}{" "}
+                        <span className="font-normal text-[10px] opacity-80">
+                          {b.label.split(" ")[0]}
+                        </span>
+                      </span>
                     </span>
                   ))}
                   <span className="text-slate-500">=</span>
-                  <span className="px-2.5 py-1 rounded bg-white text-slate-900 font-black">{total.toFixed(1)}</span>
+                  <span className="px-2.5 py-1 rounded bg-white text-slate-900 font-black">
+                    {total.toFixed(1)}
+                  </span>
                 </div>
                 <div className="mt-2.5 flex h-2 rounded-full overflow-hidden bg-slate-800">
-                  {bonuses.map(b=> {
-                    const w = Math.max(2, (Math.abs(b.val)/Math.max(1,Math.abs(total)))*100);
-                    return <div key={b.label} title={`${b.label}: ${b.val.toFixed(1)}`} className={`${b.color}`} style={{width: `${w}%`}} />;
+                  {bonuses.map((b) => {
+                    const w = Math.max(
+                      2,
+                      (Math.abs(b.val) / Math.max(1, Math.abs(total))) * 100,
+                    );
+                    return (
+                      <div
+                        key={b.label}
+                        title={`${b.label}: ${b.val.toFixed(1)}`}
+                        className={`${b.color}`}
+                        style={{ width: `${w}%` }}
+                      />
+                    );
                   })}
                 </div>
                 <div className="mt-1 flex gap-2 text-[9px] font-bold uppercase tracking-wider">
-                  {bonuses.map(b=> <span key={b.label} className="flex items-center gap-1"><span className={`w-2 h-2 rounded-sm ${b.color}`} />{b.label}</span>)}
+                  {bonuses.map((b) => (
+                    <span key={b.label} className="flex items-center gap-1">
+                      <span className={`w-2 h-2 rounded-sm ${b.color}`} />
+                      {b.label}
+                    </span>
+                  ))}
                 </div>
                 <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                  {s.unemployment_rate > (avgUnemp||7) ? `Unemployment ${Number(s.unemployment_rate).toFixed(1)}% is ${dUnemp.toFixed(0)}% above state mean — each +1% adds ~3.5 risk points (this district +${(m.unemployment_bonus||0).toFixed(1)}).` : `Unemployment below mean cushions risk.`}
-                  {s.literacy_rate < (avgLit||75) ? ` Lower literacy (${Number(s.literacy_rate).toFixed(1)}%) correlates with vulnerability (+${((75-s.literacy_rate)*0.15).toFixed(1)}).` : ''} 
-                  {poiCount?.total ? ` ${poiCount.total} POIs (${poiCount.risk_sum} risk weight) near liquor/ATM clusters amplify opportunity.` : ''}
+                  {s.unemployment_rate > (avgUnemp || 7)
+                    ? `Unemployment ${Number(s.unemployment_rate).toFixed(1)}% is ${dUnemp.toFixed(0)}% above state mean — each +1% adds ~3.5 risk points (this district +${(m.unemployment_bonus || 0).toFixed(1)}).`
+                    : `Unemployment below mean cushions risk.`}
+                  {s.literacy_rate < (avgLit || 75)
+                    ? ` Lower literacy (${Number(s.literacy_rate).toFixed(1)}%) correlates with vulnerability (+${((75 - s.literacy_rate) * 0.15).toFixed(1)}).`
+                    : ""}
+                  {poiCount?.total
+                    ? ` ${poiCount.total} POIs (${poiCount.risk_sum} risk weight) near liquor/ATM clusters amplify opportunity.`
+                    : ""}
                 </p>
               </div>
 
               <div className="flex items-center justify-between text-[9px] text-slate-500 border-t border-violet-100 pt-2">
-                <span>Source: <span className="font-semibold text-slate-700">{s.source || 'data.gov.in + OSM + Open-Meteo'}</span></span>
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live — {s.updated_at ? new Date(s.updated_at).toLocaleDateString() : 'today'}</span>
+                <span>
+                  Source:{" "}
+                  <span className="font-semibold text-slate-700">
+                    {s.source || "data.gov.in + OSM + Open-Meteo"}
+                  </span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />{" "}
+                  Live —{" "}
+                  {s.updated_at
+                    ? new Date(s.updated_at).toLocaleDateString()
+                    : "today"}
+                </span>
               </div>
             </div>
           );
@@ -2097,30 +2611,69 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
         {/* Live POI & Weather */}
         <div className="grid grid-cols-2 gap-2">
           <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
-            <p className="text-[10px] font-medium text-amber-700 flex items-center gap-1"><Beer className="h-3 w-3" /> POI Risk Points</p>
+            <p className="text-[10px] font-medium text-amber-700 flex items-center gap-1">
+              <Beer className="h-3 w-3" /> POI Risk Points
+            </p>
             {(() => {
               const total = poiCount?.total ?? m.poi_total;
               const liquor = m.poi_liquor ?? 0;
               const hasData = total != null;
               return (
                 <>
-                  <p className="text-lg font-black text-amber-800">{hasData ? `${total} pts` : '—'}</p>
+                  <p className="text-lg font-black text-amber-800">
+                    {hasData ? `${total} pts` : "—"}
+                  </p>
                   <p className="text-[10px] text-amber-700">
-                    {hasData ? (liquor ? `${liquor} liquor outlets` : poiCount?.risk_sum ? `Risk sum ${poiCount.risk_sum}` : `${total} POIs — liquor 0`) : 'Not ingested — Refresh Live Data'}
+                    {hasData
+                      ? liquor
+                        ? `${liquor} liquor outlets`
+                        : poiCount?.risk_sum
+                          ? `Risk sum ${poiCount.risk_sum}`
+                          : `${total} POIs — liquor 0`
+                      : "Not ingested — Refresh Live Data"}
                   </p>
                   {!hasData && (
-                    <button onClick={() => token && crimeMapApi.refreshIntelligence(token, { district: spot.name }).then(()=> window.location.reload())} className="mt-1 text-[10px] font-bold text-amber-700 underline">Ingest {spot.name} now</button>
+                    <button
+                      onClick={() =>
+                        token &&
+                        crimeMapApi
+                          .refreshIntelligence(token, { district: spot.name })
+                          .then(() => window.location.reload())
+                      }
+                      className="mt-1 text-[10px] font-bold text-amber-700 underline"
+                    >
+                      Ingest {spot.name} now
+                    </button>
                   )}
                 </>
               );
             })()}
           </div>
           <div className="p-3 bg-sky-50 rounded-lg border border-sky-100">
-            <p className="text-[10px] font-medium text-sky-700 flex items-center gap-1"><CloudRain className="h-3 w-3" /> Weather (14d)</p>
-            {weather.length? (
-              <><p className="text-xs font-bold text-slate-900">{weather[0].avg_temp?.toFixed?.(1) ?? m.weather_temp_14d_avg ?? '—'}°C · {weather[0].rainfall ?? m.weather_rain_14d_avg ?? '—'}mm rain</p><p className="text-[10px] text-sky-700">{weather.length} days live (Open-Meteo)</p></>
+            <p className="text-[10px] font-medium text-sky-700 flex items-center gap-1">
+              <CloudRain className="h-3 w-3" /> Weather (14d)
+            </p>
+            {weather.length ? (
+              <>
+                <p className="text-xs font-bold text-slate-900">
+                  {weather[0].avg_temp?.toFixed?.(1) ??
+                    m.weather_temp_14d_avg ??
+                    "—"}
+                  °C · {weather[0].rainfall ?? m.weather_rain_14d_avg ?? "—"}mm
+                  rain
+                </p>
+                <p className="text-[10px] text-sky-700">
+                  {weather.length} days live (Open-Meteo)
+                </p>
+              </>
             ) : (
-              <><p className="text-xs font-bold text-slate-900">{m.weather_temp_14d_avg ?? '—'}°C · {m.weather_rain_14d_avg ?? '—'}mm</p><p className="text-[10px] text-slate-500">Open-Meteo live</p></>
+              <>
+                <p className="text-xs font-bold text-slate-900">
+                  {m.weather_temp_14d_avg ?? "—"}°C ·{" "}
+                  {m.weather_rain_14d_avg ?? "—"}mm
+                </p>
+                <p className="text-[10px] text-slate-500">Open-Meteo live</p>
+              </>
             )}
           </div>
         </div>
@@ -2135,7 +2688,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               title: `${spot.top_crime || "All crimes"} in ${spot.name}`,
             })
           }
-          className="w-full py-2.5 bg-white border border-slate-600 text-[#1A1A2E] rounded-sm text-xs font-bold hover:border-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 px-4 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center gap-2 border border-red-700"
         >
           <Route className="h-3.5 w-3.5" />
           {spot.top_crime
@@ -2144,16 +2697,21 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
         </button>
         <button
           onClick={() => {
-            const drivers = (spot.risk_drivers||[]).join('; ');
-            const se = socio ? `Unemployment ${socio.unemployment_rate}%, Density ${socio.population_density}/km², Income ₹${socio.per_capita_income}, Literacy ${socio.literacy_rate}%` : '';
-            const poi = `POIs: ${m.poi_total ?? 'N/A'} (${m.poi_liquor ?? 0} liquor)`;
-            const wx = `Weather 14d avg: ${m.weather_rain_14d_avg ?? 'N/A'}mm rain, ${m.weather_temp_14d_avg ?? 'N/A'}°C`;
-            const msg = `Provide a deep dive analysis of crime in ${spot.name} district. Enhanced risk score: ${Math.round(spot.risk_score)} (${spot.risk_level}) base ${spot.risk_score_base ? Math.round(spot.risk_score_base) : 'N/A'}. Crime count: ${spot.crime_count}. Repeat offenders: ${spot.repeat_offenders}. Pending: ${spot.pending_investigations}. Trend: ${(spot.change_pct||0)>0?'+':''}${spot.change_pct||0}%. Top crime: ${spot.top_crime||'N/A'}. Rank: ${spot.rank||'N/A'}.\nLive drivers: ${drivers || 'None'}\nSocio-economic (live): ${se}\n${poi}\n${wx}\nCorrelate socio-economic unemployment, POI liquor/ATM density, and monsoon/heat weather with the crime pattern and recommend targeted patrols near liquor/ATM clusters and socio interventions.`;
+            const drivers = (spot.risk_drivers || []).join("; ");
+            const se = socio
+              ? `Unemployment ${socio.unemployment_rate}%, Density ${socio.population_density}/km², Income ₹${socio.per_capita_income}, Literacy ${socio.literacy_rate}%`
+              : "";
+            const poi = `POIs: ${m.poi_total ?? "N/A"} (${m.poi_liquor ?? 0} liquor)`;
+            const wx = `Weather 14d avg: ${m.weather_rain_14d_avg ?? "N/A"}mm rain, ${m.weather_temp_14d_avg ?? "N/A"}°C`;
+            const msg = `Provide a deep dive analysis of crime in ${spot.name} district. Enhanced risk score: ${Math.round(spot.risk_score)} (${spot.risk_level}) base ${spot.risk_score_base ? Math.round(spot.risk_score_base) : "N/A"}. Crime count: ${spot.crime_count}. Repeat offenders: ${spot.repeat_offenders}. Pending: ${spot.pending_investigations}. Trend: ${(spot.change_pct || 0) > 0 ? "+" : ""}${spot.change_pct || 0}%. Top crime: ${spot.top_crime || "N/A"}. Rank: ${spot.rank || "N/A"}.\nLive drivers: ${drivers || "None"}\nSocio-economic (live): ${se}\n${poi}\n${wx}\nCorrelate socio-economic unemployment, POI liquor/ATM density, and monsoon/heat weather with the crime pattern and recommend targeted patrols near liquor/ATM clusters and socio interventions.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full py-3 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 hover:shadow-md text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          className="group w-full py-2.5 px-4 bg-white border border-[#DDE3EC] text-[#1A1A2E] rounded-full text-xs font-bold hover:border-blue-900/90 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
         >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white group-hover:bg-red-700 transition-colors"><Sparkles className="h-3.5 w-3.5" /></span> {t("crimeMap.askAI.districtAnalysis")}
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+            <Sparkles className="h-3.5 w-3.5" />
+          </span>{" "}
+          {t("crimeMap.askAI.districtAnalysis")}
         </button>
       </div>
     </>
@@ -2181,7 +2739,7 @@ function RiskBar({ label, value }) {
       </div>
       <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
         <div
-          className="h-full bg-blue-900 rounded-full transition-all"
+          className="h-full bg-blue-900/90 rounded-full transition-all"
           style={{ width: `${value}%` }}
         />
       </div>
@@ -2196,44 +2754,119 @@ RiskBar.propTypes = {
 
 function POIPanel({ spot, onClose, onOpenPatrol }) {
   const navigate = useNavigate();
-  const typeColor = {
-    Liquor_Store: "bg-amber-50 text-amber-800 border-amber-200",
-    ATM: "bg-blue-50 text-blue-700 border-blue-200",
-    Bank: "bg-violet-50 text-violet-700 border-violet-200",
-    Bus_Stop: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    Railway_Station: "bg-red-50 text-red-700 border-red-200",
-  }[spot.poi_type] || "bg-slate-50 text-slate-700 border-slate-200";
-  const riskNote = spot.risk_weight >=5 ? "High-crime attractor — prioritize patrol" : spot.risk_weight===3 ? "Moderate risk — check CCTV" : "Baseline infrastructure";
+  const typeColor =
+    {
+      Liquor_Store: "bg-amber-50 text-amber-800 border-amber-200",
+      ATM: "bg-blue-50 text-blue-700 border-blue-200",
+      Bank: "bg-violet-50 text-violet-700 border-violet-200",
+      Bus_Stop: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      Railway_Station: "bg-red-50 text-red-700 border-red-200",
+    }[spot.poi_type] || "bg-slate-50 text-slate-700 border-slate-200";
+  const riskNote =
+    spot.risk_weight >= 5
+      ? "High-crime attractor — prioritize patrol"
+      : spot.risk_weight === 3
+        ? "Moderate risk — check CCTV"
+        : "Baseline infrastructure";
   return (
     <>
-      <PanelHeader id={`POI`} name={spot.name} type={spot.poi_type?.replace('_',' ')} typeColor={typeColor} typeIcon={<MapPin size={10} />} onClose={onClose} subtitle={`${spot.district || ''} · Risk weight ${spot.risk_weight ?? '—'} · ${riskNote}`} />
+      <PanelHeader
+        id={`POI`}
+        name={spot.name}
+        type={spot.poi_type?.replace("_", " ")}
+        typeColor={typeColor}
+        typeIcon={<MapPin size={10} />}
+        onClose={onClose}
+        subtitle={`${spot.district || ""} · Risk weight ${spot.risk_weight ?? "—"} · ${riskNote}`}
+      />
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-4">
         <div className={`p-3 rounded-lg border ${typeColor}`}>
-          <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Infrastructure Risk</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+            Infrastructure Risk
+          </p>
           <p className="text-sm font-bold mt-1">{riskNote}</p>
-          <p className="text-[11px] mt-1 opacity-80">Live data via OpenStreetMap Overpass · OSM ID {spot.id}</p>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]"><p className="text-[10px] text-slate-500">Coordinates</p><p className="text-xs font-bold">{Number(spot.lat).toFixed(4)}, {Number(spot.lng).toFixed(4)}</p></div>
-          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]"><p className="text-[10px] text-slate-500">District</p><p className="text-xs font-bold">{spot.district || '—'}</p></div>
-        </div>
-        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
-          <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Predictive Insight</p>
-          <p className="text-xs text-slate-700 leading-relaxed">
-            {spot.poi_type==='Liquor_Store' && "Liquor outlets correlate with brawls & public order offences — recommend evening beat near this POI."}
-            {spot.poi_type==='ATM' && "ATMs attract property crime — toggle ATM layer with crime heatmap to spot robbery clusters."}
-            {spot.poi_type==='Bus_Stop' && "Transit hubs see chain snatching & theft — align patrol with peak commute."}
-            {spot.poi_type==='Bank' && "Banks are economic-offence hotspots — coordinate with EOW."}
-            {spot.poi_type==='Railway_Station' && "Stations funnel inter-district movement — check repeat offender transit."}
+          <p className="text-[11px] mt-1 opacity-80">
+            Live data via OpenStreetMap Overpass · OSM ID {spot.id}
           </p>
         </div>
-        <button onClick={()=> onOpenPatrol && onOpenPatrol({ area: spot.district || '', crimeFocus: spot.poi_type==='Liquor_Store'?4 : spot.poi_type==='ATM'?2 : null, crimeLabel: spot.poi_type==='Liquor_Store' ? 'Public Order' : spot.poi_type==='ATM' ? 'Theft' : null, timeRange: 'evening', title: `POI patrol · ${spot.name}` })} className="w-full py-2.5 bg-white border border-slate-600 text-[#1A1A2E] rounded-sm text-xs font-bold hover:border-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white transition-colors shadow-sm flex items-center justify-center gap-1.5"><Route className="h-3.5 w-3.5" /> Patrol near this POI</button>
-        <button onClick={()=> { const msg=`Analyze this POI in Karnataka crime context: Type ${spot.poi_type}, Name ${spot.name}, District ${spot.district}, Coords ${spot.lat},${spot.lng}, Risk weight ${spot.risk_weight}. Explain its criminogenic relevance and suggest mitigation.`; navigate('/', { state:{ initialMessage: msg }}); }} className="w-full py-3 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 hover:shadow-md text-xs font-bold flex items-center justify-center gap-1.5"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white group-hover:bg-red-700 transition-colors"><Sparkles className="h-3.5 w-3.5" /></span> Ask AI about this POI</button>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
+            <p className="text-[10px] text-slate-500">Coordinates</p>
+            <p className="text-xs font-bold">
+              {Number(spot.lat).toFixed(4)}, {Number(spot.lng).toFixed(4)}
+            </p>
+          </div>
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
+            <p className="text-[10px] text-slate-500">District</p>
+            <p className="text-xs font-bold">{spot.district || "—"}</p>
+          </div>
+        </div>
+        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+          <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
+            Predictive Insight
+          </p>
+          <p className="text-xs text-slate-700 leading-relaxed">
+            {spot.poi_type === "Liquor_Store" &&
+              "Liquor outlets correlate with brawls & public order offences — recommend evening beat near this POI."}
+            {spot.poi_type === "ATM" &&
+              "ATMs attract property crime — toggle ATM layer with crime heatmap to spot robbery clusters."}
+            {spot.poi_type === "Bus_Stop" &&
+              "Transit hubs see chain snatching & theft — align patrol with peak commute."}
+            {spot.poi_type === "Bank" &&
+              "Banks are economic-offence hotspots — coordinate with EOW."}
+            {spot.poi_type === "Railway_Station" &&
+              "Stations funnel inter-district movement — check repeat offender transit."}
+          </p>
+        </div>
+        <button
+          onClick={() =>
+            onOpenPatrol &&
+            onOpenPatrol({
+              area: spot.district || "",
+              crimeFocus:
+                spot.poi_type === "Liquor_Store"
+                  ? 4
+                  : spot.poi_type === "ATM"
+                    ? 2
+                    : null,
+              crimeLabel:
+                spot.poi_type === "Liquor_Store"
+                  ? "Public Order"
+                  : spot.poi_type === "ATM"
+                    ? "Theft"
+                    : null,
+              timeRange: "evening",
+              title: `POI patrol · ${spot.name}`,
+            })
+          }
+          className="w-full py-2.5 px-4 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center gap-2 border border-red-700"
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+            <Route className="h-3.5 w-3.5" />
+          </span>{" "}
+          Patrol near this POI
+        </button>
+        <button
+          onClick={() => {
+            const msg = `Analyze this POI in Karnataka crime context: Type ${spot.poi_type}, Name ${spot.name}, District ${spot.district}, Coords ${spot.lat},${spot.lng}, Risk weight ${spot.risk_weight}. Explain its criminogenic relevance and suggest mitigation.`;
+            navigate("/", { state: { initialMessage: msg } });
+          }}
+          className="group w-full py-2.5 px-4 bg-white border border-[#DDE3EC] text-[#1A1A2E] rounded-full text-xs font-bold hover:border-blue-900/90 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+        >
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+            <Sparkles className="h-3.5 w-3.5" />
+          </span>{" "}
+          Ask AI about this POI
+        </button>
       </div>
     </>
   );
 }
-POIPanel.propTypes = { spot: PropTypes.object.isRequired, onClose: PropTypes.func.isRequired, onOpenPatrol: PropTypes.func };
+POIPanel.propTypes = {
+  spot: PropTypes.object.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onOpenPatrol: PropTypes.func,
+};
 
 /* ── Cluster / Hotspot Panel ────────────────────────────────────── */
 
@@ -2380,7 +3013,7 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
               title: dominant ? `${dominant} hotspot` : "Cluster hotspot",
             });
           }}
-          className="w-full py-2.5 bg-white border border-slate-600 text-[#1A1A2E] rounded-sm text-xs font-bold hover:border-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 px-4 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center gap-2 border border-red-700"
         >
           <Route className="h-3.5 w-3.5" />
           {detail?.dominant_crime || spot.dominant_crime
@@ -2400,9 +3033,12 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
               const msg = `Provide a deep dive analysis of this crime hotspot. Total incidents: ${detail.crime_count}. Peak time: ${detail.peak_time}. Repeat offenders: ${detail.repeat_offenders}. Linked investigations: ${detail.linked_investigations}. Active networks: ${detail.active_networks}. Top crimes: ${topCrimes || "N/A"}. Nearby stations: ${stations || "N/A"}. Risk factors: ${risks || "N/A"}. Identify patterns, correlations between risk factors, and recommend enforcement actions.`;
               navigate("/", { state: { initialMessage: msg } });
             }}
-            className="w-full py-3 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 hover:shadow-md text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5"
+            className="group w-full py-2.5 px-4 bg-white border border-[#DDE3EC] text-[#1A1A2E] rounded-full text-xs font-bold hover:border-blue-900/90 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
           >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white group-hover:bg-red-700 transition-colors"><Sparkles className="h-3.5 w-3.5" /></span> {t("crimeMap.askAI.clusterAnalysis")}
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+              <Sparkles className="h-3.5 w-3.5" />
+            </span>{" "}
+            {t("crimeMap.askAI.clusterAnalysis")}
           </button>
         )}
       </div>
@@ -2539,9 +3175,12 @@ function NetworkPanel({ spot, onClose }) {
             const msg = `Provide a deep dive analysis of the criminal network "${spot.network_name}". Members: ${spot.member_count}. Total FIRs: ${spot.total_firs}. Risk level: ${spot.risk}. Districts covered: ${districts || "N/A"}. Top members: ${members || "N/A"}. Identify key operatives, communication patterns, operational structure, and recommend disruption strategies.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full py-3 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 hover:shadow-md text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          className="group w-full py-2.5 px-4 bg-white border border-[#DDE3EC] text-[#1A1A2E] rounded-full text-xs font-bold hover:border-blue-900/90 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
         >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white group-hover:bg-red-700 transition-colors"><Sparkles className="h-3.5 w-3.5" /></span> {t("crimeMap.askAI.networkAnalysis")}
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+            <Sparkles className="h-3.5 w-3.5" />
+          </span>{" "}
+          {t("crimeMap.askAI.networkAnalysis")}
         </button>
       </div>
     </>
@@ -2722,7 +3361,7 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
               {t("crimeMap.patrol.subtitle")}
             </h2>
             {initialContext?.crimeLabel && (
-              <p className="text-xs font-bold text-white bg-blue-900 border border-blue-900 rounded-full inline-flex items-center gap-1.5 px-2.5 py-1 mt-2">
+              <p className="text-xs font-bold text-white bg-blue-900/90 border border-blue-900/90 rounded-full inline-flex items-center gap-1.5 px-2.5 py-1 mt-2">
                 <Shield className="h-3 w-3" />
                 {initialContext.crimeLabel}
                 {initialContext.area ? ` · ${initialContext.area}` : ""}
@@ -2759,7 +3398,7 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
                       onClick={() => setTimeRange(opt.value)}
                       className={`p-2.5 rounded-xl border text-center transition-colors ${
                         timeRange === opt.value
-                          ? "bg-[#1A1A2E] border-[#1A1A2E] text-white shadow-sm"
+                          ? "bg-blue-900/90 border-blue-900/90 text-white shadow-sm"
                           : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
                       }`}
                     >
@@ -3078,7 +3717,7 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
             <button
               onClick={handleGenerate}
               disabled={loading}
-              className="w-full py-2.5 bg-[#1A1A2E] text-white rounded-full text-xs font-bold hover:bg-blue-900 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-blue-900/90 text-white rounded-full text-xs font-bold hover:bg-blue-900 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -3136,7 +3775,10 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
                 }}
                 className="flex-1 py-2.5 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5"
               >
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white group-hover:bg-red-700 transition-colors"><Sparkles className="h-3.5 w-3.5" /></span> {t("crimeMap.askAI.patrolInsights")}
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </span>{" "}
+                {t("crimeMap.askAI.patrolInsights")}
               </button>
               {/* <button
                 onClick={onClose}
@@ -3174,7 +3816,9 @@ function PanelHeader({
     <div className="p-4 border-b border-[#E5E7EB] bg-[#FAFBFC] flex justify-between items-start shrink-0">
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-bold text-[#6B7280] ksp-mono">{id}</span>
+          <span className="text-xs font-bold text-[#6B7280] ksp-mono">
+            {id}
+          </span>
           <span
             className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] flex items-center gap-1 border ${typeColor}`}
           >
