@@ -807,27 +807,27 @@ export default function InvestigationsQueue() {
           </tbody>
         </table>
       </div>
-      {/* Floating cross-case bar — now works for 1+ selected */}
+      {/* Floating cross-case bar — compact FAB anchored bottom-right */}
       {selected.length >= 1 && (
-        <div className="pointer-events-none fixed bottom-5 left-1/2 z-40 -translate-x-1/2">
-          <div className="pointer-events-auto flex items-center gap-4 border border-[#1A1A2E] bg-[#1A1A2E] px-4 py-2.5 shadow-lg">
-            <span className="text-xs font-medium text-white/90">
+        <div className="pointer-events-none fixed inset-x-4 bottom-2 z-40 flex justify-center sm:inset-x-auto sm:bottom-3 sm:right-3 sm:justify-end">
+          <div className="pointer-events-auto flex items-center gap-2.5 rounded-full border border-[#1A1A2E] bg-[#1A1A2E] py-1.5 pl-3.5 pr-1.5 shadow-[0_8px_24px_rgba(26,26,46,0.28),0_2px_8px_rgba(0,0,0,0.12)]">
+            <span className="whitespace-nowrap text-xs font-medium text-white/90">
               {selected.length}{" "}
               {selected.length === 1 ? "case selected" : "cases selected"}
             </span>
-            <span className="text-white/30">·</span>
+            <span className="h-4 w-px bg-white/15" />
             <button
               onClick={handleCrossCase}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-white hover:text-white/80"
+              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.06em] text-[#1A1A2E] shadow-sm transition hover:bg-[#F4F6F9]"
             >
               {selected.length === 1
                 ? "Chat about this case"
-                : "Start Cross-Case Analysis"}{" "}
+                : "Cross-case analysis"}
               <ArrowRight size={12} />
             </button>
             <button
               onClick={() => setSelected([])}
-              className="ml-2 text-white/50 hover:text-white"
+              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white"
               title="Clear selection"
             >
               <X size={14} />

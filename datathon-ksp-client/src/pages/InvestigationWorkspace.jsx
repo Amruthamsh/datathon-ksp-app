@@ -332,7 +332,7 @@ export default function InvestigationWorkspace() {
           <h1 className="ksp-mono text-[19px] font-black tracking-tight text-[#1A1A2E]">
             {caseData.CrimeNo || `#${caseData.CaseMasterID}`}
           </h1>
-          <span className="border border-[#DDE3EC] bg-white px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#374151]">
+          <span className="border border-blue-900/90 bg-blue-900/90 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
             {caseData.CrimeGroupName || caseData.CrimeHeadName || "—"}
           </span>
           <span
@@ -383,7 +383,7 @@ export default function InvestigationWorkspace() {
                 setSearchParams(sp, { replace: true });
               }}
               aria-current={activeTab === id ? "page" : undefined}
-              className={`whitespace-nowrap border-b-[3px] px-3 py-2.5 text-xs font-bold uppercase tracking-[0.08em] transition-colors ${activeTab === id ? "border-[#D62828] text-[#1A1A2E]" : "border-transparent text-[#6B7280] hover:text-[#1A1A2E]"}`}
+              className={`whitespace-nowrap border-b-[3px] px-3 py-2.5 text-xs font-bold uppercase tracking-[0.08em] transition-colors ${activeTab === id ? "border-[#D62828] text-[#1A1A2E]" : "border-transparent text-[#6B7280] hover:text-blue-900"}`}
             >
               {label}
             </button>
@@ -501,31 +501,31 @@ export default function InvestigationWorkspace() {
         </div>
       </div>
 
-      {/* Persistent copilot bar */}
-      <div className="shrink-0 z-20 border-t border-[#DDE3EC] bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 flex items-center gap-3 shadow-[0_-12px_24px_-14px_rgba(26,26,46,0.35)]">
-        <button
-          onClick={() => setCopilotOpen(true)}
-          className="flex flex-1 items-center gap-2.5 rounded-full border border-[#DDE3EC] bg-[#F4F6F9] px-4 py-2.5 text-left hover:bg-white hover:border-[#1A1A2E] transition group"
-        >
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white">
-            <Sparkles size={12} />
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block text-xs font-semibold text-[#1A1A2E] group-hover:text-[#1A1A2E]">
-              Ask CrimeLens about this case
+      {/* Persistent copilot bar — floating compact pill (not full-width dock) */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-2 z-20 flex justify-center px-4 sm:bottom-3">
+        <div className="relative w-full max-w-[480px]">
+          <button
+            onClick={() => setCopilotOpen(true)}
+            className="pointer-events-auto group flex w-full cursor-pointer items-center gap-2.5 rounded-full border border-[#DDE3EC] bg-white px-3 py-2 text-left shadow-[0_8px_24px_rgba(26,26,46,0.16),0_2px_8px_rgba(26,26,46,0.08)] transition hover:border-[#1A1A2E] hover:shadow-[0_12px_32px_rgba(26,26,46,0.2)] sm:gap-3 sm:px-4 sm:py-2.5"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white">
+              <Sparkles size={12} />
             </span>
-            <span className="block text-[11px] text-[#6B7280] truncate">
-              {copilotPlaceholder}
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-semibold leading-none text-[#1A1A2E]">Ask CrimeLens about this case</span>
+              <span className="hidden truncate text-[11px] leading-tight text-[#6B7280] sm:block">{copilotPlaceholder}</span>
+              <span className="block truncate text-[11px] leading-tight text-[#6B7280] sm:hidden">Tap to ask — evidence, next steps, MO</span>
             </span>
-          </span>
-          <ArrowRight
-            size={14}
-            className="shrink-0 text-[#9CA3AF] group-hover:text-[#1A1A2E]"
-          />
-        </button>
-        <span className="hidden sm:inline text-[11px] text-[#9CA3AF]">
-          {chatMessages.length > 0 ? `${chatMessages.length} in thread` : ""}
-        </span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F4F6F9] text-[#1A1A2E] transition group-hover:bg-[#1A1A2E] group-hover:text-white">
+              <ArrowRight size={14} />
+            </span>
+          </button>
+          {chatMessages.length > 0 && (
+            <span className="pointer-events-none absolute -right-2 -top-2 hidden h-5 min-w-[20px] items-center justify-center rounded-full bg-[#D62828] px-1.5 text-[10px] font-bold leading-none text-white shadow sm:flex">
+              {chatMessages.length}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Copilot Drawer */}
@@ -535,7 +535,7 @@ export default function InvestigationWorkspace() {
             className="absolute inset-0 bg-[#1A1A2E]/20 backdrop-blur-[1px]"
             onClick={() => setCopilotOpen(false)}
           />
-          <div className="relative flex h-full w-full max-w-[420px] flex-col border-l border-[#DDE3EC] bg-white shadow-2xl animate-[slideIn_0.2s_ease]">
+          <div className="relative flex h-full w-full max-w-[480px] flex-col border-l border-[#DDE3EC] bg-white shadow-2xl animate-[slideIn_0.2s_ease]">
             <div className="flex items-center justify-between border-b border-[#DDE3EC] bg-[#F4F6F9] px-4 py-3">
               <div className="flex items-center gap-2">
                 <span className="flex h-7 w-7 items-center justify-center bg-[#1A1A2E] text-white">
@@ -1017,7 +1017,7 @@ function CaseBriefTab({
                   {caseData.Gravity ? ` · ${caseData.Gravity}` : ""}
                 </p>
               </div>
-              <span className="ml-auto rounded-sm bg-[#1A1A2E] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
+              <span className="ml-auto rounded-sm bg-blue-900/90 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
                 {ageDays} days since FIR
               </span>
             </div>
@@ -1255,7 +1255,7 @@ function IntelDrawer({ similarCases, onAsk, onOpenIntel }) {
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-[#FAFBFC]"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEF2FF] text-[#3730A3]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white">
           <Sparkles size={15} />
         </span>
         <div className="min-w-0 flex-1">
