@@ -58,8 +58,8 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
 
   return (
     <div
-      className={`group relative flex items-center rounded-card transition ${
-        isActive ? "bg-primary-soft text-primary" : "hover:bg-slate-100"
+      className={`group relative flex items-center rounded-md transition ${
+        isActive ? "bg-slate-100 text-primary" : "hover:bg-slate-100"
       }`}
     >
       {editing ? (
@@ -110,7 +110,7 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
                 e.stopPropagation();
                 setMenuOpen((o) => !o);
               }}
-              className={`mr-1 rounded p-1 transition ${
+              className={`mr-1 rounded p-1 cursor-pointer transition ${
                 isActive
                   ? menuOpen
                     ? "bg-primary/15 text-primary"
@@ -224,7 +224,7 @@ const LeftNav = ({
       <nav className="flex-1 overflow-y-auto">
         <div className="px-2 py-3 space-y-1">
           {expanded && (
-            <p className="mb-1 px-4 pt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted">
+            <p className="mb-1 px-4 pt-1 text-[10px] font-bold uppercase tracking-wide text-red-700">
               {t("nav.workspace")}
             </p>
           )}
@@ -237,11 +237,11 @@ const LeftNav = ({
               <button
                 key={item.title}
                 onClick={() => navigate(targetPath)}
-                className={`w-full flex items-center rounded-card transition-colors cursor-pointer ${
+                className={`w-full flex items-center rounded-md transition-colors cursor-pointer ${
                   expanded ? "gap-3 px-4 py-2" : "justify-center py-3"
                 } ${
                   isActive
-                    ? "bg-primary-soft text-primary"
+                    ? "bg-slate-100 text-primary"
                     : "text-ink-secondary hover:bg-slate-100"
                 }`}
               >
@@ -263,7 +263,7 @@ const LeftNav = ({
           <>
             <div className="mx-3 my-2 border-t border-slate-200" />
             <div className="px-3 pb-6">
-              <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted">
+              <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-wide text-red-700">
                 {t("nav.recentChats")}
               </p>
 
