@@ -479,10 +479,9 @@ export default function CrimeIntelligenceMap() {
               />
 
               {showSocioOverlay && (
-                <div className="absolute bottom-[5.2rem] left-4 bg-white/95 backdrop-blur rounded-lg shadow-md border border-slate-200 px-3 py-2 z-10 flex items-center gap-3">
+                <div className="absolute bottom-24 left-4 bg-white/95 backdrop-blur rounded-lg shadow-md border border-slate-200 px-3 py-2 z-20 flex items-center gap-3">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                    <Building2 className="h-3 w-3 text-violet-600" />{" "}
-                    Unemployment
+                    <Building2 className="h-3 w-3 text-red-600" /> Unemployment
                   </span>
                   <span className="flex items-center gap-1 text-[10px] font-semibold">
                     <span
@@ -501,12 +500,12 @@ export default function CrimeIntelligenceMap() {
                   <span className="flex items-center gap-1 text-[10px] font-semibold">
                     <span
                       className="w-3 h-3 rounded-sm"
-                      style={{ background: "#8b5cf6" }}
+                      style={{ background: "#dc2626" }}
                     />{" "}
                     9%+{" "}
                   </span>
                   <span className="text-[9px] text-slate-400 ml-1">
-                    violet border = critical · deeper violet = lower literacy
+                    red border = critical · deeper red = lower literacy
                   </span>
                 </div>
               )}
@@ -603,7 +602,7 @@ function LayerSwitcher({
       label: "Banks",
       icon: Building2,
       weight: 2,
-      color: "#7c3aed",
+      color: "#1e3a8a",
     },
     {
       id: "Railway_Station",
@@ -910,7 +909,7 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
 
   if (last < 1) {
     return (
-      <div className="absolute bottom-3 left-4 right-4 bg-white/95 backdrop-blur rounded-xl shadow-lg border border-slate-200 p-3 z-10">
+      <div className="absolute bottom-2 left-3 right-3 bg-white/95 backdrop-blur rounded-xl shadow-md border border-slate-200 px-2.5 py-1.5 z-10">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
           <Clock className="h-3 w-3" /> {t("crimeMap.dateRange.title")}
         </p>
@@ -933,64 +932,53 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
   return (
     <>
       <style>{`
-        .range-dual { position: relative; height: 18px; }
+        .range-dual { position: relative; height: 14px; }
         .range-dual input[type="range"] {
           -webkit-appearance: none; appearance: none;
           position: absolute; top: 0; left: 0;
-          width: 100%; height: 18px;
+          width: 100%; height: 14px;
           background: transparent; outline: none;
           margin: 0; pointer-events: none;
         }
         .range-dual input[type="range"]::-webkit-slider-runnable-track {
           -webkit-appearance: none; appearance: none;
-          width: 100%; height: 4px; border-radius: 9999px; background: transparent;
+          width: 100%; height: 3px; border-radius: 9999px; background: transparent;
         }
         .range-dual input[type="range"]::-webkit-slider-thumb {
           -webkit-appearance: none; appearance: none;
-          width: 12px; height: 12px; border-radius: 9999px;
+          width: 10px; height: 10px; border-radius: 9999px;
           background: #fff; border: 2px solid #1e3a8a;
-          box-shadow: 0 1px 4px rgba(30,58,138,0.22);
-          cursor: pointer; pointer-events: auto; margin-top: -4px;
+          box-shadow: 0 1px 3px rgba(30,58,138,0.18);
+          cursor: pointer; pointer-events: auto; margin-top: -3.5px;
           transition: transform 0.12s;
         }
         .range-dual input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.08); }
         .range-dual input[type="range"]::-moz-range-track {
-          width: 100%; height: 4px; border-radius: 9999px; background: transparent;
+          width: 100%; height: 3px; border-radius: 9999px; background: transparent;
         }
         .range-dual input[type="range"]::-moz-range-thumb {
-          width: 12px; height: 12px; border-radius: 9999px;
+          width: 10px; height: 10px; border-radius: 9999px;
           background: #fff; border: 2px solid #1e3a8a;
-          box-shadow: 0 1px 4px rgba(30,58,138,0.22);
+          box-shadow: 0 1px 3px rgba(30,58,138,0.18);
           cursor: pointer; pointer-events: auto;
         }
       `}</style>
-      <div className="absolute bottom-3 left-3 right-3 bg-white rounded-2xl shadow-lg border border-[#E5E7EB] px-3 py-2.5 z-10">
-        <div className="flex items-center justify-between mb-1.5 gap-2">
+      <div className="absolute bottom-2 left-3 right-3 bg-white rounded-xl shadow-md border border-[#E5E7EB] px-2.5 py-1.5 z-10">
+        <div className="flex items-center justify-between mb-1 gap-2">
           <p className="text-[10px] font-bold text-[#1A1A2E] uppercase tracking-[0.08em] flex items-center gap-1 shrink-0">
             <Clock className="h-3 w-3 text-blue-900" />{" "}
             {t("crimeMap.dateRange.title")}
           </p>
-          <span className="text-[10px] font-bold tracking-wide text-white bg-blue-900/90 px-3 py-1 rounded-full whitespace-nowrap shadow-sm">
+          <span className="text-[9px] font-bold tracking-wide text-white bg-blue-900/90 px-2.5 py-0.5 rounded-full whitespace-nowrap">
             {rangeLabel}
           </span>
         </div>
 
-        <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
-          <div className="flex items-center justify-between mb-1.5">
-            {/* <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">
-              <span className="w-1 h-1 rounded-full bg-blue-900/90" />
-              {t("crimeMap.dateRange.from")} {formatMonthLabel(months[safeLo])}
-            </span>
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">
-              {t("crimeMap.dateRange.to")} {formatMonthLabel(months[safeHi])}
-              <span className="w-1 h-1 rounded-full bg-blue-900/90" />
-            </span> */}
-          </div>
-
+        <div className="rounded-lg bg-slate-50 border border-slate-100 px-2.5 py-1.5">
           <div className="relative">
-            <div className="absolute top-[7px] left-0 right-0 h-[4px] rounded-full bg-slate-200" />
+            <div className="absolute top-[5.5px] left-0 right-0 h-[3px] rounded-full bg-slate-200" />
             <div
-              className="absolute top-[7px] h-[4px] rounded-full bg-blue-900/90"
+              className="absolute top-[5.5px] h-[3px] rounded-full bg-blue-900/90"
               style={{ left: `${loPct}%`, width: `${selectedWidth}%` }}
             />
             <div className="range-dual">
@@ -1019,12 +1007,12 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between mt-2 text-[10px] font-bold text-slate-400 tracking-wide">
-            <span className="bg-white border border-slate-200 px-1.5 py-0.5 rounded-full text-[10px]">
+          <div className="flex items-center justify-between mt-1 text-[9px] font-bold text-slate-400 tracking-wide">
+            <span className="bg-white border border-slate-200 px-1.5 py-0 rounded-full text-[9px] leading-[1.6]">
               {formatMonthLabel(months[0])}
             </span>
             <span className="text-slate-300 text-[8px]">{months.length}m</span>
-            <span className="bg-white border border-slate-200 px-1.5 py-0.5 rounded-full text-[10px]">
+            <span className="bg-white border border-slate-200 px-1.5 py-0 rounded-full text-[9px] leading-[1.6]">
               {formatMonthLabel(months[last])}
             </span>
           </div>
@@ -1252,23 +1240,23 @@ function MapView({
           lineWidthMinPixels: viewMode === "Administrative" ? 0 : 1,
           getFillColor: (d) => {
             const u = d.properties.unemployment_rate ?? 7;
-            // unemployment choropleth: 5% teal → 10% purple, plus literacy wash
+            // unemployment choropleth: 5% navy → 10% red, plus literacy wash (consistent with top-cards palette)
             const lit = d.properties.literacy_rate ?? 75;
             // interpolate unemployment 5-10% to color ramp
             const t = Math.max(0, Math.min(1, (u - 5) / 5));
-            // low unemp teal, mid amber, high violet — highly visible
+            // low unemp navy, mid amber, high red — highly visible
             if (t < 0.33)
-              return [20, 184, 166, viewMode === "Administrative" ? 0 : 55]; // teal (~5-6.6%)
+              return [30, 58, 138, viewMode === "Administrative" ? 0 : 45]; // navy (~5-6.6%)
             if (t < 0.66)
-              return [245, 158, 11, viewMode === "Administrative" ? 0 : 60]; // amber (~6.6-8.3%)
-            // high unemployment: violet with literacy alpha boost (lower literacy = more opaque)
+              return [245, 158, 11, viewMode === "Administrative" ? 0 : 55]; // amber (~6.6-8.3%)
+            // high unemployment: red with literacy alpha boost (lower literacy = more opaque)
             const alpha =
               viewMode === "Administrative"
                 ? 0
                 : Math.round(55 + (75 - lit) * 1.2);
-            return [139, 92, 246, Math.max(50, Math.min(95, alpha))];
+            return [220, 38, 38, Math.max(50, Math.min(95, alpha))];
           },
-          getLineColor: [139, 92, 246, 60],
+          getLineColor: [220, 38, 38, 50],
           getLineWidth: 1,
           // show socio tooltip even in Administrative (district click still works via next layer)
           onClick:
@@ -1307,22 +1295,22 @@ function MapView({
             else if (score >= 25) base = [59, 130, 246, 40];
             else base = [34, 197, 94, 30];
             if (!showSocioOverlay) return base;
-            // Socio tint: blend violet haze proportional to unemployment premium over 7%
+            // Socio tint: blend red haze proportional to unemployment premium over 7% (consistent palette)
             const premium = Math.max(0, u - 7); // 0-~4
-            const violet = [
-              139,
-              92,
-              246,
+            const redTint = [
+              220,
+              38,
+              38,
               Math.round(Math.min(75, 18 + premium * 14)),
             ];
-            // alpha blend: mix base + violet (simple avg for visibility)
+            // alpha blend: mix base + red haze (simple avg for visibility)
             if (premium > 0.5) {
               const mix = Math.min(0.45, premium * 0.12);
               return [
-                Math.round(base[0] * (1 - mix) + violet[0] * mix),
-                Math.round(base[1] * (1 - mix) + violet[1] * mix),
-                Math.round(base[2] * (1 - mix) + violet[2] * mix),
-                Math.round(base[3] + violet[3] * 0.55),
+                Math.round(base[0] * (1 - mix) + redTint[0] * mix),
+                Math.round(base[1] * (1 - mix) + redTint[1] * mix),
+                Math.round(base[2] * (1 - mix) + redTint[2] * mix),
+                Math.round(base[3] + redTint[3] * 0.55),
               ];
             }
             // also show hatched border for high-unemp districts
@@ -1330,8 +1318,8 @@ function MapView({
           },
           getLineColor: (d) => {
             const u = d.properties.unemployment_rate ?? 7;
-            if (showSocioOverlay && u >= 9) return [109, 40, 217, 255]; // violet border for critical unemp
-            if (showSocioOverlay && u >= 8) return [147, 51, 234, 255];
+            if (showSocioOverlay && u >= 9) return [185, 28, 28, 255]; // red border for critical unemp
+            if (showSocioOverlay && u >= 8) return [180, 83, 9, 255];
             const score = d.properties.risk_score || 0;
             if (score >= 75) return [185, 28, 28, 255];
             if (score >= 50) return [180, 83, 9, 255];
@@ -1738,9 +1726,9 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
 
         {/* ── Socio-Economic Intelligence — State Lens ── */}
         {socioLens ? (
-          <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-slate-100 via-white to-sky-50 p-3.5 space-y-3 overflow-hidden">
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-3.5 space-y-3 overflow-hidden shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-black tracking-widest uppercase text-red-700 flex items-center gap-1.5">
+              <p className="text-[10px] font-black tracking-widest uppercase text-[#1E3A8A] flex items-center gap-1.5">
                 Socio-Economic Intelligence
               </p>
               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-900/90 text-white">
@@ -1749,7 +1737,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
             </div>
             {/* state averages */}
             <div className="grid grid-cols-4 gap-2">
-              <div className="bg-white rounded-lg border border-violet-100 p-2 text-center">
+              <div className="bg-[#F4F6F9] rounded-lg border border-[#E5E7EB] p-2 text-center">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
                   Avg Unemp
                 </p>
@@ -1758,16 +1746,16 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
                 </p>
                 <p className="text-[9px] text-slate-500">state mean</p>
               </div>
-              <div className="bg-white rounded-lg border border-sky-100 p-2 text-center">
+              <div className="bg-[#F4F6F9] rounded-lg border border-[#E5E7EB] p-2 text-center">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
                   Avg Literacy
                 </p>
-                <p className="text-sm font-black text-sky-700">
+                <p className="text-sm font-black text-[#1E3A8A]">
                   {socioLens.avgLit.toFixed(1)}%
                 </p>
                 <p className="text-[9px] text-slate-500">state mean</p>
               </div>
-              <div className="bg-white rounded-lg border border-slate-100 p-2 text-center">
+              <div className="bg-[#F4F6F9] rounded-lg border border-[#E5E7EB] p-2 text-center">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
                   Avg Density
                 </p>
@@ -1776,7 +1764,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
                 </p>
                 <p className="text-[9px] text-slate-500">per km²</p>
               </div>
-              <div className="bg-white rounded-lg border border-amber-100 p-2 text-center">
+              <div className="bg-[#F4F6F9] rounded-lg border border-[#E5E7EB] p-2 text-center">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
                   Avg Income
                 </p>
@@ -1787,7 +1775,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
               </div>
             </div>
             {/* how it affects risk — correlation insight */}
-            <div className="bg-white rounded-lg border border-slate-200 p-3 flex gap-3">
+            <div className="bg-[#F4F6F9] rounded-lg border border-[#E5E7EB] p-3 flex gap-3">
               <div className="flex-1">
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                   Correlation
@@ -1799,12 +1787,16 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
                   high-risk districts sit above mean unemployment. Economic
                   stress is the strongest live multiplier.
                 </p>
-                <div className="mt-2 flex items-center gap-1">
-                  <span className="text-[9px] font-bold text-slate-500">
-                    Formula:
+                <div className="mt-2.5 bg-white border border-[#E5E7EB] rounded-lg px-2.5 py-2">
+                  <span className="text-[9px] font-bold text-[#6B7280] uppercase tracking-[0.08em] block mb-1">
+                    Risk formula
                   </span>
-                  <span className="text-[10px] font-mono bg-slate-900 text-violet-200 px-1.5 py-0.5 rounded">
-                    Enhanced = Base + (Unemp-7)×3.5 + POI + Weather + Literacy
+                  <code className="text-[11px] font-mono font-semibold text-slate-700 leading-relaxed block">
+                    Enhanced = Base + (Unemp − 7) × 3.5 + POI + Weather +
+                    Literacy
+                  </code>
+                  <span className="text-[9px] text-slate-400 mt-1 block">
+                    Base = crime volume · repeat · pending · trend
                   </span>
                 </div>
               </div>
@@ -1817,12 +1809,12 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
                   )
                   .map((d, i) => {
                     const h = 14 + (d.socio.unemployment_rate - 5) * 5;
-                    const col = d.risk_score >= 50 ? "#8b5cf6" : "#14b8a6";
+                    const col = d.risk_score >= 50 ? "#dc2626" : "#1e3a8a";
                     return (
                       <div
                         key={i}
                         title={`${d.district}: ${d.socio.unemployment_rate}% → risk ${Math.round(d.risk_score)}`}
-                        className="rounded-sm"
+                        className="rounded-sm opacity-90"
                         style={{
                           height: `${Math.min(48, h)}px`,
                           background: col,
@@ -1841,7 +1833,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
                 {socioLens.topUnemp.map((d) => (
                   <div
                     key={d.district}
-                    className="flex items-center justify-between gap-1 bg-white border border-red-100 rounded px-2 py-1.5 mb-1 min-w-0 overflow-hidden"
+                    className="flex items-center justify-between gap-1 bg-white border border-[#E5E7EB] rounded px-2 py-1.5 mb-1 min-w-0 overflow-hidden"
                   >
                     <span className="text-xs font-semibold text-slate-800 truncate min-w-0 flex-1">
                       {d.district}
@@ -1857,18 +1849,18 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
                 ))}
               </div>
               <div className="min-w-0">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-sky-600 mb-1 truncate">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-[#1E3A8A] mb-1 truncate">
                   Lowest literacy → vulnerability
                 </p>
                 {socioLens.lowLit.map((d) => (
                   <div
                     key={d.district}
-                    className="flex items-center justify-between gap-1 bg-white border border-sky-100 rounded px-2 py-1.5 mb-1 min-w-0 overflow-hidden"
+                    className="flex items-center justify-between gap-1 bg-white border border-[#E5E7EB] rounded px-2 py-1.5 mb-1 min-w-0 overflow-hidden"
                   >
                     <span className="text-xs font-semibold text-slate-800 truncate min-w-0 flex-1">
                       {d.district}
                     </span>
-                    <span className="text-xs font-black text-sky-700 shrink-0 whitespace-nowrap tabular-nums">
+                    <span className="text-xs font-black text-[#1E3A8A] shrink-0 whitespace-nowrap tabular-nums">
                       {Number(d.socio.literacy_rate).toFixed(1)}%
                     </span>
                   </div>
@@ -1908,9 +1900,9 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
                     summary.contextual.priority,
                 })
               }
-              className="w-full py-2.5 px-4 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center gap-2 border border-red-700"
+              className="w-full py-2.5 px-4 bg-[#B91C1C] hover:bg-[#991B1B] active:bg-[#7F1D1D] text-white rounded-lg cursor-pointer text-xs font-bold tracking-wide shadow-sm border border-[#991B1B] flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B91C1C] focus-visible:ring-offset-2"
             >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 border border-white/20 backdrop-blur-sm shrink-0">
                 <Route className="h-3.5 w-3.5" />
               </span>
               Response Plan — {summary.contextual.top_sub_type}
@@ -1929,9 +1921,9 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
                   title: `Highest priority: ${hp.name} — ${hp.reason}`,
                 })
               }
-              className="w-full py-2.5 px-4 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center gap-2 border border-red-700"
+              className="w-full py-2.5 px-4 bg-[#B91C1C] hover:bg-[#991B1B] active:bg-[#7F1D1D] text-white rounded-lg cursor-pointer text-xs font-bold tracking-wide shadow-sm border border-[#991B1B] flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B91C1C] focus-visible:ring-offset-2"
             >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 border border-white/20 backdrop-blur-sm shrink-0">
                 <Route className="h-3.5 w-3.5" />
               </span>
               Patrol plan — {hp.name}
@@ -1949,9 +1941,9 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
               const msg = `Provide a deep dive analysis of crime in ${hp?.name || summary?.contextual?.top_district || "Karnataka"} district. Today's risk: ${risk}. Hotspots: ${hotspots}. Repeat: ${repeat}. Crimes 30d: ${crimes}. Priority: ${priority}. Highlight critical areas and recommend deployment.`;
               navigate("/", { state: { initialMessage: msg } });
             }}
-            className="group w-full py-2.5 px-4 bg-white border border-[#DDE3EC] text-[#1A1A2E] rounded-full text-xs font-bold hover:border-blue-900/90 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+            className="group w-full py-2.5 px-4 bg-white hover:bg-[#F8FAFC] text-[#0F172A] rounded-lg cursor-pointer text-xs font-bold border border-slate-200 hover:border-[#1E3A8A]/20 shadow-sm hover:shadow-md flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3A8A] focus-visible:ring-offset-2"
           >
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#1E3A8A] text-white shadow-sm group-hover:bg-[#1E40AF] transition-colors shrink-0">
               <Sparkles className="h-3.5 w-3.5" />
             </span>
             Analyze This District
@@ -2120,7 +2112,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
                 title: `${spot.sub_type || spot.crime_type} — ${spot.district || spot.station || ""}`,
               })
             }
-            className="w-full py-2.5 px-4 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center gap-2 border border-red-700"
+            className="w-full py-2.5 px-4 bg-[#B91C1C] hover:bg-[#991B1B] active:bg-[#7F1D1D] text-white rounded-lg cursor-pointer text-xs font-bold tracking-wide shadow-sm border border-[#991B1B] flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B91C1C] focus-visible:ring-offset-2"
           >
             <Route className="h-3.5 w-3.5" />
             Patrol: {spot.sub_type || spot.crime_type}
@@ -2132,9 +2124,9 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
             const msg = `Analyze this FIR: Crime No ${spot.CrimeNo || "N/A"}, ${spot.sub_type || spot.crime_type || "crime"}, registered ${spot.CrimeRegisteredDate || spot.date || "unknown"}. Status: ${spot.status || "unknown"}. Gravity: ${spot.gravity || "unknown"}. Station: ${spot.station || "unknown"}, District: ${spot.district || "Karnataka"}. Coordinates: ${spot.lat}, ${spot.lng}. Brief facts: ${spot.BriefFacts || "N/A"}. Identify factors and recommend investigation/intervention actions.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="group w-full py-2.5 px-4 bg-white border border-[#DDE3EC] text-[#1A1A2E] rounded-full text-xs font-bold hover:border-blue-900/90 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+          className="group w-full py-2.5 px-4 bg-white hover:bg-[#F8FAFC] text-[#0F172A] rounded-lg cursor-pointer text-xs font-bold border border-slate-200 hover:border-[#1E3A8A]/20 shadow-sm hover:shadow-md flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3A8A] focus-visible:ring-offset-2"
         >
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#1E3A8A] text-white shadow-sm group-hover:bg-[#1E40AF] transition-colors">
             <Sparkles className="h-3.5 w-3.5" />
           </span>{" "}
           {t("crimeMap.askAI.trendAnalysis")}
@@ -2345,8 +2337,8 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
           const s = socio || spot.socio;
           if (!s) {
             return (
-              <div className="rounded-xl border border-dashed border-violet-200 bg-violet-50/40 p-3 text-center">
-                <p className="text-xs font-bold text-violet-700 flex items-center justify-center gap-1.5">
+              <div className="rounded-xl border border-dashed border-[#E5E7EB] bg-[#F4F6F9] p-3 text-center">
+                <p className="text-xs font-bold text-[#1E3A8A] flex items-center justify-center gap-1.5">
                   <Loader2 className="h-3 w-3 animate-spin" /> Socio-economic
                   live data pending for {spot.name}
                 </p>
@@ -2397,11 +2389,11 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               (m.poi_bonus || 0) -
               (m.weather_bonus || 0);
           const bonuses = [
-            { label: "Base", val: base, color: "bg-slate-800" },
+            { label: "Base", val: base, color: "bg-slate-700" },
             {
               label: `Unemp ${m.unemployment_rate ?? s.unemployment_rate}%`,
               val: m.unemployment_bonus || 0,
-              color: "bg-violet-600",
+              color: "bg-red-600",
             },
             {
               label: `POI ${m.poi_total || 0}`,
@@ -2411,18 +2403,18 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
             {
               label: "Weather",
               val: m.weather_bonus || 0,
-              color: "bg-sky-500",
+              color: "bg-blue-900",
             },
           ].filter((b) => b.val !== 0 || b.label === "Base");
           const total = bonuses.reduce((a, b) => a + b.val, 0);
           return (
-            <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-sky-50 p-3.5 space-y-3">
+            <div className="rounded-xl border border-[#E5E7EB] bg-white p-3.5 space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black tracking-widest uppercase text-violet-700 flex items-center gap-1.5">
+                <p className="text-[10px] font-black tracking-widest uppercase text-[#1E3A8A] flex items-center gap-1.5">
                   <Building2 className="h-3.5 w-3.5" /> Socio-Economic
                   Intelligence — Live
                 </p>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-600 text-white">
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-900/90 text-white">
                   Year {s.year || new Date().getFullYear()}
                 </span>
               </div>
@@ -2497,9 +2489,9 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
                             width: `${Math.min(100, Math.max(8, (metric.value / (metric.avg * 1.4)) * 100))}%`,
                             background:
                               metric.label === "Unemployment"
-                                ? "#7c3aed"
+                                ? "#dc2626"
                                 : metric.label === "Literacy"
-                                  ? "#0284c7"
+                                  ? "#1e3a8a"
                                   : metric.label === "Density"
                                     ? "#334155"
                                     : "#d97706",
@@ -2526,7 +2518,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
 
               {/* How it affects risk — equation */}
               <div className="bg-slate-900 rounded-lg p-3 text-white">
-                <p className="text-[9px] font-black tracking-widest uppercase text-violet-300 mb-2">
+                <p className="text-[9px] font-black tracking-widest uppercase text-orange-300 mb-2">
                   How this district’s economy lifts risk
                 </p>
                 <div className="flex items-center gap-1 flex-wrap text-xs font-mono">
@@ -2535,7 +2527,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
                   </span>
                   {bonuses.slice(1).map((b) => (
                     <span key={b.label} className="flex items-center gap-1">
-                      <span className="text-slate-500">+</span>
+                      <span className="text-slate-400">+</span>
                       <span
                         className={`px-2 py-1 rounded text-white font-bold ${b.color}`}
                       >
@@ -2547,7 +2539,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
                       </span>
                     </span>
                   ))}
-                  <span className="text-slate-500">=</span>
+                  <span className="text-slate-400">=</span>
                   <span className="px-2.5 py-1 rounded bg-white text-slate-900 font-black">
                     {total.toFixed(1)}
                   </span>
@@ -2589,7 +2581,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between text-[9px] text-slate-500 border-t border-violet-100 pt-2">
+              <div className="flex items-center justify-between text-[9px] text-slate-500 border-t border-[#E5E7EB] pt-2">
                 <span>
                   Source:{" "}
                   <span className="font-semibold text-slate-700">
@@ -2688,7 +2680,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               title: `${spot.top_crime || "All crimes"} in ${spot.name}`,
             })
           }
-          className="w-full py-2.5 px-4 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center gap-2 border border-red-700"
+          className="w-full py-2.5 px-4 bg-[#B91C1C] hover:bg-[#991B1B] active:bg-[#7F1D1D] text-white rounded-lg cursor-pointer text-xs font-bold tracking-wide shadow-sm border border-[#991B1B] flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B91C1C] focus-visible:ring-offset-2"
         >
           <Route className="h-3.5 w-3.5" />
           {spot.top_crime
@@ -2706,9 +2698,9 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
             const msg = `Provide a deep dive analysis of crime in ${spot.name} district. Enhanced risk score: ${Math.round(spot.risk_score)} (${spot.risk_level}) base ${spot.risk_score_base ? Math.round(spot.risk_score_base) : "N/A"}. Crime count: ${spot.crime_count}. Repeat offenders: ${spot.repeat_offenders}. Pending: ${spot.pending_investigations}. Trend: ${(spot.change_pct || 0) > 0 ? "+" : ""}${spot.change_pct || 0}%. Top crime: ${spot.top_crime || "N/A"}. Rank: ${spot.rank || "N/A"}.\nLive drivers: ${drivers || "None"}\nSocio-economic (live): ${se}\n${poi}\n${wx}\nCorrelate socio-economic unemployment, POI liquor/ATM density, and monsoon/heat weather with the crime pattern and recommend targeted patrols near liquor/ATM clusters and socio interventions.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="group w-full py-2.5 px-4 bg-white border border-[#DDE3EC] text-[#1A1A2E] rounded-full text-xs font-bold hover:border-blue-900/90 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+          className="group w-full py-2.5 px-4 bg-white hover:bg-[#F8FAFC] text-[#0F172A] rounded-lg cursor-pointer text-xs font-bold border border-slate-200 hover:border-[#1E3A8A]/20 shadow-sm hover:shadow-md flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3A8A] focus-visible:ring-offset-2"
         >
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#1E3A8A] text-white shadow-sm group-hover:bg-[#1E40AF] transition-colors">
             <Sparkles className="h-3.5 w-3.5" />
           </span>{" "}
           {t("crimeMap.askAI.districtAnalysis")}
@@ -2758,7 +2750,7 @@ function POIPanel({ spot, onClose, onOpenPatrol }) {
     {
       Liquor_Store: "bg-amber-50 text-amber-800 border-amber-200",
       ATM: "bg-blue-50 text-blue-700 border-blue-200",
-      Bank: "bg-violet-50 text-violet-700 border-violet-200",
+      Bank: "bg-slate-50 text-slate-700 border-slate-200",
       Bus_Stop: "bg-emerald-50 text-emerald-700 border-emerald-200",
       Railway_Station: "bg-red-50 text-red-700 border-red-200",
     }[spot.poi_type] || "bg-slate-50 text-slate-700 border-slate-200";
@@ -2839,9 +2831,9 @@ function POIPanel({ spot, onClose, onOpenPatrol }) {
               title: `POI patrol · ${spot.name}`,
             })
           }
-          className="w-full py-2.5 px-4 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center gap-2 border border-red-700"
+          className="w-full py-2.5 px-4 bg-[#B91C1C] hover:bg-[#991B1B] active:bg-[#7F1D1D] text-white rounded-lg cursor-pointer text-xs font-bold tracking-wide shadow-sm border border-[#991B1B] flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B91C1C] focus-visible:ring-offset-2"
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 border border-white/20 backdrop-blur-sm shrink-0">
             <Route className="h-3.5 w-3.5" />
           </span>{" "}
           Patrol near this POI
@@ -2851,9 +2843,9 @@ function POIPanel({ spot, onClose, onOpenPatrol }) {
             const msg = `Analyze this POI in Karnataka crime context: Type ${spot.poi_type}, Name ${spot.name}, District ${spot.district}, Coords ${spot.lat},${spot.lng}, Risk weight ${spot.risk_weight}. Explain its criminogenic relevance and suggest mitigation.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="group w-full py-2.5 px-4 bg-white border border-[#DDE3EC] text-[#1A1A2E] rounded-full text-xs font-bold hover:border-blue-900/90 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+          className="group w-full py-2.5 px-4 bg-white hover:bg-[#F8FAFC] text-[#0F172A] rounded-lg cursor-pointer text-xs font-bold border border-slate-200 hover:border-[#1E3A8A]/20 shadow-sm hover:shadow-md flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3A8A] focus-visible:ring-offset-2"
         >
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#1E3A8A] text-white shadow-sm group-hover:bg-[#1E40AF] transition-colors">
             <Sparkles className="h-3.5 w-3.5" />
           </span>{" "}
           Ask AI about this POI
@@ -2926,11 +2918,11 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
                   {t("crimeMap.cluster.linkedCases")}
                 </p>
               </div>
-              <div className="p-3 bg-purple-50 rounded-lg border border-purple-100 text-center">
-                <p className="text-lg font-black text-purple-700">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-center">
+                <p className="text-lg font-black text-[#1E3A8A]">
                   {detail.active_networks}
                 </p>
-                <p className="text-[10px] font-semibold text-purple-600">
+                <p className="text-[10px] font-semibold text-slate-500">
                   {t("crimeMap.cluster.networks")}
                 </p>
               </div>
@@ -3013,7 +3005,7 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
               title: dominant ? `${dominant} hotspot` : "Cluster hotspot",
             });
           }}
-          className="w-full py-2.5 px-4 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center gap-2 border border-red-700"
+          className="w-full py-2.5 px-4 bg-[#B91C1C] hover:bg-[#991B1B] active:bg-[#7F1D1D] text-white rounded-lg cursor-pointer text-xs font-bold tracking-wide shadow-sm border border-[#991B1B] flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B91C1C] focus-visible:ring-offset-2"
         >
           <Route className="h-3.5 w-3.5" />
           {detail?.dominant_crime || spot.dominant_crime
@@ -3033,9 +3025,9 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
               const msg = `Provide a deep dive analysis of this crime hotspot. Total incidents: ${detail.crime_count}. Peak time: ${detail.peak_time}. Repeat offenders: ${detail.repeat_offenders}. Linked investigations: ${detail.linked_investigations}. Active networks: ${detail.active_networks}. Top crimes: ${topCrimes || "N/A"}. Nearby stations: ${stations || "N/A"}. Risk factors: ${risks || "N/A"}. Identify patterns, correlations between risk factors, and recommend enforcement actions.`;
               navigate("/", { state: { initialMessage: msg } });
             }}
-            className="group w-full py-2.5 px-4 bg-white border border-[#DDE3EC] text-[#1A1A2E] rounded-full text-xs font-bold hover:border-blue-900/90 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+            className="group w-full py-2.5 px-4 bg-white hover:bg-[#F8FAFC] text-[#0F172A] rounded-lg cursor-pointer text-xs font-bold border border-slate-200 hover:border-[#1E3A8A]/20 shadow-sm hover:shadow-md flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3A8A] focus-visible:ring-offset-2"
           >
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#1E3A8A] text-white shadow-sm group-hover:bg-[#1E40AF] transition-colors">
               <Sparkles className="h-3.5 w-3.5" />
             </span>{" "}
             {t("crimeMap.askAI.clusterAnalysis")}
@@ -3160,9 +3152,11 @@ function NetworkPanel({ spot, onClose }) {
       <div className="p-4 border-t border-slate-100 flex flex-col gap-2 bg-white">
         <button
           onClick={() => navigate("/networks")}
-          className="w-full py-3 bg-red-700 text-white rounded-full text-xs font-bold hover:bg-[#991b1b] transition-colors shadow-sm"
+          className="w-full py-2.5 px-4 bg-[#B91C1C] hover:bg-[#991B1B] active:bg-[#7F1D1D] text-white rounded-lg cursor-pointer text-xs font-bold tracking-wide shadow-sm border border-[#991B1B] flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B91C1C] focus-visible:ring-offset-2"
         >
-          <Users className="h-3.5 w-3.5 inline mr-1.5" />{" "}
+          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 border border-white/20 backdrop-blur-sm shrink-0">
+            <Users className="h-3.5 w-3.5" />
+          </span>{" "}
           {t("crimeMap.network.openInNetworks")}
         </button>
         <button
@@ -3175,9 +3169,9 @@ function NetworkPanel({ spot, onClose }) {
             const msg = `Provide a deep dive analysis of the criminal network "${spot.network_name}". Members: ${spot.member_count}. Total FIRs: ${spot.total_firs}. Risk level: ${spot.risk}. Districts covered: ${districts || "N/A"}. Top members: ${members || "N/A"}. Identify key operatives, communication patterns, operational structure, and recommend disruption strategies.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="group w-full py-2.5 px-4 bg-white border border-[#DDE3EC] text-[#1A1A2E] rounded-full text-xs font-bold hover:border-blue-900/90 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+          className="group w-full py-2.5 px-4 bg-white hover:bg-[#F8FAFC] text-[#0F172A] rounded-lg cursor-pointer text-xs font-bold border border-slate-200 hover:border-[#1E3A8A]/20 shadow-sm hover:shadow-md flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3A8A] focus-visible:ring-offset-2"
         >
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#1E3A8A] text-white shadow-sm group-hover:bg-[#1E40AF] transition-colors">
             <Sparkles className="h-3.5 w-3.5" />
           </span>{" "}
           {t("crimeMap.askAI.networkAnalysis")}
@@ -3478,7 +3472,7 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
                     <span
                       className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
                         prevention.deployment_type === "cyber_cell"
-                          ? "bg-violet-50 text-violet-700 border-violet-200"
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
                           : prevention.deployment_type === "women_safety"
                             ? "bg-pink-50 text-pink-700 border-pink-200"
                             : prevention.deployment_type === "economic_cell"
@@ -3775,7 +3769,7 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
                 }}
                 className="flex-1 py-2.5 group bg-white border border-[#E5E7EB] text-slate-800 rounded-2xl hover:border-red-200 hover:bg-red-50/40 text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5"
               >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white group-hover:bg-red-700 transition-colors">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#1E3A8A] text-white shadow-sm group-hover:bg-[#1E40AF] transition-colors">
                   <Sparkles className="h-3.5 w-3.5" />
                 </span>{" "}
                 {t("crimeMap.askAI.patrolInsights")}
