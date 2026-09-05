@@ -649,7 +649,7 @@ export default function CrimeIntelligenceMap() {
                 ) : (
                   <button
                     onClick={() => setShowCrimeTypesPanel(true)}
-                    className="absolute bottom-[88px] left-4 z-20 bg-white/90 backdrop-blur-md rounded-full border border-[#E2E8F0] px-3 py-1.5 text-xs font-semibold text-[#334155] hover:bg-white flex items-center gap-1.5 cursor-pointer"
+                    className="absolute top-4 right-4 z-20 bg-white/90 backdrop-blur-md rounded-full border border-[#E2E8F0] px-3 py-1.5 text-xs font-semibold text-[#334155] hover:bg-white flex items-center gap-1.5 cursor-pointer"
                     style={{ boxShadow: "0 2px 8px rgba(15,23,42,0.10)" }}
                     title="Show crime types"
                   >
@@ -1029,7 +1029,7 @@ function CrimeLegend({
 
   return (
     <div
-      className="absolute bottom-[88px] left-4 bg-white/90 backdrop-blur-md rounded-[10px] border border-[#E2E8F0] p-2.5 z-20 w-[200px] max-h-[min(320px,calc(100%-11rem))] flex flex-col"
+      className="absolute top-4 right-4 bg-white/90 backdrop-blur-md rounded-[10px] border border-[#E2E8F0] p-2.5 z-20 w-[200px] max-h-[min(320px,calc(100%-6rem))] flex flex-col"
       style={{ boxShadow: "0 4px 16px rgba(15,23,42,0.10)" }}
     >
       <div className="flex items-center justify-between mb-2 shrink-0 gap-2">
