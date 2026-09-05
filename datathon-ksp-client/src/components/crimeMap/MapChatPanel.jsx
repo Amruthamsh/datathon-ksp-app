@@ -931,15 +931,6 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
                 </button>
               ))}
             </div>
-            <div className="flex items-center justify-center gap-2 pt-1">
-              <button
-                onClick={() => onMapAction?.({ type: "setViewMode", mode: mapContext?.viewMode === "Administrative" ? "Heatmap" : "Administrative" })}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
-              >
-                <Eye size={12} /> {mapContext?.viewMode === "Administrative" ? "Switch to Heatmap" : "Switch to District Risk"}
-              </button>
-              <span className="text-[11px] text-slate-400">· Map-aware</span>
-            </div>
           </div>
         )}
 

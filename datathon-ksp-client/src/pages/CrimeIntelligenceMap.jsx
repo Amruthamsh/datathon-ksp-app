@@ -450,29 +450,56 @@ export default function CrimeIntelligenceMap() {
     (action) => {
       if (!action) return;
       if (action.type === "flyToDistrict" && action.district) {
-        const entry = (enhancedRisk || []).find((d) => d.district === action.district);
+        const entry = (enhancedRisk || []).find(
+          (d) => d.district === action.district,
+        );
         if (entry?.bounds) {
           const lat = (entry.bounds.min_lat + entry.bounds.max_lat) / 2;
           const lng = (entry.bounds.min_lng + entry.bounds.max_lng) / 2;
-          setViewState((prev) => ({ ...prev, latitude: lat, longitude: lng, zoom: 9, pitch: 0 }));
-          setSelectedSpot({ id: entry.district, name: entry.district, type: "District", ...entry });
+          setViewState((prev) => ({
+            ...prev,
+            latitude: lat,
+            longitude: lng,
+            zoom: 9,
+            pitch: 0,
+          }));
+          setSelectedSpot({
+            id: entry.district,
+            name: entry.district,
+            type: "District",
+            ...entry,
+          });
           setHotspotDetail(null);
         } else {
           // Fallback: just highlight district via selection without fly
-          const fallback = (enhancedRisk || []).find((d) => d.district === action.district);
+          const fallback = (enhancedRisk || []).find(
+            (d) => d.district === action.district,
+          );
           if (fallback) {
-            setSelectedSpot({ id: fallback.district, name: fallback.district, type: "District", ...fallback });
+            setSelectedSpot({
+              id: fallback.district,
+              name: fallback.district,
+              type: "District",
+              ...fallback,
+            });
           }
         }
         setRightTab("details");
       } else if (action.type === "filterCrime" && action.crime) {
         // Try to match the crime label to an existing sub_type
-        const match = headOptions.find((h) => h.sub_type.toLowerCase() === String(action.crime).toLowerCase());
+        const match = headOptions.find(
+          (h) =>
+            h.sub_type.toLowerCase() === String(action.crime).toLowerCase(),
+        );
         if (match) {
           setSelectedHeads(new Set([match.sub_type]));
         } else {
           // fuzzy: find partial
-          const fuzzy = headOptions.find((h) => h.sub_type.toLowerCase().includes(String(action.crime).toLowerCase()));
+          const fuzzy = headOptions.find((h) =>
+            h.sub_type
+              .toLowerCase()
+              .includes(String(action.crime).toLowerCase()),
+          );
           if (fuzzy) setSelectedHeads(new Set([fuzzy.sub_type]));
         }
       } else if (action.type === "setViewMode" && action.mode) {
@@ -482,8 +509,16 @@ export default function CrimeIntelligenceMap() {
       } else if (action.type === "flyTo" && action.payload) {
         setViewState((prev) => ({ ...prev, ...action.payload }));
       } else if (action.type === "selectDistrict" && action.payload?.district) {
-        const entry = (enhancedRisk || []).find((d) => d.district === action.payload.district);
-        if (entry) setSelectedSpot({ id: entry.district, name: entry.district, type: "District", ...entry });
+        const entry = (enhancedRisk || []).find(
+          (d) => d.district === action.payload.district,
+        );
+        if (entry)
+          setSelectedSpot({
+            id: entry.district,
+            name: entry.district,
+            type: "District",
+            ...entry,
+          });
       }
     },
     [enhancedRisk, headOptions],
@@ -516,7 +551,10 @@ export default function CrimeIntelligenceMap() {
                 {t("crimeMap.subtitle")}
               </p>
             </div>
-            <div className="flex items-center gap-3 bg-white rounded-[10px] border border-[#E2E8F0] px-3 py-2 flex-wrap" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}>
+            <div
+              className="flex items-center gap-3 bg-white rounded-[10px] border border-[#E2E8F0] px-3 py-2 flex-wrap"
+              style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
+            >
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1.5">
                   <span
@@ -537,11 +575,15 @@ export default function CrimeIntelligenceMap() {
                       {formatNumber(intelligenceStatus.poi_total || 0)} POIs
                     </span>
                     <span className="bg-[#F5F7FA] border border-[#E2E8F0] rounded-full px-2 py-0.5 font-medium tabular-nums">
-                      {formatNumber(intelligenceStatus.weather_rows || 0)} weather
+                      {formatNumber(intelligenceStatus.weather_rows || 0)}{" "}
+                      weather
                     </span>
                     {intelligenceStatus.poi_last_refresh && (
                       <span className="text-[11px] text-[#94A3B8]">
-                        Updated {new Date(intelligenceStatus.poi_last_refresh).toLocaleDateString()}
+                        Updated{" "}
+                        {new Date(
+                          intelligenceStatus.poi_last_refresh,
+                        ).toLocaleDateString()}
                       </span>
                     )}
                   </span>
@@ -567,7 +609,10 @@ export default function CrimeIntelligenceMap() {
           </div>
 
           <div className="flex-1 flex gap-4 min-h-0 relative">
-            <div className="flex-1 bg-[#E2E8F0] rounded-[12px] border border-[#E2E8F0] relative overflow-hidden flex flex-col" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}>
+            <div
+              className="flex-1 bg-[#E2E8F0] rounded-[12px] border border-[#E2E8F0] relative overflow-hidden flex flex-col"
+              style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
+            >
               <MapView
                 viewState={viewState}
                 onViewStateChange={setViewState}
@@ -638,12 +683,16 @@ export default function CrimeIntelligenceMap() {
                   style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
                   title="Show map layers"
                 >
-                  <Layers className="h-3.5 w-3.5" /> Map Layers <Eye className="h-3 w-3 text-[#94A3B8]" />
+                  <Layers className="h-3.5 w-3.5" /> Map Layers{" "}
+                  <Eye className="h-3 w-3 text-[#94A3B8]" />
                 </button>
               )}
 
               {showSocioOverlay && (
-                <div className="absolute bottom-24 left-4 bg-white/95 backdrop-blur rounded-[8px] border border-[#E2E8F0] px-3 py-2 z-20 flex items-center gap-3" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}>
+                <div
+                  className="absolute bottom-24 left-4 bg-white/95 backdrop-blur rounded-[8px] border border-[#E2E8F0] px-3 py-2 z-20 flex items-center gap-3"
+                  style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
+                >
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                     <Building2 className="h-3 w-3 text-red-600" /> Unemployment
                   </span>
@@ -785,7 +834,10 @@ function LayerSwitcher({
     intelligenceStatus?.poi_total && Number(intelligenceStatus.poi_total) > 0;
 
   return (
-    <div className="absolute top-4 left-4 bg-white rounded-[10px] border border-[#E2E8F0] p-2 flex flex-col gap-1 z-10 w-[210px] max-h-[calc(100%-6rem)] overflow-y-auto" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}>
+    <div
+      className="absolute top-4 left-4 bg-white rounded-[10px] border border-[#E2E8F0] p-2 flex flex-col gap-1 z-10 w-[210px] max-h-[calc(100%-6rem)] overflow-y-auto"
+      style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
+    >
       <div className="flex items-center justify-between px-2 py-1">
         <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.08em]">
           {t("crimeMap.layers.title")}
@@ -813,14 +865,18 @@ function LayerSwitcher({
         >
           <Icon className="h-3 w-3 shrink-0" />
           <span className="flex items-center gap-1.5">
-            {viewMode === id && <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />}
+            {viewMode === id && (
+              <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
+            )}
             {label}
           </span>
         </button>
       ))}
       <div className="h-px bg-[#E2E8F0] my-1" />
       <div>
-        <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.08em] px-2 mb-1">Overlays</p>
+        <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.08em] px-2 mb-1">
+          Overlays
+        </p>
         <label
           className={`flex items-center gap-2 px-2.5 py-1 rounded-[6px] ${networkDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-[#F8FAFC] cursor-pointer"}`}
         >
@@ -972,7 +1028,10 @@ function CrimeLegend({
   const allSelected = !selectedHeads || selectedHeads.size === heads.length;
 
   return (
-    <div className="absolute top-4 right-4 bg-white rounded-[10px] border border-[#E2E8F0] p-2.5 z-20 w-[200px] max-h-[calc(100%-12rem)] flex flex-col" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}>
+    <div
+      className="absolute top-4 right-4 bg-white rounded-[10px] border border-[#E2E8F0] p-2.5 z-20 w-[200px] max-h-[calc(100%-12rem)] flex flex-col"
+      style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
+    >
       <div className="flex items-center justify-between mb-2 shrink-0 gap-2">
         <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.08em]">
           {t("crimeMap.legend.crimeTypes")}
@@ -1017,7 +1076,9 @@ function CrimeLegend({
               />
               <span
                 className={`text-[11px] leading-[1.3] ${
-                  active ? "text-[#334155] font-medium" : "text-[#94A3B8] line-through font-normal"
+                  active
+                    ? "text-[#334155] font-medium"
+                    : "text-[#94A3B8] line-through font-normal"
                 }`}
               >
                 {h.sub_type}
@@ -1084,7 +1145,10 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
 
   if (last < 1) {
     return (
-      <div className="absolute bottom-2 left-3 right-3 bg-white/95 backdrop-blur rounded-[10px] border border-[#E2E8F0] px-2.5 py-1.5 z-10" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}>
+      <div
+        className="absolute bottom-2 left-3 right-3 bg-white/95 backdrop-blur rounded-[10px] border border-[#E2E8F0] px-2.5 py-1.5 z-10"
+        style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
+      >
         <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.08em] flex items-center gap-1">
           <Clock className="h-3 w-3" /> {t("crimeMap.dateRange.title")}
         </p>
@@ -1138,7 +1202,10 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
           cursor: pointer; pointer-events: auto;
         }
       `}</style>
-      <div className="absolute bottom-2 left-3 right-3 bg-white rounded-[10px] border border-[#E2E8F0] px-2.5 py-1.5 z-10" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}>
+      <div
+        className="absolute bottom-2 left-3 right-3 bg-white rounded-[10px] border border-[#E2E8F0] px-2.5 py-1.5 z-10"
+        style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
+      >
         <div className="flex items-center justify-between mb-1 gap-2">
           <p className="text-[10px] font-bold text-[#17233C] uppercase tracking-[0.08em] flex items-center gap-1 shrink-0">
             <Clock className="h-3 w-3 text-[#334155]" />{" "}
@@ -1380,7 +1447,8 @@ function MapView({
     // collect outer rings of each polygon as holes
     let holes = [];
     if (geom.type === "Polygon") holes = [geom.coordinates[0]];
-    else if (geom.type === "MultiPolygon") holes = geom.coordinates.map((p) => p[0]);
+    else if (geom.type === "MultiPolygon")
+      holes = geom.coordinates.map((p) => p[0]);
     else return null;
     const world = [
       [-180, -90],
@@ -1778,27 +1846,73 @@ function RightPanel({
   chatKey,
   onAskInMapChat,
 }) {
-  const panelWrap = "w-[380px] xl:w-[400px] bg-white rounded-[12px] border border-[#E2E8F0] flex flex-col min-h-0 overflow-hidden shrink-0";
+  const panelWrap =
+    "w-[380px] xl:w-[400px] bg-white rounded-[12px] border border-[#E2E8F0] flex flex-col min-h-0 overflow-hidden shrink-0";
   const panelStyle = { boxShadow: "0 1px 3px rgba(15,23,42,0.08)" };
   const hasSelection = !!selectedSpot;
 
   const renderDetails = () => {
     if (!selectedSpot) {
-      return <DefaultPanel summary={summary} enhancedRisk={enhancedRisk} onOpenPatrol={onOpenPatrol} onAskInMapChat={onAskInMapChat} mapContext={mapContext} />;
+      return (
+        <DefaultPanel
+          summary={summary}
+          enhancedRisk={enhancedRisk}
+          onOpenPatrol={onOpenPatrol}
+          onAskInMapChat={onAskInMapChat}
+          mapContext={mapContext}
+        />
+      );
     }
     if (selectedSpot.type === "POI") {
-      return <POIPanel spot={selectedSpot} onClose={onClose} onOpenPatrol={onOpenPatrol} onAskInMapChat={onAskInMapChat} />;
+      return (
+        <POIPanel
+          spot={selectedSpot}
+          onClose={onClose}
+          onOpenPatrol={onOpenPatrol}
+          onAskInMapChat={onAskInMapChat}
+        />
+      );
     }
     if (selectedSpot.type === "Trend" || selectedSpot.type === "Crime") {
-      return <TrendPanel spot={selectedSpot} onClose={onClose} onOpenPatrol={onOpenPatrol} onAskInMapChat={onAskInMapChat} />;
+      return (
+        <TrendPanel
+          spot={selectedSpot}
+          onClose={onClose}
+          onOpenPatrol={onOpenPatrol}
+          onAskInMapChat={onAskInMapChat}
+        />
+      );
     }
     if (selectedSpot.type === "District") {
-      return <DistrictPanel spot={selectedSpot} onClose={onClose} onOpenPatrol={onOpenPatrol} enhancedRisk={enhancedRisk} token={token} onAskInMapChat={onAskInMapChat} />;
+      return (
+        <DistrictPanel
+          spot={selectedSpot}
+          onClose={onClose}
+          onOpenPatrol={onOpenPatrol}
+          enhancedRisk={enhancedRisk}
+          token={token}
+          onAskInMapChat={onAskInMapChat}
+        />
+      );
     }
     if (selectedSpot.type === "Criminal Network") {
-      return <NetworkPanel spot={selectedSpot} onClose={onClose} onAskInMapChat={onAskInMapChat} />;
+      return (
+        <NetworkPanel
+          spot={selectedSpot}
+          onClose={onClose}
+          onAskInMapChat={onAskInMapChat}
+        />
+      );
     }
-    return <ClusterPanel spot={selectedSpot} detail={hotspotDetail} onClose={onClose} onOpenPatrol={onOpenPatrol} onAskInMapChat={onAskInMapChat} />;
+    return (
+      <ClusterPanel
+        spot={selectedSpot}
+        detail={hotspotDetail}
+        onClose={onClose}
+        onOpenPatrol={onOpenPatrol}
+        onAskInMapChat={onAskInMapChat}
+      />
+    );
   };
 
   return (
@@ -1809,43 +1923,57 @@ function RightPanel({
           <button
             onClick={() => onTabChange("details")}
             className={`flex-1 flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition cursor-pointer ${
-              activeTab === "details" ? "bg-white text-[#17233C] shadow-sm border border-[#E2E8F0]" : "text-[#64748B] hover:text-[#334155]"
+              activeTab === "details"
+                ? "bg-white text-[#17233C] shadow-sm border border-[#E2E8F0]"
+                : "text-[#64748B] hover:text-[#334155]"
             }`}
           >
             <Layers className="h-3.5 w-3.5" /> Details
-            {hasSelection && activeTab !== "details" && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-[#D92D20] animate-pulse" />}
+            {hasSelection && activeTab !== "details" && (
+              <span className="ml-1 h-1.5 w-1.5 rounded-full bg-[#D92D20] animate-pulse" />
+            )}
           </button>
           <button
             onClick={() => onTabChange("chat")}
             className={`flex-1 flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition cursor-pointer ${
-              activeTab === "chat" ? "bg-[#17233C] text-white shadow-sm" : "text-[#64748B] hover:text-[#334155]"
+              activeTab === "chat"
+                ? "bg-[#17233C] text-white shadow-sm"
+                : "text-[#64748B] hover:text-[#334155]"
             }`}
           >
-            <MessageSquare className={`h-3.5 w-3.5 ${activeTab === "chat" ? "text-white" : "text-slate-400"}`} />
+            <MessageSquare
+              className={`h-3.5 w-3.5 ${activeTab === "chat" ? "text-white" : "text-slate-400"}`}
+            />
             <span className="hidden sm:inline">Ask AI</span>
             <span className="sm:hidden">Chat</span>
-            <span className={`ml-1 flex h-4 items-center rounded-full px-1.5 text-[10px] font-bold ${activeTab === "chat" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700 border border-emerald-200"}`}>
+            <span
+              className={`ml-1 flex h-4 items-center rounded-full px-1.5 text-[10px] font-bold ${activeTab === "chat" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700 border border-emerald-200"}`}
+            >
               Map-aware
             </span>
           </button>
         </div>
         {activeTab === "details" && hasSelection && (
           <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500 text-center">
-            Selected context is sent with every Ask AI question — switch tabs to chat.
-          </p>
-        )}
-        {activeTab === "chat" && (
-          <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500 text-center flex items-center justify-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live map view + filters are included in every answer
+            Selected context is sent with every Ask AI question — switch tabs to
+            chat.
           </p>
         )}
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {activeTab === "chat" ? (
-          <MapChatPanel token={token} mapContext={mapContext} onMapAction={onMapAction} initialQuery={chatPrefill} initialQueryKey={chatKey} />
+          <MapChatPanel
+            token={token}
+            mapContext={mapContext}
+            onMapAction={onMapAction}
+            initialQuery={chatPrefill}
+            initialQueryKey={chatKey}
+          />
         ) : (
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">{renderDetails()}</div>
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            {renderDetails()}
+          </div>
         )}
       </div>
     </div>
@@ -1905,7 +2033,8 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
       vals,
     };
   }, [enhancedRisk]);
-  const priorityDistrict = summary?.contextual?.top_district || hp?.name || null;
+  const priorityDistrict =
+    summary?.contextual?.top_district || hp?.name || null;
   const priorityCrime = summary?.contextual?.top_sub_type || null;
   const highRiskCount = useMemo(() => {
     if (!enhancedRisk?.length) return null;
@@ -1924,13 +2053,19 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
         <div>
           <p className="text-[13px] leading-snug text-[#334155]">
             <span className="text-[22px] font-black tracking-tight text-[#D92D20]">
-              {highRiskCount != null ? highRiskCount : formatNumber(summary?.emerging_hotspots)}
+              {highRiskCount != null
+                ? highRiskCount
+                : formatNumber(summary?.emerging_hotspots)}
             </span>
-            <span className="ml-1.5 font-semibold text-[#17233C]">districts show elevated risk</span>
+            <span className="ml-1.5 font-semibold text-[#17233C]">
+              districts show elevated risk
+            </span>
           </p>
           <p className="text-xs text-[#64748B] leading-relaxed mt-1">
             Economic stress is currently the strongest live multiplier.
-            {socioLens?.highRiskHighUnemp ? ` ${socioLens.highRiskHighUnemp} high-risk districts sit above mean unemployment.` : ""}
+            {socioLens?.highRiskHighUnemp
+              ? ` ${socioLens.highRiskHighUnemp} high-risk districts sit above mean unemployment.`
+              : ""}
           </p>
           {hp && (
             <p className="mt-2 text-xs">
@@ -1943,9 +2078,17 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
           )}
           {summary?.contextual && (
             <div className="mt-3 border-l-2 border-[#D97706] bg-[#FFFBEB]/70 rounded-r-[8px] px-3 py-2">
-              <p className="text-[10px] font-bold tracking-wide uppercase text-[#92400E]">{t("crimeMap.summary.filteredPriority")}</p>
-              <p className="text-xs font-semibold text-[#1E293B] mt-0.5 leading-snug">{summary.contextual.priority}</p>
-              {summary.contextual.key_stat && <p className="text-[11px] text-[#475569] mt-1">{summary.contextual.key_stat}</p>}
+              <p className="text-[10px] font-bold tracking-wide uppercase text-[#92400E]">
+                {t("crimeMap.summary.filteredPriority")}
+              </p>
+              <p className="text-xs font-semibold text-[#1E293B] mt-0.5 leading-snug">
+                {summary.contextual.priority}
+              </p>
+              {summary.contextual.key_stat && (
+                <p className="text-[11px] text-[#475569] mt-1">
+                  {summary.contextual.key_stat}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -1953,22 +2096,38 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
         {/* Stats — muted, not screaming */}
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-white border border-[#E2E8F0] rounded-[8px] px-3 py-2.5">
-            <p className="text-[10px] font-semibold tracking-wide uppercase text-[#64748B]">{t("crimeMap.summary.todaysRisk")}</p>
-            <p className={`text-[13px] font-bold mt-1 ${summary?.today_risk === "HIGH" ? "text-[#D92D20]" : summary?.today_risk === "MEDIUM" ? "text-[#D97706]" : "text-[#17233C]"}`}>
+            <p className="text-[10px] font-semibold tracking-wide uppercase text-[#64748B]">
+              {t("crimeMap.summary.todaysRisk")}
+            </p>
+            <p
+              className={`text-[13px] font-bold mt-1 ${summary?.today_risk === "HIGH" ? "text-[#D92D20]" : summary?.today_risk === "MEDIUM" ? "text-[#D97706]" : "text-[#17233C]"}`}
+            >
               {summary?.today_risk || "—"}
             </p>
           </div>
           <div className="bg-white border border-[#E2E8F0] rounded-[8px] px-3 py-2.5">
-            <p className="text-[10px] font-semibold tracking-wide uppercase text-[#64748B]">{t("crimeMap.summary.emergingHotspots")}</p>
-            <p className="text-[13px] font-bold text-[#17233C] mt-1 tabular-nums">{formatNumber(summary?.emerging_hotspots)}</p>
+            <p className="text-[10px] font-semibold tracking-wide uppercase text-[#64748B]">
+              {t("crimeMap.summary.emergingHotspots")}
+            </p>
+            <p className="text-[13px] font-bold text-[#17233C] mt-1 tabular-nums">
+              {formatNumber(summary?.emerging_hotspots)}
+            </p>
           </div>
           <div className="bg-white border border-[#E2E8F0] rounded-[8px] px-3 py-2.5">
-            <p className="text-[10px] font-semibold tracking-wide uppercase text-[#64748B]">{t("crimeMap.summary.repeatOffenders")}</p>
-            <p className="text-[13px] font-bold text-[#17233C] mt-1 tabular-nums">{formatNumber(summary?.repeat_offender_areas)}</p>
+            <p className="text-[10px] font-semibold tracking-wide uppercase text-[#64748B]">
+              {t("crimeMap.summary.repeatOffenders")}
+            </p>
+            <p className="text-[13px] font-bold text-[#17233C] mt-1 tabular-nums">
+              {formatNumber(summary?.repeat_offender_areas)}
+            </p>
           </div>
           <div className="bg-white border border-[#E2E8F0] rounded-[8px] px-3 py-2.5">
-            <p className="text-[10px] font-semibold tracking-wide uppercase text-[#64748B]">{t("crimeMap.summary.crimes30d")}</p>
-            <p className="text-[13px] font-bold text-[#17233C] mt-1 tabular-nums">{formatNumber(summary?.active_hotspots)}</p>
+            <p className="text-[10px] font-semibold tracking-wide uppercase text-[#64748B]">
+              {t("crimeMap.summary.crimes30d")}
+            </p>
+            <p className="text-[13px] font-bold text-[#17233C] mt-1 tabular-nums">
+              {formatNumber(summary?.active_hotspots)}
+            </p>
           </div>
         </div>
 
@@ -1976,12 +2135,17 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
 
         {/* Risk formula */}
         <div>
-          <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B] mb-2">Risk model</p>
+          <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B] mb-2">
+            Risk model
+          </p>
           <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[8px] px-3 py-2.5">
             <code className="text-[11px] font-mono font-semibold text-[#334155] leading-relaxed block">
-              Enhanced = Base + (Unemployment − 7) × 3.5 + POI + Weather + Literacy
+              Enhanced = Base + (Unemployment − 7) × 3.5 + POI + Weather +
+              Literacy
             </code>
-            <span className="text-[10px] text-[#94A3B8] mt-1 block">Base = crime volume · repeat · pending · trend</span>
+            <span className="text-[10px] text-[#94A3B8] mt-1 block">
+              Base = crime volume · repeat · pending · trend
+            </span>
           </div>
         </div>
 
@@ -1989,7 +2153,9 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
         {socioLens ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B]">Signals</p>
+              <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B]">
+                Signals
+              </p>
               <span className="text-[10px] font-semibold text-[#64748B] bg-[#F1F5F9] border border-[#E2E8F0] rounded-full px-2 py-0.5">
                 {socioLens.vals.length} districts · live
               </span>
@@ -1999,37 +2165,77 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
             <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
               {socioLens.vals
                 .slice(0, 20)
-                .sort((a, b) => a.socio.unemployment_rate - b.socio.unemployment_rate)
+                .sort(
+                  (a, b) =>
+                    a.socio.unemployment_rate - b.socio.unemployment_rate,
+                )
                 .map((d, i) => {
                   const u = d.socio.unemployment_rate;
-                  const bg = u >= 9 ? "#D92D20" : u >= 7.5 ? "#D97706" : u >= 6.2 ? "#CBD5E1" : "#E2E8F0";
-                  return <div key={i} className="flex-1" style={{ background: bg }} title={`${d.district} ${u}%`} />;
+                  const bg =
+                    u >= 9
+                      ? "#D92D20"
+                      : u >= 7.5
+                        ? "#D97706"
+                        : u >= 6.2
+                          ? "#CBD5E1"
+                          : "#E2E8F0";
+                  return (
+                    <div
+                      key={i}
+                      className="flex-1"
+                      style={{ background: bg }}
+                      title={`${d.district} ${u}%`}
+                    />
+                  );
                 })}
             </div>
-            <p className="text-[10px] text-[#94A3B8]">Unemployment gradient · neutral → amber → critical</p>
+            <p className="text-[10px] text-[#94A3B8]">
+              Unemployment gradient · neutral → amber → critical
+            </p>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-[10px] font-semibold tracking-wide uppercase text-[#94A3B8] mb-1.5">Highest unemployment</p>
+                <p className="text-[10px] font-semibold tracking-wide uppercase text-[#94A3B8] mb-1.5">
+                  Highest unemployment
+                </p>
                 <div className="space-y-1">
                   {socioLens.topUnemp.map((d) => (
-                    <div key={d.district} className="flex items-center justify-between gap-2 py-1 border-b border-[#F1F5F9] last:border-0">
-                      <span className="text-xs font-medium text-[#334155] truncate">{d.district}</span>
+                    <div
+                      key={d.district}
+                      className="flex items-center justify-between gap-2 py-1 border-b border-[#F1F5F9] last:border-0"
+                    >
+                      <span className="text-xs font-medium text-[#334155] truncate">
+                        {d.district}
+                      </span>
                       <span className="text-xs font-semibold tabular-nums shrink-0">
-                        <span className="text-[#D92D20]">{Number(d.socio.unemployment_rate).toFixed(1)}%</span>
-                        <span className="text-[#94A3B8] font-normal"> · {Math.round(d.risk_score)}</span>
+                        <span className="text-[#D92D20]">
+                          {Number(d.socio.unemployment_rate).toFixed(1)}%
+                        </span>
+                        <span className="text-[#94A3B8] font-normal">
+                          {" "}
+                          · {Math.round(d.risk_score)}
+                        </span>
                       </span>
                     </div>
                   ))}
                 </div>
               </div>
               <div>
-                <p className="text-[10px] font-semibold tracking-wide uppercase text-[#94A3B8] mb-1.5">Lowest literacy</p>
+                <p className="text-[10px] font-semibold tracking-wide uppercase text-[#94A3B8] mb-1.5">
+                  Lowest literacy
+                </p>
                 <div className="space-y-1">
                   {socioLens.lowLit.map((d) => (
-                    <div key={d.district} className="flex items-center justify-between gap-2 py-1 border-b border-[#F1F5F9] last:border-0">
-                      <span className="text-xs font-medium text-[#334155] truncate">{d.district}</span>
-                      <span className="text-xs font-semibold text-[#17233C] tabular-nums shrink-0">{Number(d.socio.literacy_rate).toFixed(1)}%</span>
+                    <div
+                      key={d.district}
+                      className="flex items-center justify-between gap-2 py-1 border-b border-[#F1F5F9] last:border-0"
+                    >
+                      <span className="text-xs font-medium text-[#334155] truncate">
+                        {d.district}
+                      </span>
+                      <span className="text-xs font-semibold text-[#17233C] tabular-nums shrink-0">
+                        {Number(d.socio.literacy_rate).toFixed(1)}%
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -2038,23 +2244,36 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
 
             <div className="grid grid-cols-3 gap-2 pt-1">
               <div className="text-center">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">Avg unemployment</p>
-                <p className="text-sm font-bold text-[#334155] tabular-nums">{socioLens.avgUnemp.toFixed(1)}%</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                  Avg unemployment
+                </p>
+                <p className="text-sm font-bold text-[#334155] tabular-nums">
+                  {socioLens.avgUnemp.toFixed(1)}%
+                </p>
               </div>
               <div className="text-center border-l border-[#E2E8F0]">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">Avg literacy</p>
-                <p className="text-sm font-bold text-[#334155] tabular-nums">{socioLens.avgLit.toFixed(1)}%</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                  Avg literacy
+                </p>
+                <p className="text-sm font-bold text-[#334155] tabular-nums">
+                  {socioLens.avgLit.toFixed(1)}%
+                </p>
               </div>
               <div className="text-center border-l border-[#E2E8F0]">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">Avg income</p>
-                <p className="text-sm font-bold text-[#334155] tabular-nums">₹{(socioLens.avgIncome / 1000).toFixed(0)}k</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                  Avg income
+                </p>
+                <p className="text-sm font-bold text-[#334155] tabular-nums">
+                  ₹{(socioLens.avgIncome / 1000).toFixed(0)}k
+                </p>
               </div>
             </div>
           </div>
         ) : (
           <div className="rounded-[8px] border border-dashed border-[#E2E8F0] bg-[#F8FAFC] p-3 text-center">
             <p className="text-xs font-medium text-[#475569] flex items-center justify-center gap-1.5">
-              <Loader2 className="h-3 w-3 animate-spin" /> Loading socio-economic intelligence…
+              <Loader2 className="h-3 w-3 animate-spin" /> Loading
+              socio-economic intelligence…
             </p>
           </div>
         )}
@@ -2063,21 +2282,35 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
 
         {/* ── Recommended response — secondary (white) ── */}
         {(priorityCrime || priorityDistrict) && (
-          <div className="rounded-[10px] border border-[#E2E8F0] bg-white p-3.5" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.06)" }}>
-            <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B]">Recommended response</p>
+          <div
+            className="rounded-[10px] border border-[#E2E8F0] bg-white p-3.5"
+            style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.06)" }}
+          >
+            <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B]">
+              Recommended response
+            </p>
             <p className="mt-1.5 text-sm font-semibold text-[#17233C] flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
-              {priorityCrime || "Elevated risk"}{priorityDistrict ? ` · ${priorityDistrict}` : ""}
+              {priorityCrime || "Elevated risk"}
+              {priorityDistrict ? ` · ${priorityDistrict}` : ""}
             </p>
-            <p className="mt-1 text-xs text-[#64748B]">Elevated risk detected{priorityCrime ? ` — ${priorityCrime} pattern` : ""} · {socioLens?.highRiskHighUnemp ?? ""} contributing factor(s)</p>
+            <p className="mt-1 text-xs text-[#64748B]">
+              Elevated risk detected
+              {priorityCrime ? ` — ${priorityCrime} pattern` : ""} ·{" "}
+              {socioLens?.highRiskHighUnemp ?? ""} contributing factor(s)
+            </p>
             <button
               onClick={() =>
                 onOpenPatrol({
-                  crimeFocus: priorityCrime ? getHeadIdForSubType(priorityCrime) : null,
+                  crimeFocus: priorityCrime
+                    ? getHeadIdForSubType(priorityCrime)
+                    : null,
                   crimeLabel: priorityCrime,
                   area: priorityDistrict || "",
                   timeRange: "night",
-                  title: priorityCrime ? `${priorityCrime} · ${priorityDistrict || ""}` : `Priority: ${priorityDistrict}`,
+                  title: priorityCrime
+                    ? `${priorityCrime} · ${priorityDistrict || ""}`
+                    : `Priority: ${priorityDistrict}`,
                 })
               }
               className="mt-3 w-full flex items-center justify-between rounded-[8px] border border-blue-900/15 bg-white hover:bg-blue-50/50 px-3 py-2.5 text-xs font-semibold text-blue-900 transition-colors cursor-pointer"
@@ -2095,8 +2328,11 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
             const hotspots = summary?.emerging_hotspots ?? "N/A";
             const repeat = summary?.repeat_offender_areas ?? "N/A";
             const crimes = summary?.active_hotspots ?? "N/A";
-            const priority = hp?.name ? `${hp.name} — ${hp.reason}` : "None identified";
-            const district = hp?.name || summary?.contextual?.top_district || "Karnataka";
+            const priority = hp?.name
+              ? `${hp.name} — ${hp.reason}`
+              : "None identified";
+            const district =
+              hp?.name || summary?.contextual?.top_district || "Karnataka";
             const msg = `Provide a deep dive analysis of crime in ${district} district. Today's risk: ${risk}. Hotspots: ${hotspots}. Repeat: ${repeat}. Crimes 30d: ${crimes}. Priority: ${priority}. Highlight critical areas and recommend deployment.`;
             if (onAskInMapChat) onAskInMapChat(msg);
             else navigate("/", { state: { initialMessage: msg } });
@@ -2113,7 +2349,9 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
             const hotspots = summary?.emerging_hotspots ?? "N/A";
             const repeat = summary?.repeat_offender_areas ?? "N/A";
             const crimes = summary?.active_hotspots ?? "N/A";
-            const priority = hp?.name ? `${hp.name} — ${hp.reason}` : "None identified";
+            const priority = hp?.name
+              ? `${hp.name} — ${hp.reason}`
+              : "None identified";
             const msg = `Provide a deep dive analysis of crime in ${hp?.name || summary?.contextual?.top_district || "Karnataka"} district. Today's risk: ${risk}. Hotspots: ${hotspots}. Repeat: ${repeat}. Crimes 30d: ${crimes}. Priority: ${priority}. Highlight critical areas and recommend deployment.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
@@ -2328,7 +2566,14 @@ TrendPanel.propTypes = {
 
 /* ── District Panel ─────────────────────────────────────────────── */
 
-function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token, onAskInMapChat }) {
+function DistrictPanel({
+  spot,
+  onClose,
+  onOpenPatrol,
+  enhancedRisk,
+  token,
+  onAskInMapChat,
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [socio, setSocio] = useState(null);
@@ -2394,7 +2639,9 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token, onAsk
                 {Math.round(spot.risk_score)}
               </p>
             </div>
-            <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${riskBadgeColor}`}>
+            <span
+              className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${riskBadgeColor}`}
+            >
               {spot.risk_level}
             </span>
           </div>
@@ -2595,11 +2842,13 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token, onAsk
             <div className="w-full rounded-xl border border-[#E5E7EB] bg-white p-3 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 flex items-center gap-1.5">
-                  <Building2 className="h-3.5 w-3.5 text-slate-400" /> Socio-Economic Intelligence
+                  <Building2 className="h-3.5 w-3.5 text-slate-400" />{" "}
+                  Socio-Economic Intelligence
                 </p>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
-                    <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" /> LIVE
+                    <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />{" "}
+                    LIVE
                   </span>
                   <span className="text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
                     {s.year || new Date().getFullYear()} ▾
@@ -2725,8 +2974,12 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token, onAsk
                 </p>
                 <div className="flex items-center justify-between">
                   <div className="text-center">
-                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Base risk</p>
-                    <p className="text-xl font-bold text-slate-700 tabular-nums">{Math.round(base)}</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+                      Base risk
+                    </p>
+                    <p className="text-xl font-bold text-slate-700 tabular-nums">
+                      {Math.round(base)}
+                    </p>
                   </div>
                   <div className="flex-1 mx-3 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-slate-300 shrink-0" />
@@ -2738,34 +2991,65 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token, onAsk
                     <span className="w-2 h-2 rounded-full bg-blue-900 shrink-0" />
                   </div>
                   <div className="text-center">
-                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Enhanced risk</p>
-                    <p className="text-xl font-bold text-blue-900 tabular-nums">{total.toFixed(1)}</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+                      Enhanced risk
+                    </p>
+                    <p className="text-xl font-bold text-blue-900 tabular-nums">
+                      {total.toFixed(1)}
+                    </p>
                   </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-slate-200/60">
-                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Contributing signals</p>
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Contributing signals
+                  </p>
                   <div className="space-y-2">
                     <div className="flex gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] mt-1.5 shrink-0" />
                       <div className="text-xs leading-snug">
-                        <span className="font-medium text-slate-700">Unemployment</span>
-                        <span className="text-slate-500"> — {dUnemp > 0 ? `${dUnemp.toFixed(0)}% above` : `${Math.abs(dUnemp).toFixed(0)}% below`} state mean</span>
-                        <span className="ml-1.5 text-[10px] font-semibold text-slate-600">+{(m.unemployment_bonus || 0).toFixed(1)} risk</span>
+                        <span className="font-medium text-slate-700">
+                          Unemployment
+                        </span>
+                        <span className="text-slate-500">
+                          {" "}
+                          —{" "}
+                          {dUnemp > 0
+                            ? `${dUnemp.toFixed(0)}% above`
+                            : `${Math.abs(dUnemp).toFixed(0)}% below`}{" "}
+                          state mean
+                        </span>
+                        <span className="ml-1.5 text-[10px] font-semibold text-slate-600">
+                          +{(m.unemployment_bonus || 0).toFixed(1)} risk
+                        </span>
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-900 mt-1.5 shrink-0" />
                       <div className="text-xs leading-snug">
-                        <span className="font-medium text-slate-700">Literacy</span>
-                        <span className="text-slate-500"> — {Number(s.literacy_rate).toFixed(1)}% vs {avgLit?.toFixed(1)}% state mean</span>
-                        <span className="ml-1.5 text-[10px] font-semibold text-slate-600">+{((75 - s.literacy_rate) * 0.15).toFixed(1)} risk</span>
+                        <span className="font-medium text-slate-700">
+                          Literacy
+                        </span>
+                        <span className="text-slate-500">
+                          {" "}
+                          — {Number(s.literacy_rate).toFixed(1)}% vs{" "}
+                          {avgLit?.toFixed(1)}% state mean
+                        </span>
+                        <span className="ml-1.5 text-[10px] font-semibold text-slate-600">
+                          +{((75 - s.literacy_rate) * 0.15).toFixed(1)} risk
+                        </span>
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                       <div className="text-xs leading-snug">
-                        <span className="font-medium text-slate-700">POI exposure</span>
-                        <span className="text-slate-500"> — {poiCount?.total ?? m.poi_total ?? 0} points near liquor/ATM clusters</span>
+                        <span className="font-medium text-slate-700">
+                          POI exposure
+                        </span>
+                        <span className="text-slate-500">
+                          {" "}
+                          — {poiCount?.total ?? m.poi_total ?? 0} points near
+                          liquor/ATM clusters
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -2775,7 +3059,8 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token, onAsk
               <div className="flex items-center justify-between text-[9px] text-slate-400 pt-2">
                 <span>OSM · Open-Meteo · data.gov.in</span>
                 <span className="flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-emerald-500" /> Updated{" "}
+                  <span className="w-1 h-1 rounded-full bg-emerald-500" />{" "}
+                  Updated{" "}
                   {s.updated_at
                     ? new Date(s.updated_at).toLocaleDateString()
                     : "today"}
@@ -2868,7 +3153,9 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token, onAsk
         >
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
-            {spot.top_crime ? `View response plan — ${spot.top_crime}` : `${t("crimeMap.generatePatrolPlan")} — ${spot.name}`}
+            {spot.top_crime
+              ? `View response plan — ${spot.top_crime}`
+              : `${t("crimeMap.generatePatrolPlan")} — ${spot.name}`}
           </span>
           <span className="text-[#94A3B8]">→</span>
         </button>
@@ -4067,11 +4354,11 @@ function PanelHeader({
             {typeIcon} {type.toUpperCase()}
           </span>
         </div>
-        <h2 className="text-[15px] font-bold tracking-tight text-[#17233C]">{name}</h2>
+        <h2 className="text-[15px] font-bold tracking-tight text-[#17233C]">
+          {name}
+        </h2>
         {subtitle && (
-          <p className="text-xs text-[#64748B] mt-0.5">
-            {subtitle}
-          </p>
+          <p className="text-xs text-[#64748B] mt-0.5">{subtitle}</p>
         )}
       </div>
       <button
