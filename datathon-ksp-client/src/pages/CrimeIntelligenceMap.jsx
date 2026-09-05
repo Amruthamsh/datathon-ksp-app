@@ -720,22 +720,23 @@ function LayerSwitcher({
       <div>
         <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.08em] px-2 mb-1">Overlays</p>
         <label
-          className={`flex items-center gap-2 px-2.5 py-1 rounded-[6px] border ${networkDisabled ? "opacity-40 cursor-not-allowed border-transparent" : "hover:bg-[#F8FAFC] cursor-pointer border-transparent"}`}
+          className={`flex items-center gap-2 px-2.5 py-1 rounded-[6px] ${networkDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-[#F8FAFC] cursor-pointer"}`}
         >
           <input
             type="checkbox"
             checked={showNetworks}
             onChange={onToggleNetworks}
             disabled={networkDisabled}
-            className="rounded border-slate-300 text-blue-900 w-3.5 h-3.5 disabled:opacity-50 accent-blue-900 cursor-pointer"
+            className="rounded border-slate-300 text-[#17233C] w-3 h-3 disabled:opacity-50 accent-[#17233C] cursor-pointer"
             title={
               networkDisabled
                 ? "Network overlay is unavailable in District Risk view"
                 : undefined
             }
           />
-          <span className="text-xs font-bold text-[#1A1A2E] flex items-center gap-1">
-            <Users className="h-3 w-3" /> {t("crimeMap.layers.networkOverlay")}
+          <Users className="h-3 w-3 text-[#334155] shrink-0" />
+          <span className="text-[12px] font-medium text-[#334155]">
+            {t("crimeMap.layers.networkOverlay")}
           </span>
         </label>
         {networkDisabled && (
@@ -2145,14 +2146,14 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
 
   const m = spot.multipliers || {};
   const isEnhanced = !!spot.risk_score_enhanced;
-  const riskColor =
+  const riskBadgeColor =
     spot.risk_level === "CRITICAL"
-      ? "text-red-600 bg-red-50 border-red-200"
+      ? "text-red-700 bg-red-50 border-red-200"
       : spot.risk_level === "HIGH"
-        ? "text-amber-600 bg-amber-50 border-amber-200"
+        ? "text-amber-700 bg-amber-50 border-amber-200"
         : spot.risk_level === "MEDIUM"
-          ? "text-blue-600 bg-blue-50 border-blue-200"
-          : "text-green-600 bg-green-50 border-green-200";
+          ? "text-blue-700 bg-blue-50 border-blue-200"
+          : "text-emerald-700 bg-emerald-50 border-emerald-200";
 
   const crimeNorm = Math.min(100, spot.crime_count * 2);
   const repeatNorm = Math.min(100, spot.repeat_offenders * 3);
@@ -2171,17 +2172,17 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
         subtitle={`Rank #${spot.rank || "—"} of 31 districts`}
       />
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-4">
-        <div className={`p-4 rounded-lg border ${riskColor}`}>
+        <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+              <p className="text-[10px] font-medium text-slate-500">
                 {t("crimeMap.district.operationalRisk")}
               </p>
-              <p className="text-3xl font-black mt-0.5">
+              <p className="text-2xl font-black text-slate-900 mt-1">
                 {Math.round(spot.risk_score)}
               </p>
             </div>
-            <span className="text-xs font-black px-2.5 py-1 rounded">
+            <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${riskBadgeColor}`}>
               {spot.risk_level}
             </span>
           </div>
@@ -2237,7 +2238,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
         )}
 
         <div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+          <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-2">
             {t("crimeMap.district.riskBreakdown")}
           </p>
           <div className="space-y-2">
@@ -2283,7 +2284,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
 
         {/* Predictive Intelligence drivers */}
         {isEnhanced && spot.risk_drivers?.length > 0 && (
-          <div className="bg-emerald-50/70 border border-emerald-100 rounded-lg p-3">
+          <div className="bg-[#F4F6F9] border border-[#E5E7EB] rounded-xl p-3">
             <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
               <Zap className="h-3 w-3" /> Why risk is{" "}
               {spot.risk_level.toLowerCase()} (enhanced)
@@ -2379,7 +2380,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
           ].filter((b) => b.val !== 0 || b.label === "Base");
           const total = bonuses.reduce((a, b) => a + b.val, 0);
           return (
-            <div className="rounded-xl border border-[#E5E7EB] bg-white p-3.5 space-y-3 shadow-sm">
+            <div className="rounded-xl border border-[#E5E7EB] bg-white p-3.5 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-black tracking-widest uppercase text-[#1E3A8A] flex items-center gap-1.5">
                   <Building2 className="h-3.5 w-3.5" /> Socio-Economic
@@ -2435,7 +2436,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
                   return (
                     <div
                       key={metric.label}
-                      className={`bg-white rounded-lg border p-2.5 ${isBad ? "border-red-200 bg-red-50/40" : isGood ? "border-emerald-200 bg-emerald-50/30" : "border-slate-200"}`}
+                      className={`bg-white rounded-xl border p-2.5 ${isBad ? "border-red-200 bg-red-50/40" : isGood ? "border-emerald-200 bg-emerald-50/30" : "border-[#E5E7EB]"}`}
                     >
                       <div className="flex items-center justify-between">
                         <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
@@ -2488,12 +2489,12 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               </div>
 
               {/* How it affects risk — equation */}
-              <div className="bg-slate-900 rounded-lg p-3 text-white">
-                <p className="text-[9px] font-black tracking-widest uppercase text-orange-300 mb-2">
+              <div className="bg-[#F4F6F9] rounded-xl border border-[#E5E7EB] p-3">
+                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-2">
                   How this district’s economy lifts risk
                 </p>
                 <div className="flex items-center gap-1 flex-wrap text-xs font-mono">
-                  <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700">
+                  <span className="px-2 py-1 rounded bg-white border border-[#E5E7EB] text-slate-900">
                     {Math.round(base)}
                   </span>
                   {bonuses.slice(1).map((b) => (
@@ -2511,11 +2512,11 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
                     </span>
                   ))}
                   <span className="text-slate-400">=</span>
-                  <span className="px-2.5 py-1 rounded bg-white text-slate-900 font-black">
+                  <span className="px-2.5 py-1 rounded bg-blue-900/90 text-white font-black">
                     {total.toFixed(1)}
                   </span>
                 </div>
-                <div className="mt-2.5 flex h-2 rounded-full overflow-hidden bg-slate-800">
+                <div className="mt-2.5 flex h-2 rounded-full overflow-hidden bg-[#E2E8F0]">
                   {bonuses.map((b) => {
                     const w = Math.max(
                       2,
@@ -2531,7 +2532,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
                     );
                   })}
                 </div>
-                <div className="mt-1 flex gap-2 text-[9px] font-bold uppercase tracking-wider">
+                <div className="mt-1 flex gap-2 text-[9px] font-medium text-slate-500 uppercase tracking-wider">
                   {bonuses.map((b) => (
                     <span key={b.label} className="flex items-center gap-1">
                       <span className={`w-2 h-2 rounded-sm ${b.color}`} />
@@ -2539,7 +2540,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
                     </span>
                   ))}
                 </div>
-                <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
+                <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
                   {s.unemployment_rate > (avgUnemp || 7)
                     ? `Unemployment ${Number(s.unemployment_rate).toFixed(1)}% is ${dUnemp.toFixed(0)}% above state mean — each +1% adds ~3.5 risk points (this district +${(m.unemployment_bonus || 0).toFixed(1)}).`
                     : `Unemployment below mean cushions risk.`}
@@ -2573,9 +2574,9 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
 
         {/* Live POI & Weather */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
-            <p className="text-[10px] font-medium text-amber-700 flex items-center gap-1">
-              <Beer className="h-3 w-3" /> POI Risk Points
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
+            <p className="text-[10px] font-medium text-slate-500 flex items-center gap-1">
+              <Beer className="h-3 w-3 text-slate-500" /> POI Risk Points
             </p>
             {(() => {
               const total = poiCount?.total ?? m.poi_total;
@@ -2583,10 +2584,10 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               const hasData = total != null;
               return (
                 <>
-                  <p className="text-lg font-black text-amber-800">
+                  <p className="text-lg font-black text-slate-900">
                     {hasData ? `${total} pts` : "—"}
                   </p>
-                  <p className="text-[10px] text-amber-700">
+                  <p className="text-[10px] text-slate-500">
                     {hasData
                       ? liquor
                         ? `${liquor} liquor outlets`
@@ -2612,9 +2613,9 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               );
             })()}
           </div>
-          <div className="p-3 bg-sky-50 rounded-lg border border-sky-100">
-            <p className="text-[10px] font-medium text-sky-700 flex items-center gap-1">
-              <CloudRain className="h-3 w-3" /> Weather (14d)
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
+            <p className="text-[10px] font-medium text-slate-500 flex items-center gap-1">
+              <CloudRain className="h-3 w-3 text-slate-500" /> Weather (14d)
             </p>
             {weather.length ? (
               <>
