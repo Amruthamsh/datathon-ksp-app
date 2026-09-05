@@ -39,9 +39,6 @@
       "unemployment": "ನಿರುದ್ಯೋಗ",
       "hint": "ಕೆಂಪು ಅಂಚು = ಗಂಭೀರ · ಗಾಢ ಕೆಂಪು = ಕಡಿಮೆ ಸಾಕ್ಷರತೆ"
     },
-    "timeline": {
-      "monthsCount": "{{count}} ಮಾ"
-    },
     "tabs": {
       "details": "ವಿವರಗಳು",
       "askAI": "ಎಐ ಕೇಳಿ",

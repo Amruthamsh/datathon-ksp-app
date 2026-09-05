@@ -1224,18 +1224,16 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
         className="absolute bottom-2 left-3 right-3 bg-white rounded-[10px] border border-[#E2E8F0] px-2.5 py-1.5 z-10"
         style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
       >
-        <div className="flex items-center justify-between mb-1 gap-2">
-          <p className="text-[10px] font-bold text-[#17233C] uppercase tracking-[0.08em] flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-3">
+          <p className="text-[10px] font-bold text-[#17233C] uppercase tracking-[0.08em] flex items-center gap-1 shrink-0 whitespace-nowrap">
             <Clock className="h-3 w-3 text-[#334155]" />{" "}
-            {t("crimeMap.dateRange.title")}
+            {t("crimeMap.dateRange.title")}:{" "}
+            <span className="font-semibold normal-case tracking-normal">
+              {rangeLabel}
+            </span>
           </p>
-          <span className="text-[10px] font-semibold tracking-wide text-white bg-blue-900/90 px-2.5 py-0.5 rounded-full whitespace-nowrap">
-            {rangeLabel}
-          </span>
-        </div>
 
-        <div className="rounded-[8px] bg-[#F8FAFC] border border-[#E2E8F0] px-2.5 py-1.5">
-          <div className="relative">
+          <div className="relative flex-1 min-w-0">
             <div className="absolute top-[5.5px] left-0 right-0 h-[3px] rounded-full bg-slate-200" />
             <div
               className="absolute top-[5.5px] h-[3px] rounded-full bg-blue-900/90"
@@ -1265,18 +1263,6 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
                 }}
               />
             </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-1 text-[9px] font-bold text-slate-400 tracking-wide">
-            <span className="bg-white border border-slate-200 px-1.5 py-0 rounded-full text-[9px] leading-[1.6]">
-              {formatMonthLabel(months[0])}
-            </span>
-            <span className="text-slate-300 text-[8px]">
-              {t("crimeMap.timeline.monthsCount", { count: months.length })}
-            </span>
-            <span className="bg-white border border-slate-200 px-1.5 py-0 rounded-full text-[9px] leading-[1.6]">
-              {formatMonthLabel(months[last])}
-            </span>
           </div>
         </div>
       </div>

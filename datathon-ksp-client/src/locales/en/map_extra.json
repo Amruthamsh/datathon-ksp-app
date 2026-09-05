@@ -39,9 +39,6 @@
       "unemployment": "Unemployment",
       "hint": "red border = critical · deeper red = lower literacy"
     },
-    "timeline": {
-      "monthsCount": "{{count}}m"
-    },
     "tabs": {
       "details": "Details",
       "askAI": "Ask AI",
