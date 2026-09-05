@@ -217,7 +217,7 @@
   },
   "crimeMap": {
     "title": "Crime Intelligence Map",
-    "subtitle": "Decide where to deploy police resources",
+    "subtitle": "Understand where crime is happening and act where it matters most.",
     "generatePatrolPlan": "Generate Patrol Plan",
     "layers": {
       "title": "Map Layers",
