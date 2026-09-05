@@ -1019,7 +1019,7 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
         .range-dual input[type="range"]::-webkit-slider-thumb {
           -webkit-appearance: none; appearance: none;
           width: 10px; height: 10px; border-radius: 9999px;
-          background: #fff; border: 2px solid #17233C;
+          background: #fff; border: 2px solid #1e3a8a;
           box-shadow: 0 1px 3px rgba(15,23,42,0.12);
           cursor: pointer; pointer-events: auto; margin-top: -3.5px;
           transition: transform 0.12s;
@@ -1030,7 +1030,7 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
         }
         .range-dual input[type="range"]::-moz-range-thumb {
           width: 10px; height: 10px; border-radius: 9999px;
-          background: #fff; border: 2px solid #17233C;
+          background: #fff; border: 2px solid #1e3a8a;
           box-shadow: 0 1px 3px rgba(15,23,42,0.12);
           cursor: pointer; pointer-events: auto;
         }
@@ -1041,7 +1041,7 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
             <Clock className="h-3 w-3 text-[#334155]" />{" "}
             {t("crimeMap.dateRange.title")}
           </p>
-          <span className="text-[10px] font-semibold tracking-wide text-white bg-[#17233C] px-2.5 py-0.5 rounded-full whitespace-nowrap">
+          <span className="text-[10px] font-semibold tracking-wide text-white bg-blue-900/90 px-2.5 py-0.5 rounded-full whitespace-nowrap">
             {rangeLabel}
           </span>
         </div>
@@ -1050,7 +1050,7 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
           <div className="relative">
             <div className="absolute top-[5.5px] left-0 right-0 h-[3px] rounded-full bg-slate-200" />
             <div
-              className="absolute top-[5.5px] h-[3px] rounded-full bg-[#17233C]"
+              className="absolute top-[5.5px] h-[3px] rounded-full bg-blue-900/90"
               style={{ left: `${loPct}%`, width: `${selectedWidth}%` }}
             />
             <div className="range-dual">
@@ -1895,7 +1895,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
                   title: priorityCrime ? `${priorityCrime} · ${priorityDistrict || ""}` : `Priority: ${priorityDistrict}`,
                 })
               }
-              className="mt-3 w-full flex items-center justify-between rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] px-3 py-2.5 text-xs font-semibold text-[#17233C] transition-colors cursor-pointer"
+              className="mt-3 w-full flex items-center justify-between rounded-[8px] border border-blue-900/15 bg-white hover:bg-blue-50/50 px-3 py-2.5 text-xs font-semibold text-blue-900 transition-colors cursor-pointer"
             >
               <span>View response plan</span>
               <span className="text-[#64748B]">→</span>
@@ -1914,7 +1914,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
             const msg = `Provide a deep dive analysis of crime in ${hp?.name || summary?.contextual?.top_district || "Karnataka"} district. Today's risk: ${risk}. Hotspots: ${hotspots}. Repeat: ${repeat}. Crimes 30d: ${crimes}. Priority: ${priority}. Highlight critical areas and recommend deployment.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#1E344D] text-white text-[13px] font-semibold py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#17233C] focus-visible:ring-offset-2 cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-blue-900/90 hover:bg-blue-900 text-white text-[13px] font-semibold py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900 focus-visible:ring-offset-2 cursor-pointer"
           style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.12)" }}
         >
           <Sparkles className="h-4 w-4 opacity-90" />
@@ -2083,7 +2083,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
                 title: `${spot.sub_type || spot.crime_type} — ${spot.district || spot.station || ""}`,
               })
             }
-            className="w-full flex items-center justify-between rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] px-3.5 py-2.5 text-xs font-semibold text-[#17233C] transition-colors cursor-pointer"
+            className="w-full flex items-center justify-between rounded-[8px] border border-blue-900/15 bg-white hover:bg-blue-50/50 px-3.5 py-2.5 text-xs font-semibold text-blue-900 transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
@@ -2097,7 +2097,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
             const msg = `Analyze this FIR: Crime No ${spot.CrimeNo || "N/A"}, ${spot.sub_type || spot.crime_type || "crime"}, registered ${spot.CrimeRegisteredDate || spot.date || "unknown"}. Status: ${spot.status || "unknown"}. Gravity: ${spot.gravity || "unknown"}. Station: ${spot.station || "unknown"}, District: ${spot.district || "Karnataka"}. Coordinates: ${spot.lat}, ${spot.lng}. Brief facts: ${spot.BriefFacts || "N/A"}. Identify factors and recommend investigation/intervention actions.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#1E344D] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-blue-900/90 hover:bg-blue-900 text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
         >
           <Sparkles className="h-3.5 w-3.5 opacity-90" />
           {t("crimeMap.askAI.trendAnalysis")}
@@ -2651,7 +2651,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               title: `${spot.top_crime || "All crimes"} in ${spot.name}`,
             })
           }
-          className="w-full flex items-center justify-between rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] px-3.5 py-2.5 text-xs font-semibold text-[#17233C] transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between rounded-[8px] border border-blue-900/15 bg-white hover:bg-blue-50/50 px-3.5 py-2.5 text-xs font-semibold text-blue-900 transition-colors cursor-pointer"
         >
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
@@ -2670,7 +2670,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
             const msg = `Provide a deep dive analysis of crime in ${spot.name} district. Enhanced risk score: ${Math.round(spot.risk_score)} (${spot.risk_level}) base ${spot.risk_score_base ? Math.round(spot.risk_score_base) : "N/A"}. Crime count: ${spot.crime_count}. Repeat offenders: ${spot.repeat_offenders}. Pending: ${spot.pending_investigations}. Trend: ${(spot.change_pct || 0) > 0 ? "+" : ""}${spot.change_pct || 0}%. Top crime: ${spot.top_crime || "N/A"}. Rank: ${spot.rank || "N/A"}.\nLive drivers: ${drivers || "None"}\nSocio-economic (live): ${se}\n${poi}\n${wx}\nCorrelate socio-economic unemployment, POI liquor/ATM density, and monsoon/heat weather with the crime pattern and recommend targeted patrols near liquor/ATM clusters and socio interventions.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#1E344D] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-blue-900/90 hover:bg-blue-900 text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
         >
           <Sparkles className="h-3.5 w-3.5 opacity-90" />
           {t("crimeMap.askAI.districtAnalysis")}
@@ -2701,7 +2701,7 @@ function RiskBar({ label, value }) {
       </div>
       <div className="w-full h-1.5 bg-[#E2E8F0] rounded-full overflow-hidden">
         <div
-          className="h-full bg-[#17233C] rounded-full transition-all"
+          className="h-full bg-blue-900/90 rounded-full transition-all"
           style={{ width: `${value}%` }}
         />
       </div>
@@ -2801,7 +2801,7 @@ function POIPanel({ spot, onClose, onOpenPatrol }) {
               title: `POI patrol · ${spot.name}`,
             })
           }
-          className="w-full flex items-center justify-between rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] px-3.5 py-2.5 text-xs font-semibold text-[#17233C] transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between rounded-[8px] border border-blue-900/15 bg-white hover:bg-blue-50/50 px-3.5 py-2.5 text-xs font-semibold text-blue-900 transition-colors cursor-pointer"
         >
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
@@ -2814,7 +2814,7 @@ function POIPanel({ spot, onClose, onOpenPatrol }) {
             const msg = `Analyze this POI in Karnataka crime context: Type ${spot.poi_type}, Name ${spot.name}, District ${spot.district}, Coords ${spot.lat},${spot.lng}, Risk weight ${spot.risk_weight}. Explain its criminogenic relevance and suggest mitigation.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#1E344D] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-blue-900/90 hover:bg-blue-900 text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
         >
           <Sparkles className="h-3.5 w-3.5 opacity-90" />
           Ask AI about this POI
@@ -2974,7 +2974,7 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
               title: dominant ? `${dominant} hotspot` : "Cluster hotspot",
             });
           }}
-          className="w-full flex items-center justify-between rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] px-3.5 py-2.5 text-xs font-semibold text-[#17233C] transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between rounded-[8px] border border-blue-900/15 bg-white hover:bg-blue-50/50 px-3.5 py-2.5 text-xs font-semibold text-blue-900 transition-colors cursor-pointer"
         >
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
@@ -2997,7 +2997,7 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
               const msg = `Provide a deep dive analysis of this crime hotspot. Total incidents: ${detail.crime_count}. Peak time: ${detail.peak_time}. Repeat offenders: ${detail.repeat_offenders}. Linked investigations: ${detail.linked_investigations}. Active networks: ${detail.active_networks}. Top crimes: ${topCrimes || "N/A"}. Nearby stations: ${stations || "N/A"}. Risk factors: ${risks || "N/A"}. Identify patterns, correlations between risk factors, and recommend enforcement actions.`;
               navigate("/", { state: { initialMessage: msg } });
             }}
-            className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#1E344D] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-blue-900/90 hover:bg-blue-900 text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
           >
             <Sparkles className="h-3.5 w-3.5 opacity-90" />
 
@@ -3123,7 +3123,7 @@ function NetworkPanel({ spot, onClose }) {
       <div className="p-4 border-t border-[#E2E8F0] flex flex-col gap-2 bg-white">
         <button
           onClick={() => navigate("/networks")}
-          className="w-full flex items-center justify-between rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] px-3.5 py-2.5 text-xs font-semibold text-[#17233C] transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between rounded-[8px] border border-blue-900/15 bg-white hover:bg-blue-50/50 px-3.5 py-2.5 text-xs font-semibold text-blue-900 transition-colors cursor-pointer"
         >
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
@@ -3141,7 +3141,7 @@ function NetworkPanel({ spot, onClose }) {
             const msg = `Provide a deep dive analysis of the criminal network "${spot.network_name}". Members: ${spot.member_count}. Total FIRs: ${spot.total_firs}. Risk level: ${spot.risk}. Districts covered: ${districts || "N/A"}. Top members: ${members || "N/A"}. Identify key operatives, communication patterns, operational structure, and recommend disruption strategies.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#1E344D] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-blue-900/90 hover:bg-blue-900 text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
         >
           <Sparkles className="h-3.5 w-3.5 opacity-90" />
           {t("crimeMap.askAI.networkAnalysis")}
