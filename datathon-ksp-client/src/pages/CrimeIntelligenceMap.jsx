@@ -30,6 +30,7 @@ import {
   Eye,
   EyeOff,
   Layers,
+  MessageSquare,
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useAuth } from "../auth/AuthContext";
@@ -37,6 +38,7 @@ import * as crimeMapApi from "../api/crimeMap";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import * as XLSX from "xlsx";
+import MapChatPanel from "../components/crimeMap/MapChatPanel";
 
 function formatNumber(num) {
   if (num === null || num === undefined) return "—";
@@ -202,6 +204,9 @@ export default function CrimeIntelligenceMap() {
   const [refreshingIntel, setRefreshingIntel] = useState(false);
   const [showLayerPanel, setShowLayerPanel] = useState(true);
   const [showCrimeTypesPanel, setShowCrimeTypesPanel] = useState(true);
+  const [rightTab, setRightTab] = useState("details");
+  const [mapChatPrefill, setMapChatPrefill] = useState(null);
+  const [mapChatKey, setMapChatKey] = useState(0);
 
   const activeSubType = useMemo(() => {
     if (selectedHeads && selectedHeads.size === 1) {
@@ -401,6 +406,96 @@ export default function CrimeIntelligenceMap() {
     setShowPatrolModal(true);
   }, []);
 
+  const activeSubTypes = useMemo(() => {
+    if (!selectedHeads) return null;
+    return Array.from(selectedHeads);
+  }, [selectedHeads]);
+
+  const mapContext = useMemo(
+    () => ({
+      viewMode,
+      viewState,
+      dateFrom,
+      dateTo,
+      activeSubTypes,
+      poiFilters,
+      showSocioOverlay,
+      showNetworks,
+      crimesCount: crimesData?.length ?? 0,
+      filteredCount: filteredCrimesData?.length ?? 0,
+      selectedSpot,
+      hotspotDetail,
+      summary,
+      enhancedRisk,
+    }),
+    [
+      viewMode,
+      viewState,
+      dateFrom,
+      dateTo,
+      activeSubTypes,
+      poiFilters,
+      showSocioOverlay,
+      showNetworks,
+      crimesData,
+      filteredCrimesData,
+      selectedSpot,
+      hotspotDetail,
+      summary,
+      enhancedRisk,
+    ],
+  );
+
+  const handleMapAction = useCallback(
+    (action) => {
+      if (!action) return;
+      if (action.type === "flyToDistrict" && action.district) {
+        const entry = (enhancedRisk || []).find((d) => d.district === action.district);
+        if (entry?.bounds) {
+          const lat = (entry.bounds.min_lat + entry.bounds.max_lat) / 2;
+          const lng = (entry.bounds.min_lng + entry.bounds.max_lng) / 2;
+          setViewState((prev) => ({ ...prev, latitude: lat, longitude: lng, zoom: 9, pitch: 0 }));
+          setSelectedSpot({ id: entry.district, name: entry.district, type: "District", ...entry });
+          setHotspotDetail(null);
+        } else {
+          // Fallback: just highlight district via selection without fly
+          const fallback = (enhancedRisk || []).find((d) => d.district === action.district);
+          if (fallback) {
+            setSelectedSpot({ id: fallback.district, name: fallback.district, type: "District", ...fallback });
+          }
+        }
+        setRightTab("details");
+      } else if (action.type === "filterCrime" && action.crime) {
+        // Try to match the crime label to an existing sub_type
+        const match = headOptions.find((h) => h.sub_type.toLowerCase() === String(action.crime).toLowerCase());
+        if (match) {
+          setSelectedHeads(new Set([match.sub_type]));
+        } else {
+          // fuzzy: find partial
+          const fuzzy = headOptions.find((h) => h.sub_type.toLowerCase().includes(String(action.crime).toLowerCase()));
+          if (fuzzy) setSelectedHeads(new Set([fuzzy.sub_type]));
+        }
+      } else if (action.type === "setViewMode" && action.mode) {
+        setViewMode(action.mode);
+        setSelectedSpot(null);
+        setHotspotDetail(null);
+      } else if (action.type === "flyTo" && action.payload) {
+        setViewState((prev) => ({ ...prev, ...action.payload }));
+      } else if (action.type === "selectDistrict" && action.payload?.district) {
+        const entry = (enhancedRisk || []).find((d) => d.district === action.payload.district);
+        if (entry) setSelectedSpot({ id: entry.district, name: entry.district, type: "District", ...entry });
+      }
+    },
+    [enhancedRisk, headOptions],
+  );
+
+  const handleAskInMapChat = useCallback((query) => {
+    if (!query) return;
+    setMapChatPrefill(query);
+    setMapChatKey((k) => k + 1);
+    setRightTab("chat");
+  }, []);
+
   // Auto-disable network overlay in District Risk view
   useEffect(() => {
     if (viewMode === "Administrative" && showNetworks) {
@@ -598,6 +693,13 @@ export default function CrimeIntelligenceMap() {
               onOpenPatrol={openPatrol}
               enhancedRisk={enhancedRisk}
               token={token}
+              activeTab={rightTab}
+              onTabChange={setRightTab}
+              mapContext={mapContext}
+              onMapAction={handleMapAction}
+              chatPrefill={mapChatPrefill}
+              chatKey={mapChatKey}
+              onAskInMapChat={handleAskInMapChat}
             />
           </div>
         </div>
@@ -1668,76 +1770,84 @@ function RightPanel({
   onOpenPatrol,
   enhancedRisk,
   token,
+  activeTab,
+  onTabChange,
+  mapContext,
+  onMapAction,
+  chatPrefill,
+  chatKey,
+  onAskInMapChat,
 }) {
-  const panelWrap = "w-96 bg-white rounded-[12px] border border-[#E2E8F0] flex flex-col min-h-0 overflow-hidden";
+  const panelWrap = "w-[380px] xl:w-[400px] bg-white rounded-[12px] border border-[#E2E8F0] flex flex-col min-h-0 overflow-hidden shrink-0";
   const panelStyle = { boxShadow: "0 1px 3px rgba(15,23,42,0.08)" };
-  if (!selectedSpot) {
-    return (
-      <div className={panelWrap} style={panelStyle}>
-        <DefaultPanel
-          summary={summary}
-          enhancedRisk={enhancedRisk}
-          onOpenPatrol={onOpenPatrol}
-        />
-      </div>
-    );
-  }
+  const hasSelection = !!selectedSpot;
 
-  if (selectedSpot.type === "POI") {
-    return (
-      <div className={panelWrap} style={panelStyle}>
-        <POIPanel
-          spot={selectedSpot}
-          onClose={onClose}
-          onOpenPatrol={onOpenPatrol}
-        />
-      </div>
-    );
-  }
+  const renderDetails = () => {
+    if (!selectedSpot) {
+      return <DefaultPanel summary={summary} enhancedRisk={enhancedRisk} onOpenPatrol={onOpenPatrol} onAskInMapChat={onAskInMapChat} mapContext={mapContext} />;
+    }
+    if (selectedSpot.type === "POI") {
+      return <POIPanel spot={selectedSpot} onClose={onClose} onOpenPatrol={onOpenPatrol} onAskInMapChat={onAskInMapChat} />;
+    }
+    if (selectedSpot.type === "Trend" || selectedSpot.type === "Crime") {
+      return <TrendPanel spot={selectedSpot} onClose={onClose} onOpenPatrol={onOpenPatrol} onAskInMapChat={onAskInMapChat} />;
+    }
+    if (selectedSpot.type === "District") {
+      return <DistrictPanel spot={selectedSpot} onClose={onClose} onOpenPatrol={onOpenPatrol} enhancedRisk={enhancedRisk} token={token} onAskInMapChat={onAskInMapChat} />;
+    }
+    if (selectedSpot.type === "Criminal Network") {
+      return <NetworkPanel spot={selectedSpot} onClose={onClose} onAskInMapChat={onAskInMapChat} />;
+    }
+    return <ClusterPanel spot={selectedSpot} detail={hotspotDetail} onClose={onClose} onOpenPatrol={onOpenPatrol} onAskInMapChat={onAskInMapChat} />;
+  };
 
-  if (selectedSpot.type === "Trend" || selectedSpot.type === "Crime") {
-    return (
-      <div className={panelWrap} style={panelStyle}>
-        <TrendPanel
-          spot={selectedSpot}
-          onClose={onClose}
-          onOpenPatrol={onOpenPatrol}
-        />
-      </div>
-    );
-  }
-
-  if (selectedSpot.type === "District") {
-    return (
-      <div className={panelWrap} style={panelStyle}>
-        <DistrictPanel
-          spot={selectedSpot}
-          onClose={onClose}
-          onOpenPatrol={onOpenPatrol}
-          enhancedRisk={enhancedRisk}
-          token={token}
-        />
-      </div>
-    );
-  }
-
-  if (selectedSpot.type === "Criminal Network") {
-    return (
-      <div className={panelWrap} style={panelStyle}>
-        <NetworkPanel spot={selectedSpot} onClose={onClose} />
-      </div>
-    );
-  }
-
-  // Cluster / Hotspot
   return (
     <div className={panelWrap} style={panelStyle}>
-      <ClusterPanel
-        spot={selectedSpot}
-        detail={hotspotDetail}
-        onClose={onClose}
-        onOpenPatrol={onOpenPatrol}
-      />
+      {/* Tab bar — distinctive pill switcher */}
+      <div className="shrink-0 px-3 pt-3 pb-2 bg-white border-b border-[#E2E8F0]">
+        <div className="flex items-center gap-1 p-1 bg-[#F1F5F9] rounded-full border border-[#E2E8F0]">
+          <button
+            onClick={() => onTabChange("details")}
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition cursor-pointer ${
+              activeTab === "details" ? "bg-white text-[#17233C] shadow-sm border border-[#E2E8F0]" : "text-[#64748B] hover:text-[#334155]"
+            }`}
+          >
+            <Layers className="h-3.5 w-3.5" /> Details
+            {hasSelection && activeTab !== "details" && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-[#D92D20] animate-pulse" />}
+          </button>
+          <button
+            onClick={() => onTabChange("chat")}
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition cursor-pointer ${
+              activeTab === "chat" ? "bg-[#17233C] text-white shadow-sm" : "text-[#64748B] hover:text-[#334155]"
+            }`}
+          >
+            <MessageSquare className={`h-3.5 w-3.5 ${activeTab === "chat" ? "text-white" : "text-slate-400"}`} />
+            <span className="hidden sm:inline">Ask AI</span>
+            <span className="sm:hidden">Chat</span>
+            <span className={`ml-1 flex h-4 items-center rounded-full px-1.5 text-[10px] font-bold ${activeTab === "chat" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700 border border-emerald-200"}`}>
+              Map-aware
+            </span>
+          </button>
+        </div>
+        {activeTab === "details" && hasSelection && (
+          <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500 text-center">
+            Selected context is sent with every Ask AI question — switch tabs to chat.
+          </p>
+        )}
+        {activeTab === "chat" && (
+          <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500 text-center flex items-center justify-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live map view + filters are included in every answer
+          </p>
+        )}
+      </div>
+
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        {activeTab === "chat" ? (
+          <MapChatPanel token={token} mapContext={mapContext} onMapAction={onMapAction} initialQuery={chatPrefill} initialQueryKey={chatKey} />
+        ) : (
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">{renderDetails()}</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1750,11 +1860,18 @@ RightPanel.propTypes = {
   onOpenPatrol: PropTypes.func.isRequired,
   enhancedRisk: PropTypes.array,
   token: PropTypes.string,
+  activeTab: PropTypes.string,
+  onTabChange: PropTypes.func,
+  mapContext: PropTypes.object,
+  onMapAction: PropTypes.func,
+  chatPrefill: PropTypes.string,
+  chatKey: PropTypes.number,
+  onAskInMapChat: PropTypes.func,
 };
 
 /* ── Default Panel (nothing selected) ──────────────────────────── */
 
-function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
+function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const hp = summary?.highest_priority_district;
@@ -1971,7 +2088,25 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
           </div>
         )}
 
-        {/* ── Primary action — navy ── */}
+        {/* ── Primary action — ask in map chat (keeps context) ── */}
+        <button
+          onClick={() => {
+            const risk = summary?.today_risk || "N/A";
+            const hotspots = summary?.emerging_hotspots ?? "N/A";
+            const repeat = summary?.repeat_offender_areas ?? "N/A";
+            const crimes = summary?.active_hotspots ?? "N/A";
+            const priority = hp?.name ? `${hp.name} — ${hp.reason}` : "None identified";
+            const district = hp?.name || summary?.contextual?.top_district || "Karnataka";
+            const msg = `Provide a deep dive analysis of crime in ${district} district. Today's risk: ${risk}. Hotspots: ${hotspots}. Repeat: ${repeat}. Crimes 30d: ${crimes}. Priority: ${priority}. Highlight critical areas and recommend deployment.`;
+            if (onAskInMapChat) onAskInMapChat(msg);
+            else navigate("/", { state: { initialMessage: msg } });
+          }}
+          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#0f1a2e] text-white text-[13px] font-semibold py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900 focus-visible:ring-offset-2 cursor-pointer"
+          style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.12)" }}
+        >
+          <MessageSquare className="h-4 w-4 opacity-90" />
+          Ask CrimeLens — map-aware
+        </button>
         <button
           onClick={() => {
             const risk = summary?.today_risk || "N/A";
@@ -1982,11 +2117,9 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol }) {
             const msg = `Provide a deep dive analysis of crime in ${hp?.name || summary?.contextual?.top_district || "Karnataka"} district. Today's risk: ${risk}. Hotspots: ${hotspots}. Repeat: ${repeat}. Crimes 30d: ${crimes}. Priority: ${priority}. Highlight critical areas and recommend deployment.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-blue-900/90 hover:bg-blue-900 text-white text-[13px] font-semibold py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900 focus-visible:ring-offset-2 cursor-pointer"
-          style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.12)" }}
+          className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2.5 transition-colors cursor-pointer"
         >
-          <Sparkles className="h-4 w-4 opacity-90" />
-          Analyze district
+          Open in full workspace <span className="text-[#94A3B8]">→</span>
         </button>
       </div>
     </div>
@@ -1997,11 +2130,12 @@ DefaultPanel.propTypes = {
   summary: PropTypes.object,
   enhancedRisk: PropTypes.array,
   onOpenPatrol: PropTypes.func,
+  onAskInMapChat: PropTypes.func,
 };
 
 /* ── Trend Panel ────────────────────────────────────────────────── */
 
-function TrendPanel({ spot, onClose, onOpenPatrol }) {
+function TrendPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -2163,12 +2297,22 @@ function TrendPanel({ spot, onClose, onOpenPatrol }) {
         <button
           onClick={() => {
             const msg = `Analyze this FIR: Crime No ${spot.CrimeNo || "N/A"}, ${spot.sub_type || spot.crime_type || "crime"}, registered ${spot.CrimeRegisteredDate || spot.date || "unknown"}. Status: ${spot.status || "unknown"}. Gravity: ${spot.gravity || "unknown"}. Station: ${spot.station || "unknown"}, District: ${spot.district || "Karnataka"}. Coordinates: ${spot.lat}, ${spot.lng}. Brief facts: ${spot.BriefFacts || "N/A"}. Identify factors and recommend investigation/intervention actions.`;
+            if (onAskInMapChat) onAskInMapChat(msg);
+            else navigate("/", { state: { initialMessage: msg } });
+          }}
+          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#0f1a2e] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+        >
+          <MessageSquare className="h-3.5 w-3.5 opacity-90" />
+          Ask CrimeLens — map-aware
+        </button>
+        <button
+          onClick={() => {
+            const msg = `Analyze this FIR: Crime No ${spot.CrimeNo || "N/A"}, ${spot.sub_type || spot.crime_type || "crime"}, registered ${spot.CrimeRegisteredDate || spot.date || "unknown"}. Status: ${spot.status || "unknown"}. Gravity: ${spot.gravity || "unknown"}. Station: ${spot.station || "unknown"}, District: ${spot.district || "Karnataka"}. Coordinates: ${spot.lat}, ${spot.lng}. Brief facts: ${spot.BriefFacts || "N/A"}. Identify factors and recommend investigation/intervention actions.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-blue-900/90 hover:bg-blue-900 text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2 transition-colors cursor-pointer"
         >
-          <Sparkles className="h-3.5 w-3.5 opacity-90" />
-          {t("crimeMap.askAI.trendAnalysis")}
+          Open in full workspace <span className="text-[#94A3B8]">→</span>
         </button>
       </div>
     </>
@@ -2179,11 +2323,12 @@ TrendPanel.propTypes = {
   spot: PropTypes.object.isRequired,
   onClose: PropTypes.func.isRequired,
   onOpenPatrol: PropTypes.func,
+  onAskInMapChat: PropTypes.func,
 };
 
 /* ── District Panel ─────────────────────────────────────────────── */
 
-function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
+function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token, onAskInMapChat }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [socio, setSocio] = useState(null);
@@ -2736,12 +2881,28 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
             const poi = `POIs: ${m.poi_total ?? "N/A"} (${m.poi_liquor ?? 0} liquor)`;
             const wx = `Weather 14d avg: ${m.weather_rain_14d_avg ?? "N/A"}mm rain, ${m.weather_temp_14d_avg ?? "N/A"}°C`;
             const msg = `Provide a deep dive analysis of crime in ${spot.name} district. Enhanced risk score: ${Math.round(spot.risk_score)} (${spot.risk_level}) base ${spot.risk_score_base ? Math.round(spot.risk_score_base) : "N/A"}. Crime count: ${spot.crime_count}. Repeat offenders: ${spot.repeat_offenders}. Pending: ${spot.pending_investigations}. Trend: ${(spot.change_pct || 0) > 0 ? "+" : ""}${spot.change_pct || 0}%. Top crime: ${spot.top_crime || "N/A"}. Rank: ${spot.rank || "N/A"}.\nLive drivers: ${drivers || "None"}\nSocio-economic (live): ${se}\n${poi}\n${wx}\nCorrelate socio-economic unemployment, POI liquor/ATM density, and monsoon/heat weather with the crime pattern and recommend targeted patrols near liquor/ATM clusters and socio interventions.`;
+            if (onAskInMapChat) onAskInMapChat(msg);
+            else navigate("/", { state: { initialMessage: msg } });
+          }}
+          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#0f1a2e] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+        >
+          <MessageSquare className="h-3.5 w-3.5 opacity-90" />
+          Ask CrimeLens — map-aware
+        </button>
+        <button
+          onClick={() => {
+            const drivers = (spot.risk_drivers || []).join("; ");
+            const se = socio
+              ? `Unemployment ${socio.unemployment_rate}%, Density ${socio.population_density}/km², Income ₹${socio.per_capita_income}, Literacy ${socio.literacy_rate}%`
+              : "";
+            const poi = `POIs: ${m.poi_total ?? "N/A"} (${m.poi_liquor ?? 0} liquor)`;
+            const wx = `Weather 14d avg: ${m.weather_rain_14d_avg ?? "N/A"}mm rain, ${m.weather_temp_14d_avg ?? "N/A"}°C`;
+            const msg = `Provide a deep dive analysis of crime in ${spot.name} district. Enhanced risk score: ${Math.round(spot.risk_score)} (${spot.risk_level}) base ${spot.risk_score_base ? Math.round(spot.risk_score_base) : "N/A"}. Crime count: ${spot.crime_count}. Repeat offenders: ${spot.repeat_offenders}. Pending: ${spot.pending_investigations}. Trend: ${(spot.change_pct || 0) > 0 ? "+" : ""}${spot.change_pct || 0}%. Top crime: ${spot.top_crime || "N/A"}. Rank: ${spot.rank || "N/A"}.\nLive drivers: ${drivers || "None"}\nSocio-economic (live): ${se}\n${poi}\n${wx}\nCorrelate socio-economic unemployment, POI liquor/ATM density, and monsoon/heat weather with the crime pattern and recommend targeted patrols near liquor/ATM clusters and socio interventions.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-blue-900/90 hover:bg-blue-900 text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2 transition-colors cursor-pointer"
         >
-          <Sparkles className="h-3.5 w-3.5 opacity-90" />
-          {t("crimeMap.askAI.districtAnalysis")}
+          Open in full workspace <span className="text-[#94A3B8]">→</span>
         </button>
       </div>
     </>
@@ -2754,6 +2915,7 @@ DistrictPanel.propTypes = {
   onOpenPatrol: PropTypes.func.isRequired,
   enhancedRisk: PropTypes.array,
   token: PropTypes.string,
+  onAskInMapChat: PropTypes.func,
 };
 
 function RiskBar({ label, value }) {
@@ -2782,7 +2944,7 @@ RiskBar.propTypes = {
   value: PropTypes.number.isRequired,
 };
 
-function POIPanel({ spot, onClose, onOpenPatrol }) {
+function POIPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
   const navigate = useNavigate();
   const typeColor =
     {
@@ -2880,12 +3042,22 @@ function POIPanel({ spot, onClose, onOpenPatrol }) {
         <button
           onClick={() => {
             const msg = `Analyze this POI in Karnataka crime context: Type ${spot.poi_type}, Name ${spot.name}, District ${spot.district}, Coords ${spot.lat},${spot.lng}, Risk weight ${spot.risk_weight}. Explain its criminogenic relevance and suggest mitigation.`;
+            if (onAskInMapChat) onAskInMapChat(msg);
+            else navigate("/", { state: { initialMessage: msg } });
+          }}
+          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#0f1a2e] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+        >
+          <MessageSquare className="h-3.5 w-3.5 opacity-90" />
+          Ask CrimeLens — map-aware
+        </button>
+        <button
+          onClick={() => {
+            const msg = `Analyze this POI in Karnataka crime context: Type ${spot.poi_type}, Name ${spot.name}, District ${spot.district}, Coords ${spot.lat},${spot.lng}, Risk weight ${spot.risk_weight}. Explain its criminogenic relevance and suggest mitigation.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-blue-900/90 hover:bg-blue-900 text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2 transition-colors cursor-pointer"
         >
-          <Sparkles className="h-3.5 w-3.5 opacity-90" />
-          Ask AI about this POI
+          Open in full workspace <span className="text-[#94A3B8]">→</span>
         </button>
       </div>
     </>
@@ -2895,11 +3067,12 @@ POIPanel.propTypes = {
   spot: PropTypes.object.isRequired,
   onClose: PropTypes.func.isRequired,
   onOpenPatrol: PropTypes.func,
+  onAskInMapChat: PropTypes.func,
 };
 
 /* ── Cluster / Hotspot Panel ────────────────────────────────────── */
 
-function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
+function ClusterPanel({ spot, detail, onClose, onOpenPatrol, onAskInMapChat }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const displayName =
@@ -3053,24 +3226,42 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol }) {
           <span className="text-[#94A3B8]">→</span>
         </button>
         {detail && (
-          <button
-            onClick={() => {
-              const topCrimes = (detail.top_crimes || [])
-                .map((c) => `${c.CrimeGroupName}: ${c.cnt}`)
-                .join(", ");
-              const stations = (detail.stations || [])
-                .map((s) => s.name)
-                .join(", ");
-              const risks = (detail.risk_factors || []).join("; ");
-              const msg = `Provide a deep dive analysis of this crime hotspot. Total incidents: ${detail.crime_count}. Peak time: ${detail.peak_time}. Repeat offenders: ${detail.repeat_offenders}. Linked investigations: ${detail.linked_investigations}. Active networks: ${detail.active_networks}. Top crimes: ${topCrimes || "N/A"}. Nearby stations: ${stations || "N/A"}. Risk factors: ${risks || "N/A"}. Identify patterns, correlations between risk factors, and recommend enforcement actions.`;
-              navigate("/", { state: { initialMessage: msg } });
-            }}
-            className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-blue-900/90 hover:bg-blue-900 text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
-          >
-            <Sparkles className="h-3.5 w-3.5 opacity-90" />
-
-            {t("crimeMap.askAI.clusterAnalysis")}
-          </button>
+          <>
+            <button
+              onClick={() => {
+                const topCrimes = (detail.top_crimes || [])
+                  .map((c) => `${c.CrimeGroupName}: ${c.cnt}`)
+                  .join(", ");
+                const stations = (detail.stations || [])
+                  .map((s) => s.name)
+                  .join(", ");
+                const risks = (detail.risk_factors || []).join("; ");
+                const msg = `Provide a deep dive analysis of this crime hotspot. Total incidents: ${detail.crime_count}. Peak time: ${detail.peak_time}. Repeat offenders: ${detail.repeat_offenders}. Linked investigations: ${detail.linked_investigations}. Active networks: ${detail.active_networks}. Top crimes: ${topCrimes || "N/A"}. Nearby stations: ${stations || "N/A"}. Risk factors: ${risks || "N/A"}. Identify patterns, correlations between risk factors, and recommend enforcement actions.`;
+                if (onAskInMapChat) onAskInMapChat(msg);
+                else navigate("/", { state: { initialMessage: msg } });
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#0f1a2e] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+            >
+              <MessageSquare className="h-3.5 w-3.5 opacity-90" />
+              Ask CrimeLens — map-aware
+            </button>
+            <button
+              onClick={() => {
+                const topCrimes = (detail.top_crimes || [])
+                  .map((c) => `${c.CrimeGroupName}: ${c.cnt}`)
+                  .join(", ");
+                const stations = (detail.stations || [])
+                  .map((s) => s.name)
+                  .join(", ");
+                const risks = (detail.risk_factors || []).join("; ");
+                const msg = `Provide a deep dive analysis of this crime hotspot. Total incidents: ${detail.crime_count}. Peak time: ${detail.peak_time}. Repeat offenders: ${detail.repeat_offenders}. Linked investigations: ${detail.linked_investigations}. Active networks: ${detail.active_networks}. Top crimes: ${topCrimes || "N/A"}. Nearby stations: ${stations || "N/A"}. Risk factors: ${risks || "N/A"}. Identify patterns, correlations between risk factors, and recommend enforcement actions.`;
+                navigate("/", { state: { initialMessage: msg } });
+              }}
+              className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2 transition-colors cursor-pointer"
+            >
+              Open in full workspace <span className="text-[#94A3B8]">→</span>
+            </button>
+          </>
         )}
       </div>
     </>
@@ -3082,11 +3273,12 @@ ClusterPanel.propTypes = {
   detail: PropTypes.object,
   onClose: PropTypes.func.isRequired,
   onOpenPatrol: PropTypes.func.isRequired,
+  onAskInMapChat: PropTypes.func,
 };
 
 /* ── Network Panel ──────────────────────────────────────────────── */
 
-function NetworkPanel({ spot, onClose }) {
+function NetworkPanel({ spot, onClose, onAskInMapChat }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   return (
@@ -3207,12 +3399,27 @@ function NetworkPanel({ spot, onClose }) {
               .join(", ");
             const districts = (spot.districts || []).join(", ");
             const msg = `Provide a deep dive analysis of the criminal network "${spot.network_name}". Members: ${spot.member_count}. Total FIRs: ${spot.total_firs}. Risk level: ${spot.risk}. Districts covered: ${districts || "N/A"}. Top members: ${members || "N/A"}. Identify key operatives, communication patterns, operational structure, and recommend disruption strategies.`;
+            if (onAskInMapChat) onAskInMapChat(msg);
+            else navigate("/", { state: { initialMessage: msg } });
+          }}
+          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#0f1a2e] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+        >
+          <MessageSquare className="h-3.5 w-3.5 opacity-90" />
+          Ask CrimeLens — map-aware
+        </button>
+        <button
+          onClick={() => {
+            const members = (spot.members || [])
+              .slice(0, 8)
+              .map((m) => `${m.name} (${m.firs} FIRs)`)
+              .join(", ");
+            const districts = (spot.districts || []).join(", ");
+            const msg = `Provide a deep dive analysis of the criminal network "${spot.network_name}". Members: ${spot.member_count}. Total FIRs: ${spot.total_firs}. Risk level: ${spot.risk}. Districts covered: ${districts || "N/A"}. Top members: ${members || "N/A"}. Identify key operatives, communication patterns, operational structure, and recommend disruption strategies.`;
             navigate("/", { state: { initialMessage: msg } });
           }}
-          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-blue-900/90 hover:bg-blue-900 text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2 transition-colors cursor-pointer"
         >
-          <Sparkles className="h-3.5 w-3.5 opacity-90" />
-          {t("crimeMap.askAI.networkAnalysis")}
+          Open in full workspace <span className="text-[#94A3B8]">→</span>
         </button>
       </div>
     </>
@@ -3222,6 +3429,7 @@ function NetworkPanel({ spot, onClose }) {
 NetworkPanel.propTypes = {
   spot: PropTypes.object.isRequired,
   onClose: PropTypes.func.isRequired,
+  onAskInMapChat: PropTypes.func,
 };
 
 /* ── Patrol Planner Modal ───────────────────────────────────────── */

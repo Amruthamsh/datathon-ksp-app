@@ -381,6 +381,9 @@
       "socioeconomic": "Socio-Economic Factors",
       "highRiskPOIs": "High-Risk POIs",
       "temporalThreat": "Temporal Threat Index"
+    },
+    "chat": {
+      "greeting": "I'm CrimeLens—your investigative analyst. Ask about what's on the map and I'll blend live view context with the KSP crime database. Try a suggested prompt below or type your own."
     }
   },
   "networks": {
