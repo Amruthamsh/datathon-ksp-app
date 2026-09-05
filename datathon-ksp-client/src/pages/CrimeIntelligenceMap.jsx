@@ -1124,6 +1124,7 @@ function MapView({
   const [districtRisk, setDistrictRisk] = useState([]);
   const [networkOverlay, setNetworkOverlay] = useState([]);
   const [poiData, setPoiData] = useState([]);
+  const [karnatakaGeo, setKarnatakaGeo] = useState(null);
 
   useEffect(() => {
     if (!token) return;
@@ -1156,6 +1157,16 @@ function MapView({
       .then((r) => setNetworkOverlay(r.data || []))
       .catch(() => {});
   }, [token]);
+
+  // Fetch Karnataka boundary GeoJSON for masking / outline
+  useEffect(() => {
+    fetch("/data/karnataka.geojson")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (j) setKarnatakaGeo(j);
+      })
+      .catch(() => {});
+  }, []);
 
   // Fetch live POIs (OSM)
   useEffect(() => {
@@ -1260,8 +1271,46 @@ function MapView({
     return edges;
   }, [networkOverlay]);
 
+  // Karnataka mask = world rect with Karnataka holes (dims everything outside state)
+  const karnatakaMask = useMemo(() => {
+    if (!karnatakaGeo || !karnatakaGeo.geometry) return null;
+    const geom = karnatakaGeo.geometry;
+    // collect outer rings of each polygon as holes
+    let holes = [];
+    if (geom.type === "Polygon") holes = [geom.coordinates[0]];
+    else if (geom.type === "MultiPolygon") holes = geom.coordinates.map((p) => p[0]);
+    else return null;
+    const world = [
+      [-180, -90],
+      [180, -90],
+      [180, 90],
+      [-180, 90],
+      [-180, -90],
+    ];
+    return {
+      type: "Feature",
+      properties: {},
+      geometry: { type: "Polygon", coordinates: [world, ...holes] },
+    };
+  }, [karnatakaGeo]);
+
   const layers = useMemo(() => {
     const activeLayers = [];
+
+    // 1) Mask outside Karnataka (rendered first, underneath crimes)
+    if (karnatakaMask) {
+      activeLayers.push(
+        new GeoJsonLayer({
+          id: "karnataka-mask",
+          data: karnatakaMask,
+          pickable: false,
+          stroked: false,
+          filled: true,
+          getFillColor: [15, 23, 42, 75],
+          getLineColor: [0, 0, 0, 0],
+        }),
+      );
+    }
 
     if (viewMode === "Heatmap") {
       if (crimePointsData.length) {
@@ -1540,6 +1589,22 @@ function MapView({
       });
     }
 
+    // Karnataka state outline — always on top
+    if (karnatakaGeo) {
+      activeLayers.push(
+        new GeoJsonLayer({
+          id: "karnataka-boundary",
+          data: karnatakaGeo,
+          pickable: false,
+          stroked: true,
+          filled: false,
+          getLineColor: [15, 23, 42, 255],
+          getLineWidth: 2,
+          lineWidthMinPixels: 2,
+        }),
+      );
+    }
+
     return activeLayers;
   }, [
     viewMode,
@@ -1554,6 +1619,8 @@ function MapView({
     subTypeColorMap,
     poiData,
     showSocioOverlay,
+    karnatakaGeo,
+    karnatakaMask,
   ]);
 
   return (
