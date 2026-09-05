@@ -2163,7 +2163,7 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
   return (
     <>
       <PanelHeader
-        id={`DISTRICT`}
+        id={``}
         name={spot.name}
         type="District"
         typeColor="bg-blue-900/90 text-white border-blue-900/90"
@@ -2380,15 +2380,19 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
           ].filter((b) => b.val !== 0 || b.label === "Base");
           const total = bonuses.reduce((a, b) => a + b.val, 0);
           return (
-            <div className="rounded-xl border border-[#E5E7EB] bg-white p-3.5 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black tracking-widest uppercase text-[#1E3A8A] flex items-center gap-1.5">
-                  <Building2 className="h-3.5 w-3.5" /> Socio-Economic
-                  Intelligence — Live
+            <div className="w-full rounded-xl border border-[#E5E7EB] bg-white p-3 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5 text-slate-400" /> Socio-Economic Intelligence
                 </p>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-900/90 text-white">
-                  Year {s.year || new Date().getFullYear()}
-                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
+                    <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" /> LIVE
+                  </span>
+                  <span className="text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                    {s.year || new Date().getFullYear()} ▾
+                  </span>
+                </div>
               </div>
 
               {/* 4 metrics vs state average */}
@@ -2433,52 +2437,66 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
                   const isGood = metric.inv
                     ? metric.delta < -8
                     : metric.delta > 8;
+                  // Semantic badge: only unemployment is critical red; density low is neutral/slate, not red
+                  const badgeClass =
+                    metric.label === "Unemployment" && isBad
+                      ? "bg-[#D92D20] text-white"
+                      : metric.label === "Unemployment" && isGood
+                        ? "bg-emerald-600 text-white"
+                        : metric.label === "Density" && isBad
+                          ? "bg-slate-200 text-slate-700"
+                          : isBad
+                            ? "bg-amber-500 text-white"
+                            : isGood
+                              ? "bg-emerald-600 text-white"
+                              : "bg-slate-100 text-slate-600";
                   return (
                     <div
                       key={metric.label}
-                      className={`bg-white rounded-xl border p-2.5 ${isBad ? "border-red-200 bg-red-50/40" : isGood ? "border-emerald-200 bg-emerald-50/30" : "border-[#E5E7EB]"}`}
+                      className="bg-[#F8FAFC] rounded-xl p-3"
                     >
-                      <div className="flex items-center justify-between">
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-500 leading-none pt-1">
                           {metric.label}
                         </p>
                         <span
-                          className={`text-[9px] font-black px-1 py-0.5 rounded ${isBad ? "bg-red-700 text-white" : isGood ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"}`}
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${badgeClass}`}
                         >
                           {metric.delta > 0 ? "+" : ""}
-                          {metric.delta.toFixed(1)}% vs avg
+                          {metric.delta.toFixed(1)}%
                         </span>
                       </div>
-                      <p className="text-sm font-black text-slate-900 mt-1 tabular-nums">
+                      <p className="text-[18px] font-bold text-slate-900 mt-1.5 tabular-nums leading-none">
                         {metric.fmt
                           ? metric.fmt(metric.value)
                           : `${Number(metric.value).toFixed(1)}${metric.unit}`}
                       </p>
-                      <div className="mt-1.5 h-1.5 bg-slate-100 rounded-full overflow-hidden relative">
+                      <div className="mt-2 h-1 bg-[#E7EBF2] rounded-full overflow-hidden relative">
                         <div
                           className="h-full rounded-full transition-all"
                           style={{
                             width: `${Math.min(100, Math.max(8, (metric.value / (metric.avg * 1.4)) * 100))}%`,
                             background:
                               metric.label === "Unemployment"
-                                ? "#dc2626"
+                                ? "#D92D20"
                                 : metric.label === "Literacy"
                                   ? "#1e3a8a"
                                   : metric.label === "Density"
-                                    ? "#334155"
-                                    : "#d97706",
+                                    ? "#64748B"
+                                    : "#D97706",
+                            opacity: 0.85,
                           }}
                         />
                         <div
-                          className="absolute top-0 bottom-0 w-0.5 bg-slate-900"
+                          className="absolute top-0 bottom-0 w-0.5 bg-slate-700"
                           style={{
                             left: `${Math.min(100, Math.max(0, (metric.avg / (metric.avg * 1.4)) * 100))}%`,
                           }}
                           title={`State avg ${metric.avg?.toFixed(1)}`}
                         />
                       </div>
-                      <p className="text-[9px] text-slate-400 mt-1">
-                        State avg{" "}
+                      <p className="text-[10px] text-slate-400 mt-1.5">
+                        State average{" "}
                         {metric.fmt
                           ? metric.fmt(metric.avg)
                           : `${metric.avg?.toFixed(1)}${metric.unit}`}
@@ -2488,81 +2506,64 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
                 })}
               </div>
 
-              {/* How it affects risk — equation */}
-              <div className="bg-[#F4F6F9] rounded-xl border border-[#E5E7EB] p-3">
-                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-2">
-                  How this district’s economy lifts risk
+              {/* How it affects risk — centerpiece */}
+              <div className="bg-[#F8FAFC] rounded-xl p-3">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                  How this district lifts risk
                 </p>
-                <div className="flex items-center gap-1 flex-wrap text-xs font-mono">
-                  <span className="px-2 py-1 rounded bg-white border border-[#E5E7EB] text-slate-900">
-                    {Math.round(base)}
-                  </span>
-                  {bonuses.slice(1).map((b) => (
-                    <span key={b.label} className="flex items-center gap-1">
-                      <span className="text-slate-400">+</span>
-                      <span
-                        className={`px-2 py-1 rounded text-white font-bold ${b.color}`}
-                      >
-                        {b.val > 0 ? "+" : ""}
-                        {b.val.toFixed(1)}{" "}
-                        <span className="font-normal text-[10px] opacity-80">
-                          {b.label.split(" ")[0]}
-                        </span>
+                <div className="flex items-center justify-between">
+                  <div className="text-center">
+                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Base risk</p>
+                    <p className="text-xl font-bold text-slate-700 tabular-nums">{Math.round(base)}</p>
+                  </div>
+                  <div className="flex-1 mx-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-slate-300 shrink-0" />
+                    <div className="flex-1 h-0.5 bg-slate-300 relative">
+                      <span className="absolute left-1/2 -translate-x-1/2 -top-3 text-[10px] font-semibold text-slate-500 bg-[#F8FAFC] px-1">
+                        +{(total - base).toFixed(1)}
                       </span>
-                    </span>
-                  ))}
-                  <span className="text-slate-400">=</span>
-                  <span className="px-2.5 py-1 rounded bg-blue-900/90 text-white font-black">
-                    {total.toFixed(1)}
-                  </span>
+                    </div>
+                    <span className="w-2 h-2 rounded-full bg-blue-900 shrink-0" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Enhanced risk</p>
+                    <p className="text-xl font-bold text-blue-900 tabular-nums">{total.toFixed(1)}</p>
+                  </div>
                 </div>
-                <div className="mt-2.5 flex h-2 rounded-full overflow-hidden bg-[#E2E8F0]">
-                  {bonuses.map((b) => {
-                    const w = Math.max(
-                      2,
-                      (Math.abs(b.val) / Math.max(1, Math.abs(total))) * 100,
-                    );
-                    return (
-                      <div
-                        key={b.label}
-                        title={`${b.label}: ${b.val.toFixed(1)}`}
-                        className={`${b.color}`}
-                        style={{ width: `${w}%` }}
-                      />
-                    );
-                  })}
+                <div className="mt-3 pt-3 border-t border-slate-200/60">
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Contributing signals</p>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] mt-1.5 shrink-0" />
+                      <div className="text-xs leading-snug">
+                        <span className="font-medium text-slate-700">Unemployment</span>
+                        <span className="text-slate-500"> — {dUnemp > 0 ? `${dUnemp.toFixed(0)}% above` : `${Math.abs(dUnemp).toFixed(0)}% below`} state mean</span>
+                        <span className="ml-1.5 text-[10px] font-semibold text-slate-600">+{(m.unemployment_bonus || 0).toFixed(1)} risk</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-900 mt-1.5 shrink-0" />
+                      <div className="text-xs leading-snug">
+                        <span className="font-medium text-slate-700">Literacy</span>
+                        <span className="text-slate-500"> — {Number(s.literacy_rate).toFixed(1)}% vs {avgLit?.toFixed(1)}% state mean</span>
+                        <span className="ml-1.5 text-[10px] font-semibold text-slate-600">+{((75 - s.literacy_rate) * 0.15).toFixed(1)} risk</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                      <div className="text-xs leading-snug">
+                        <span className="font-medium text-slate-700">POI exposure</span>
+                        <span className="text-slate-500"> — {poiCount?.total ?? m.poi_total ?? 0} points near liquor/ATM clusters</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-1 flex gap-2 text-[9px] font-medium text-slate-500 uppercase tracking-wider">
-                  {bonuses.map((b) => (
-                    <span key={b.label} className="flex items-center gap-1">
-                      <span className={`w-2 h-2 rounded-sm ${b.color}`} />
-                      {b.label}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
-                  {s.unemployment_rate > (avgUnemp || 7)
-                    ? `Unemployment ${Number(s.unemployment_rate).toFixed(1)}% is ${dUnemp.toFixed(0)}% above state mean — each +1% adds ~3.5 risk points (this district +${(m.unemployment_bonus || 0).toFixed(1)}).`
-                    : `Unemployment below mean cushions risk.`}
-                  {s.literacy_rate < (avgLit || 75)
-                    ? ` Lower literacy (${Number(s.literacy_rate).toFixed(1)}%) correlates with vulnerability (+${((75 - s.literacy_rate) * 0.15).toFixed(1)}).`
-                    : ""}
-                  {poiCount?.total
-                    ? ` ${poiCount.total} POIs (${poiCount.risk_sum} risk weight) near liquor/ATM clusters amplify opportunity.`
-                    : ""}
-                </p>
               </div>
 
-              <div className="flex items-center justify-between text-[9px] text-slate-500 border-t border-[#E5E7EB] pt-2">
-                <span>
-                  Source:{" "}
-                  <span className="font-semibold text-slate-700">
-                    {s.source || "data.gov.in + OSM + Open-Meteo"}
-                  </span>
-                </span>
+              <div className="flex items-center justify-between text-[9px] text-slate-400 pt-2">
+                <span>OSM · Open-Meteo · data.gov.in</span>
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />{" "}
-                  Live —{" "}
+                  <span className="w-1 h-1 rounded-full bg-emerald-500" /> Updated{" "}
                   {s.updated_at
                     ? new Date(s.updated_at).toLocaleDateString()
                     : "today"}
@@ -2572,11 +2573,11 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
           );
         })()}
 
-        {/* Live POI & Weather */}
+        {/* Live POI & Weather — supporting signals */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
-            <p className="text-[10px] font-medium text-slate-500 flex items-center gap-1">
-              <Beer className="h-3 w-3 text-slate-500" /> POI Risk Points
+          <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E5E7EB]">
+            <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+              <Beer className="h-3 w-3 text-slate-400" /> POI Exposure
             </p>
             {(() => {
               const total = poiCount?.total ?? m.poi_total;
@@ -2584,17 +2585,17 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               const hasData = total != null;
               return (
                 <>
-                  <p className="text-lg font-black text-slate-900">
+                  <p className="text-base font-bold text-slate-900 mt-1">
                     {hasData ? `${total} pts` : "—"}
                   </p>
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[10px] text-slate-400">
                     {hasData
                       ? liquor
                         ? `${liquor} liquor outlets`
                         : poiCount?.risk_sum
-                          ? `Risk sum ${poiCount.risk_sum}`
-                          : `${total} POIs — liquor 0`
-                      : "Not ingested — Refresh Live Data"}
+                          ? `Risk weight ${poiCount.risk_sum}`
+                          : `${total} POIs`
+                      : "Not ingested"}
                   </p>
                   {!hasData && (
                     <button
@@ -2613,30 +2614,29 @@ function DistrictPanel({ spot, onClose, onOpenPatrol, enhancedRisk, token }) {
               );
             })()}
           </div>
-          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
-            <p className="text-[10px] font-medium text-slate-500 flex items-center gap-1">
-              <CloudRain className="h-3 w-3 text-slate-500" /> Weather (14d)
+          <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E5E7EB]">
+            <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+              <CloudRain className="h-3 w-3 text-slate-400" /> Weather
             </p>
             {weather.length ? (
               <>
-                <p className="text-xs font-bold text-slate-900">
+                <p className="text-base font-bold text-slate-900 mt-1">
                   {weather[0].avg_temp?.toFixed?.(1) ??
                     m.weather_temp_14d_avg ??
                     "—"}
                   °C · {weather[0].rainfall ?? m.weather_rain_14d_avg ?? "—"}mm
-                  rain
                 </p>
-                <p className="text-[10px] text-sky-700">
-                  {weather.length} days live (Open-Meteo)
+                <p className="text-[10px] text-slate-400">
+                  {weather.length} days · Open-Meteo
                 </p>
               </>
             ) : (
               <>
-                <p className="text-xs font-bold text-slate-900">
+                <p className="text-base font-bold text-slate-900 mt-1">
                   {m.weather_temp_14d_avg ?? "—"}°C ·{" "}
                   {m.weather_rain_14d_avg ?? "—"}mm
                 </p>
-                <p className="text-[10px] text-slate-500">Open-Meteo live</p>
+                <p className="text-[10px] text-slate-400">Open-Meteo live</p>
               </>
             )}
           </div>
@@ -3781,9 +3781,11 @@ function PanelHeader({
     <div className="p-4 border-b border-[#E2E8F0] bg-white flex justify-between items-start shrink-0">
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-[11px] font-semibold tracking-wide text-[#64748B] ksp-mono">
-            {id}
-          </span>
+          {id ? (
+            <span className="text-[11px] font-semibold tracking-wide text-[#64748B] ksp-mono">
+              {id}
+            </span>
+          ) : null}
           <span
             className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-[0.08em] flex items-center gap-1 border ${typeColor}`}
           >
