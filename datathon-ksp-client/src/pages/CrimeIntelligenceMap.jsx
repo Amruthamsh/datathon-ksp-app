@@ -27,6 +27,9 @@ import {
   CloudRain,
   Database,
   RefreshCw,
+  Eye,
+  EyeOff,
+  Layers,
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useAuth } from "../auth/AuthContext";
@@ -197,6 +200,8 @@ export default function CrimeIntelligenceMap() {
   const [enhancedRisk, setEnhancedRisk] = useState([]);
   const [intelligenceStatus, setIntelligenceStatus] = useState(null);
   const [refreshingIntel, setRefreshingIntel] = useState(false);
+  const [showLayerPanel, setShowLayerPanel] = useState(true);
+  const [showCrimeTypesPanel, setShowCrimeTypesPanel] = useState(true);
 
   const activeSubType = useMemo(() => {
     if (selectedHeads && selectedHeads.size === 1) {
@@ -407,7 +412,7 @@ export default function CrimeIntelligenceMap() {
     <div className="flex h-full bg-[#F4F6F9] text-slate-900 font-sans">
       <main className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 flex flex-col p-6 overflow-hidden gap-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-xl font-bold text-slate-900">
                 {t("crimeMap.title")}
@@ -416,10 +421,44 @@ export default function CrimeIntelligenceMap() {
                 {t("crimeMap.subtitle")}
               </p>
             </div>
-            {/* <button onClick={() => setShowPatrolModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-900/90 text-white rounded-full text-xs font-bold hover:bg-blue-900 transition-colors shadow-sm">
-              <Route className="h-4 w-4" /> {t("crimeMap.generatePatrolPlan")}
-            </button> */}
+            <div className="flex items-center gap-3 bg-white rounded-full border border-[#E5E7EB] shadow-sm px-3 py-1.5 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`w-2 h-2 rounded-full shrink-0 ${intelligenceStatus?.poi_total ? "bg-emerald-500" : "bg-amber-400"}`}
+                  title={
+                    intelligenceStatus?.poi_total
+                      ? "Live OSM data loaded"
+                      : "No POI data yet — click refresh"
+                  }
+                />
+                <span className="text-[11px] font-bold text-slate-700 tracking-wide">
+                  Live Intel
+                </span>
+                {intelligenceStatus && (
+                  <span className="text-[11px] text-slate-500">
+                    POIs: {intelligenceStatus.poi_total || 0} · Weather:{" "}
+                    {intelligenceStatus.weather_rows || 0}
+                    {intelligenceStatus.poi_last_refresh &&
+                      ` · ${new Date(intelligenceStatus.poi_last_refresh).toLocaleDateString()}`}
+                  </span>
+                )}
+                {enhancedRisk?.length > 0 && (
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    Enhanced risk active
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={handleRefreshIntel}
+                disabled={refreshingIntel}
+                className="flex items-center justify-center gap-1.5 px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-full text-xs font-bold tracking-wide disabled:opacity-50 transition-colors shadow-sm shrink-0"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${refreshingIntel ? "animate-spin" : ""}`}
+                />{" "}
+                {refreshingIntel ? "Refreshing…" : "Refresh Live Data"}
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 flex gap-4 min-h-0 relative">
@@ -441,42 +480,60 @@ export default function CrimeIntelligenceMap() {
                 showSocioOverlay={showSocioOverlay}
               />
 
-              {viewMode === "Heatmap" && (
-                <CrimeLegend
-                  heads={headOptions}
-                  selectedHeads={selectedHeads}
-                  colorMap={subTypeColorMap}
-                  onToggle={toggleHead}
-                  onToggleAll={() =>
-                    setSelectedHeads((prev) =>
-                      prev && prev.size === headOptions.length
-                        ? new Set()
-                        : new Set(headOptions.map((o) => o.sub_type)),
-                    )
-                  }
-                />
-              )}
+              {viewMode === "Heatmap" &&
+                (showCrimeTypesPanel ? (
+                  <CrimeLegend
+                    heads={headOptions}
+                    selectedHeads={selectedHeads}
+                    colorMap={subTypeColorMap}
+                    onToggle={toggleHead}
+                    onToggleAll={() =>
+                      setSelectedHeads((prev) =>
+                        prev && prev.size === headOptions.length
+                          ? new Set()
+                          : new Set(headOptions.map((o) => o.sub_type)),
+                      )
+                    }
+                    onHide={() => setShowCrimeTypesPanel(false)}
+                  />
+                ) : (
+                  <button
+                    onClick={() => setShowCrimeTypesPanel(true)}
+                    className="absolute top-4 right-4 z-20 bg-white rounded-full shadow-md border border-[#E5E7EB] px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
+                    title="Show crime types"
+                  >
+                    <Eye className="h-3.5 w-3.5" /> Crime Types
+                  </button>
+                ))}
 
-              <LayerSwitcher
-                viewMode={viewMode}
-                onModeChange={(m) => {
-                  setViewMode(m);
-                  setSelectedSpot(null);
-                  setHotspotDetail(null);
-                }}
-                showNetworks={showNetworks}
-                onToggleNetworks={() => setShowNetworks(!showNetworks)}
-                poiFilters={poiFilters}
-                onTogglePoi={(k) =>
-                  setPoiFilters((p) => ({ ...p, [k]: !p[k] }))
-                }
-                showSocioOverlay={showSocioOverlay}
-                onToggleSocio={() => setShowSocioOverlay((v) => !v)}
-                intelligenceStatus={intelligenceStatus}
-                onRefreshIntel={handleRefreshIntel}
-                refreshingIntel={refreshingIntel}
-                enhancedRisk={enhancedRisk}
-              />
+              {showLayerPanel ? (
+                <LayerSwitcher
+                  viewMode={viewMode}
+                  onModeChange={(m) => {
+                    setViewMode(m);
+                    setSelectedSpot(null);
+                    setHotspotDetail(null);
+                  }}
+                  showNetworks={showNetworks}
+                  onToggleNetworks={() => setShowNetworks(!showNetworks)}
+                  poiFilters={poiFilters}
+                  onTogglePoi={(k) =>
+                    setPoiFilters((p) => ({ ...p, [k]: !p[k] }))
+                  }
+                  showSocioOverlay={showSocioOverlay}
+                  onToggleSocio={() => setShowSocioOverlay((v) => !v)}
+                  intelligenceStatus={intelligenceStatus}
+                  onHide={() => setShowLayerPanel(false)}
+                />
+              ) : (
+                <button
+                  onClick={() => setShowLayerPanel(true)}
+                  className="absolute top-4 left-4 z-10 bg-white rounded-full shadow-md border border-[#E5E7EB] px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
+                  title="Show map layers"
+                >
+                  <Layers className="h-3.5 w-3.5" /> Map Layers <Eye className="h-3 w-3 text-slate-400" />
+                </button>
+              )}
 
               {showSocioOverlay && (
                 <div className="absolute bottom-24 left-4 bg-white/95 backdrop-blur rounded-lg shadow-md border border-slate-200 px-3 py-2 z-20 flex items-center gap-3">
@@ -561,9 +618,7 @@ function LayerSwitcher({
   showSocioOverlay,
   onToggleSocio,
   intelligenceStatus,
-  onRefreshIntel,
-  refreshingIntel,
-  enhancedRisk,
+  onHide,
 }) {
   const { t } = useTranslation();
   const modes = [
@@ -617,16 +672,28 @@ function LayerSwitcher({
 
   return (
     <div className="absolute top-4 left-4 bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-1.5 flex flex-col gap-1 z-10 w-52 max-h-[calc(100%-6rem)] overflow-y-auto">
-      <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-[0.08em] px-2 py-1">
-        {t("crimeMap.layers.title")}
-      </span>
+      <div className="flex items-center justify-between px-2 py-1">
+        <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-[0.08em]">
+          {t("crimeMap.layers.title")}
+        </span>
+        {onHide && (
+          <button
+            onClick={onHide}
+            className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+            title="Hide map layers"
+            aria-label="Hide map layers"
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
       {modes.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
           onClick={() => onModeChange(id)}
           className={`px-3 py-1.5 text-xs font-bold rounded-full text-left transition-colors flex items-center gap-2 ${
             viewMode === id
-              ? "bg-blue-900/90 text-white shadow-sm"
+              ? "bg-yellow-50 text-black shadow-sm"
               : "text-slate-600 hover:bg-slate-50 border border-transparent hover:border-[#E5E7EB]"
           }`}
         >
@@ -711,31 +778,6 @@ function LayerSwitcher({
             Socio-Economic tint
           </span>
         </label>
-        <div className="px-2 py-1.5 mt-1">
-          <button
-            onClick={onRefreshIntel}
-            disabled={refreshingIntel}
-            className="mx-auto flex items-center justify-center gap-1 px-3.5 py-1.5 bg-blue-900/90 text-white rounded-full text-[10px] font-bold tracking-wide hover:bg-blue-900 disabled:opacity-50 transition-colors shadow-sm"
-          >
-            <RefreshCw
-              className={`h-3 w-3 ${refreshingIntel ? "animate-spin" : ""}`}
-            />{" "}
-            {refreshingIntel ? "Refreshing…" : "Refresh Live Data"}
-          </button>
-          {intelligenceStatus && (
-            <p className="text-[9px] text-slate-400 mt-1 text-center">
-              POIs: {intelligenceStatus.poi_total || 0} · Weather:{" "}
-              {intelligenceStatus.weather_rows || 0}
-              {intelligenceStatus.poi_last_refresh &&
-                ` · ${new Date(intelligenceStatus.poi_last_refresh).toLocaleDateString()}`}
-            </p>
-          )}
-          {enhancedRisk?.length > 0 && (
-            <p className="text-[9px] text-emerald-600 font-semibold text-center mt-0.5">
-              Enhanced risk active
-            </p>
-          )}
-        </div>
       </div>
     </div>
   );
@@ -751,9 +793,7 @@ LayerSwitcher.propTypes = {
   showSocioOverlay: PropTypes.bool,
   onToggleSocio: PropTypes.func,
   intelligenceStatus: PropTypes.object,
-  onRefreshIntel: PropTypes.func,
-  refreshingIntel: PropTypes.bool,
-  enhancedRisk: PropTypes.array,
+  onHide: PropTypes.func,
 };
 
 /* ── Crime Category Legend ─────────────────────────────────────── */
@@ -805,6 +845,7 @@ function CrimeLegend({
   colorMap,
   onToggle,
   onToggleAll,
+  onHide,
 }) {
   const { t } = useTranslation();
   if (!heads || heads.length === 0) return null;
@@ -812,16 +853,28 @@ function CrimeLegend({
 
   return (
     <div className="absolute top-4 right-4 bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-3 z-20 w-56 max-h-[calc(100%-12rem)] flex flex-col">
-      <div className="flex items-center justify-between mb-2 shrink-0">
+      <div className="flex items-center justify-between mb-2 shrink-0 gap-2">
         <span className="text-[10px] font-bold text-[#1A1A2E] uppercase tracking-[0.08em]">
           {t("crimeMap.legend.crimeTypes")}
         </span>
-        <button
-          onClick={onToggleAll}
-          className="text-[10px] font-black uppercase tracking-wide text-blue-900 hover:text-red-700 border border-[#E5E7EB] rounded-full px-2 py-0.5 bg-white hover:border-red-200 hover:bg-red-50 transition-colors"
-        >
-          {allSelected ? t("crimeMap.legend.none") : t("crimeMap.legend.all")}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={onToggleAll}
+            className="text-[10px] font-black uppercase tracking-wide text-blue-900 hover:text-red-700 border border-[#E5E7EB] rounded-full px-2 py-0.5 bg-white hover:border-red-200 hover:bg-red-50 transition-colors"
+          >
+            {allSelected ? t("crimeMap.legend.none") : t("crimeMap.legend.all")}
+          </button>
+          {onHide && (
+            <button
+              onClick={onHide}
+              className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              title="Hide crime types"
+              aria-label="Hide crime types"
+            >
+              <EyeOff className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex flex-col gap-0.5 overflow-y-auto min-h-0">
         {heads.map((h) => {
@@ -862,6 +915,7 @@ CrimeLegend.propTypes = {
   colorMap: PropTypes.object,
   onToggle: PropTypes.func.isRequired,
   onToggleAll: PropTypes.func.isRequired,
+  onHide: PropTypes.func,
 };
 
 /* ── Date Range Slider ──────────────────────────────────────────── */
@@ -969,7 +1023,7 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
             <Clock className="h-3 w-3 text-blue-900" />{" "}
             {t("crimeMap.dateRange.title")}
           </p>
-          <span className="text-[9px] font-bold tracking-wide text-white bg-blue-900/90 px-2.5 py-0.5 rounded-full whitespace-nowrap">
+          <span className="text-[9px] font-bold tracking-wide text-white bg-blue-900/80 px-2.5 py-0.5 rounded-full whitespace-nowrap">
             {rangeLabel}
           </span>
         </div>
@@ -978,7 +1032,7 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
           <div className="relative">
             <div className="absolute top-[5.5px] left-0 right-0 h-[3px] rounded-full bg-slate-200" />
             <div
-              className="absolute top-[5.5px] h-[3px] rounded-full bg-blue-900/90"
+              className="absolute top-[5.5px] h-[3px] rounded-full bg-blue-900/70"
               style={{ left: `${loPct}%`, width: `${selectedWidth}%` }}
             />
             <div className="range-dual">
