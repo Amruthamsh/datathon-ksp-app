@@ -145,7 +145,7 @@ export default function Home() {
     setLocationLoading(true);
     setLocationError(null);
     if (!navigator.geolocation) {
-      setLocationError("Geolocation not supported");
+      setLocationError(t("home.location.geoUnsupported"));
       setLocationEnabled(true);
       setLocationLoading(false);
       return;
@@ -160,13 +160,13 @@ export default function Home() {
         setLocationLoading(false);
       },
       (err) => {
-        setLocationError(err.message || "Unable to fetch location");
+        setLocationError(err.message || t("home.location.fetchFailed"));
         setLocationEnabled(true);
         setLocationLoading(false);
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
     );
-  }, [locationEnabled]);
+  }, [locationEnabled, t]);
 
   const handleToggleWeb = useCallback(() => setWebEnabled((v) => !v), []);
 
@@ -333,13 +333,11 @@ export default function Home() {
     const valid = [];
     for (const file of selected) {
       if (!allowed.includes(file.type)) {
-        alert(
-          `"${file.name}" is unsupported. Upload PDF, Excel, Word, or image files.`,
-        );
+        alert(t("home.upload.unsupported", { name: file.name }));
         continue;
       }
       if (file.size > 10 * 1024 * 1024) {
-        alert(`"${file.name}" exceeds the 10 MB limit.`);
+        alert(t("home.upload.tooBig", { name: file.name }));
         continue;
       }
       valid.push(file);
@@ -695,7 +693,9 @@ export default function Home() {
                         {m.context.useLocation && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase text-emerald-700">
                             <MapPin size={10} />{" "}
-                            {m.context.location?.radiusKm ?? 5}km radius
+                            {t("home.location.radiusChip", {
+                              count: m.context.location?.radiusKm ?? 5,
+                            })}
                           </span>
                         )}
                         {m.context.useWeb && (
@@ -710,20 +710,22 @@ export default function Home() {
                     (m.sources.location || m.sources.web) && (
                       <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-slate-200/60 pt-2">
                         <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-slate-400">
-                          Sources
+                          {t("chat.sources")}
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 text-white px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
-                          <Database size={10} /> KSP Database
+                          <Database size={10} /> {t("sources.crimeDatabase")}
                         </span>
                         {m.sources.location && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-800">
-                            <MapPin size={10} /> Location ·{" "}
-                            {m.sources.locationRadius ?? 5}km
+                            <MapPin size={10} />{" "}
+                            {t("home.location.locationInRadius", {
+                              count: m.sources.locationRadius ?? 5,
+                            })}
                           </span>
                         )}
                         {m.sources.web && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 border border-sky-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-800">
-                            <Globe size={10} /> Open Web
+                            <Globe size={10} /> {t("sources.openWeb")}
                           </span>
                         )}
                       </div>
@@ -931,7 +933,7 @@ export default function Home() {
                       >
                         <div className="flex items-center justify-between mb-3">
                           <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-slate-500">
-                            Location Context
+                            {t("chat.locationContext")}
                           </p>
                           <button
                             onClick={() => setShowLocationDetail(false)}
@@ -942,7 +944,7 @@ export default function Home() {
                         </div>
                         <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 mb-3">
                           <p className="text-[11px] font-medium tracking-wide uppercase text-slate-500 mb-1">
-                            Current location
+                            {t("chat.currentLocation")}
                           </p>
                           {locationCoords ? (
                             <p className="text-[13px] font-medium text-slate-800">
@@ -960,15 +962,15 @@ export default function Home() {
                             </p>
                           ) : (
                             <p className="text-[13px] text-slate-500">
-                              Detecting location…
+                              {t("home.location.detecting")}
                             </p>
                           )}
                           <p className="text-[11px] text-slate-400 mt-1">
-                            Bengaluru, Karnataka — GPS
+                            {t("home.location.gpsHint")}
                           </p>
                         </div>
                         <p className="text-[11px] font-semibold tracking-wide uppercase text-slate-500 mb-2">
-                          Search radius
+                          {t("chat.searchRadius")}
                         </p>
                         <div className="grid grid-cols-4 gap-1.5 mb-3">
                           {[1, 5, 10, 25].map((r) => (
@@ -988,15 +990,15 @@ export default function Home() {
                         <div className="space-y-1.5 text-[11.5px] text-slate-600">
                           <label className="flex items-center gap-2">
                             <span className="h-3 w-3 rounded-sm bg-emerald-500 border border-emerald-600 inline-block" />
-                            Crime incidents
+                            {t("home.location.incidents")}
                           </label>
                           <label className="flex items-center gap-2">
                             <span className="h-3 w-3 rounded-sm bg-emerald-500 border border-emerald-600 inline-block" />
-                            Crime clusters
+                            {t("home.location.clusters")}
                           </label>
                           <label className="flex items-center gap-2">
                             <span className="h-3 w-3 rounded-sm bg-emerald-500 border border-emerald-600 inline-block" />
-                            Police stations
+                            {t("home.location.stations")}
                           </label>
                         </div>
                         {locationError && (
@@ -1004,7 +1006,7 @@ export default function Home() {
                             onClick={handleToggleLocation}
                             className="mt-3 w-full rounded-xl bg-slate-900 text-white text-[13px] font-medium py-2 hover:bg-slate-800 transition cursor-pointer"
                           >
-                            Retry location
+                            {t("home.location.retry")}
                           </button>
                         )}
                       </div>
@@ -1392,7 +1394,7 @@ export default function Home() {
         }}
         onDoubleClick={() => setChatWidth(CHAT_WIDTH_DEFAULT)}
         className="group relative w-1.5 shrink-0 cursor-col-resize touch-none select-none flex items-center justify-center"
-        title="Drag to resize — double-click to reset"
+        title={t("home.location.resizeHint")}
       >
         <div
           className={`absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors ${

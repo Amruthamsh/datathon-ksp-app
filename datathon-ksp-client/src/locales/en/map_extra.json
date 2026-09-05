@@ -1,0 +1,215 @@
+{
+  "crimeMap": {
+    "status": {
+      "liveOsmLoaded": "Live OSM data loaded",
+      "noPoiYet": "No POI data yet — click refresh",
+      "liveIntelligence": "Live intelligence",
+      "pois": "{{count}} POIs",
+      "weatherRows": "{{count}} weather",
+      "updated": "Updated {{date}}",
+      "enhancedRisk": "Enhanced risk"
+    },
+    "actions": {
+      "refreshLiveData": "Refresh live data",
+      "showCrimeTypes": "Show crime types",
+      "hideCrimeTypes": "Hide crime types",
+      "showMapLayers": "Show map layers",
+      "hideMapLayers": "Hide map layers",
+      "askMapAware": "Ask CrimeLens — map-aware",
+      "openFullWorkspace": "Open in full workspace",
+      "viewResponsePlan": "View response plan",
+      "viewResponsePlanFor": "View response plan — {{label}}",
+      "generateResponsePlanFor": "Generate {{label}} Response Plan",
+      "patrolNearPoi": "Patrol near this POI",
+      "ingestNow": "Ingest {{name}} now"
+    },
+    "overlays": {
+      "title": "Overlays",
+      "unavailable": "Network overlay is unavailable in District Risk view",
+      "unavailableShort": "Unavailable in District Risk view",
+      "predictiveIntel": "Predictive Intel",
+      "liquorShops": "Liquor Shops",
+      "atms": "ATMs",
+      "busStops": "Bus Stops",
+      "banks": "Banks",
+      "railway": "Railway",
+      "socioTint": "Socio-Economic tint"
+    },
+    "socioLegend": {
+      "unemployment": "Unemployment",
+      "hint": "red border = critical · deeper red = lower literacy"
+    },
+    "timeline": {
+      "monthsCount": "{{count}}m"
+    },
+    "tabs": {
+      "details": "Details",
+      "askAI": "Ask AI",
+      "chat": "Chat",
+      "mapAware": "Map-aware",
+      "hint": "Selected context is sent with every Ask AI question — switch tabs to chat."
+    },
+    "overview": {
+      "elevated": "districts show elevated risk",
+      "multiplier": "Economic stress is currently the strongest live multiplier.",
+      "aboveMean": "{{count}} high-risk districts sit above mean unemployment.",
+      "riskModel": "Risk model",
+      "signals": "Signals",
+      "districtsLive": "{{count}} districts · live",
+      "gradient": "Unemployment gradient · neutral → amber → critical",
+      "highestUnemp": "Highest unemployment",
+      "lowestLit": "Lowest literacy",
+      "avgUnemp": "Avg unemployment",
+      "avgLit": "Avg literacy",
+      "avgIncome": "Avg income",
+      "loadingSocio": "Loading socio-economic intelligence…",
+      "recommended": "Recommended response",
+      "elevatedRisk": "Elevated risk",
+      "elevatedDetected": "Elevated risk detected",
+      "factors": "{{count}} contributing factor(s)"
+    },
+    "district": {
+      "topCrime": "Top Crime Category",
+      "rankOf": "Rank #{{rank}} of 31 districts",
+      "whyRisk": "Why risk is {{level}} (enhanced)",
+      "baseToEnhanced": "Base score {{base}} → Enhanced {{enhanced}} (Δ {{delta}})",
+      "socioPending": "Socio-economic live data pending for {{name}}",
+      "noRow": "No row in DistrictSocioEconomic — tap",
+      "refreshCta": "Refresh Live Data",
+      "ingestHint": "in Layers to ingest OSM + Open-Meteo + data.gov.in for all 31 districts.",
+      "fallbackHint": "Fallback: state means will show once refreshed. Enhanced risk currently uses base score only.",
+      "socioTitle": "Socio-Economic Intelligence",
+      "live": "LIVE",
+      "unemployment": "Unemployment",
+      "literacy": "Literacy",
+      "density": "Density",
+      "perCapita": "Per-capita",
+      "stateAvg": "State average",
+      "stateAvgTitle": "State avg {{value}}",
+      "howLifts": "How this district lifts risk",
+      "baseRisk": "Base risk",
+      "enhancedRiskLabel": "Enhanced risk",
+      "contrib": "Contributing signals",
+      "above": "{{pct}}% above",
+      "below": "{{pct}}% below",
+      "stateMean": "state mean",
+      "risk": "risk",
+      "poiExposure": "POI exposure",
+      "poiNear": "{{count}} points near liquor/ATM clusters",
+      "updated": "Updated {{date}}",
+      "today": "today",
+      "poiTitle": "POI Exposure",
+      "pts": "{{count}} pts",
+      "liquorOutlets": "{{count}} liquor outlets",
+      "riskWeight": "Risk weight {{count}}",
+      "poisCount": "{{count}} POIs",
+      "notIngested": "Not ingested",
+      "weather": "Weather",
+      "weatherDays": "{{count}} days · Open-Meteo",
+      "openMeteoLive": "Open-Meteo live",
+      "unempBar": "Unemployment {{value}}%",
+      "poiBar": "POI density ({{count}} pts)",
+      "weatherBar": "Weather (rain {{value}}mm)",
+      "riskWeightSub": "Risk weight {{value}}"
+    },
+    "response": {
+      "threatSummary": "Threat Summary",
+      "why": "Why",
+      "physicalLimited": "Physical patrol limited — focus on specialized cell deployment above. Routes omitted.",
+      "immediate": "Immediate Actions",
+      "preventive": "Preventive Measures",
+      "metrics": "Metrics to Track",
+      "crimes": "{{count}} crimes",
+      "repeat": "{{count}} repeat",
+      "heinous": "{{count}} heinous"
+    },
+    "poi": {
+      "high": "High-crime attractor — prioritize patrol",
+      "moderate": "Moderate risk — check CCTV",
+      "baseline": "Baseline infrastructure",
+      "infraRisk": "Infrastructure Risk",
+      "coordinates": "Coordinates",
+      "district": "District",
+      "predictive": "Predictive Insight",
+      "liquor": "Liquor outlets correlate with brawls & public order offences — recommend evening beat near this POI.",
+      "atm": "ATMs attract property crime — toggle ATM layer with crime heatmap to spot robbery clusters.",
+      "bus": "Transit hubs see chain snatching & theft — align patrol with peak commute.",
+      "bank": "Banks are economic-offence hotspots — coordinate with EOW.",
+      "railway": "Stations funnel inter-district movement — check repeat offender transit.",
+      "riskWeightSub": "Risk weight {{value}}"
+    },
+    "panelTypes": {
+      "crime": "Crime",
+      "district": "District",
+      "hotspot": "Hotspot",
+      "network": "Network"
+    },
+    "trend": {
+      "loadingName": "Loading…"
+    },
+    "network": {
+      "firsBadge": "{{count}} FIRs"
+    }
+  },
+  "mapPanel": {
+    "contextIncluded": "Map context included",
+    "statewide": "Statewide overview",
+    "mapLabel": "Map",
+    "noSelection": "No selection — analysis will use statewide context with current filters.",
+    "contextSent": "Map context is sent with every question. Switch layers or select a district to refine it.",
+    "tryAsking": "Try asking",
+    "viewData": "View data",
+    "rows": "{{count}} rows",
+    "charts_one": "{{count}} chart",
+    "charts_other": "{{count}} charts",
+    "show": "Show",
+    "hide": "Hide",
+    "onMap": "On map",
+    "focus": "Focus {{name}}",
+    "filter": "Filter {{name}}",
+    "showing": "Showing 50 of {{count}} rows",
+    "kspDb": "KSP DB",
+    "mapView": "Map view",
+    "mapContext": "Map context",
+    "visual": "Visual {{index}}",
+    "attachFile": "Attach file",
+    "inputPlaceholder": "Ask about this map view…",
+    "listening": "Listening…",
+    "footer": "Map context + KSP Database — answers blend live view with crime records",
+    "unsupported": "\"{{name}}\" is unsupported. Upload PDF, Excel, Word, or image files.",
+    "tooBig": "\"{{name}}\" exceeds the 10 MB limit.",
+    "viewModes": {
+      "heatmap": "Heatmap",
+      "clusters": "Clusters",
+      "risk": "District Risk"
+    }
+  },
+  "home": {
+    "location": {
+      "geoUnsupported": "Geolocation not supported",
+      "fetchFailed": "Unable to fetch location",
+      "detecting": "Detecting location…",
+      "gpsHint": "Bengaluru, Karnataka — GPS",
+      "incidents": "Crime incidents",
+      "clusters": "Crime clusters",
+      "stations": "Police stations",
+      "retry": "Retry location",
+      "radiusChip": "{{count}}km radius",
+      "locationInRadius": "Location · {{count}}km",
+      "resizeHint": "Drag to resize — double-click to reset"
+    },
+    "upload": {
+      "unsupported": "\"{{name}}\" is unsupported. Upload PDF, Excel, Word, or image files.",
+      "tooBig": "\"{{name}}\" exceeds the 10 MB limit."
+    }
+  },
+  "reports": {
+    "deleteConfirm": "Are you sure you want to delete this report?",
+    "deleteFailed": "Failed to delete the report. Please try again.",
+    "loadFailed": "Failed to load data"
+  },
+  "header": {
+    "logoAlt": "Logo",
+    "profileAlt": "Profile"
+  }
+}

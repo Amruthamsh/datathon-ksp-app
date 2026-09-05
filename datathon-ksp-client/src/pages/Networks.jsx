@@ -197,6 +197,7 @@ const cyStylesheet = [
 ];
 
 function StarRating({ count, total = 5, showTooltip = false }) {
+  const { t } = useTranslation();
   const [hover, setHover] = useState(false);
   return (
     <span
@@ -213,12 +214,12 @@ function StarRating({ count, total = 5, showTooltip = false }) {
       </span>
       {showTooltip && hover && (
         <span className="absolute left-0 top-full mt-1.5 z-20 whitespace-nowrap rounded-md bg-[#17233C] px-2.5 py-1.5 text-[11px] font-medium leading-tight text-white shadow-lg">
-          Confidence:{" "}
+          {t("networks.tooltip.confidence")}{" "}
           {count === 5
-            ? "Very high — strong linkage"
+            ? t("networks.tooltip.veryHigh")
             : count === 4
-              ? "High — frequent co-occurrence"
-              : "Moderate — review evidence"}
+              ? t("networks.tooltip.high")
+              : t("networks.tooltip.moderate")}
           <span className="absolute -top-1 left-3 h-2 w-2 rotate-45 bg-[#17233C]" />
         </span>
       )}
@@ -232,23 +233,23 @@ StarRating.propTypes = {
 };
 
 // ── Helpers
-function getRiskBadge(firs, stations, districts) {
+function getRiskBadge(firs, stations, districts, t) {
   const score =
     (firs || 0) * 1.2 + (stations || 0) * 1.5 + (districts || 0) * 1.8;
   if (score >= 14 || firs >= 6)
     return {
-      label: "High",
+      label: t ? t("networks.risk.high") : "High",
       tone: "bg-red-50 text-red-700 border-red-200",
       dot: "bg-red-600",
     };
   if (score >= 8 || firs >= 4)
     return {
-      label: "Medium",
+      label: t ? t("networks.risk.medium") : "Medium",
       tone: "bg-amber-50 text-amber-700 border-amber-200",
       dot: "bg-amber-500",
     };
   return {
-    label: "Low",
+    label: t ? t("networks.risk.low") : "Low",
     tone: "bg-emerald-50 text-emerald-700 border-emerald-200",
     dot: "bg-emerald-500",
   };
@@ -545,8 +546,8 @@ export default function CriminalNetworks() {
         label: t("networks.stats.repeatOffenders"),
         value: nodeCounts.accused,
         icon: Users,
-        desc: "Multiple FIRs · priority tracking",
-        sub: "priority",
+        desc: t("networks.kpi.descRepeat"),
+        sub: t("networks.kpi.subPriority"),
         bg: "bg-red-400",
         valueColor: "text-white",
         dot: "bg-white",
@@ -559,8 +560,8 @@ export default function CriminalNetworks() {
         label: t("networks.stats.criminalGroups"),
         value: nodeCounts.groups,
         icon: Network,
-        desc: "Co-offending clusters",
-        sub: "clusters",
+        desc: t("networks.kpi.descGroups"),
+        sub: t("networks.kpi.subClusters"),
         bg: "bg-orange-300",
         valueColor: "text-slate-900",
         dot: "bg-slate-800",
@@ -573,8 +574,8 @@ export default function CriminalNetworks() {
         label: t("networks.stats.bridgeIndividuals"),
         value: nodeCounts.bridges,
         icon: GitBranch,
-        desc: "Cross-group connectors",
-        sub: "connectors",
+        desc: t("networks.kpi.descBridges"),
+        sub: t("networks.kpi.subConnectors"),
         bg: "bg-blue-900/90",
         valueColor: "text-white",
         dot: "bg-white",
@@ -587,8 +588,8 @@ export default function CriminalNetworks() {
         label: t("networks.stats.highRiskNetworks"),
         value: nodeCounts.highRisk,
         icon: AlertTriangle,
-        desc: "Score ≥ high · immediate",
-        sub: "critical",
+        desc: t("networks.kpi.descHighRisk"),
+        sub: t("networks.kpi.subCritical"),
         bg: "bg-red-400",
         valueColor: "text-white",
         dot: "bg-white",
@@ -641,8 +642,8 @@ export default function CriminalNetworks() {
                   </h1>
                 </div>
                 <p className="text-[13px] text-[#64748B] mt-1.5 max-w-[560px] leading-relaxed">
-                  {t("networks.subtitle")} · Select a view below — tables update
-                  without leaving the page.
+                  {t("networks.subtitle")}
+                  {t("networks.landing.subtitleSuffix")}
                 </p>
               </div>
 
@@ -654,10 +655,10 @@ export default function CriminalNetworks() {
               >
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <span className="text-[10px] font-bold tracking-[0.12em] uppercase text-[#64748B] flex items-center gap-1">
-                    <Search size={10} /> Global Search
+                    <Search size={10} /> {t("networks.search.globalSearch")}
                   </span>
                   <span className="hidden sm:inline text-[10px] text-[#94A3B8]">
-                    Person · Crime No · Station
+                    {t("networks.search.searchHint")}
                   </span>
                 </div>
                 <div className="relative">
@@ -679,7 +680,7 @@ export default function CriminalNetworks() {
                     <button
                       type="submit"
                       className="inline-flex items-center justify-center h-full rounded-lg bg-[#17233C] hover:bg-[#0f1a2e] text-white px-3 transition"
-                      aria-label="Search"
+                      aria-label={t("networks.search.searchAria")}
                     >
                       <Search size={14} />
                     </button>
@@ -721,16 +722,16 @@ export default function CriminalNetworks() {
                                       className={`h-1.5 w-1.5 rounded-full ${p.case_count >= 4 ? "bg-red-500" : p.case_count >= 2 ? "bg-amber-500" : "bg-slate-300"}`}
                                     />
                                     {p.case_count >= 4
-                                      ? "High"
+                                      ? t("networks.risk.high")
                                       : p.case_count >= 2
-                                        ? "Medium"
-                                        : "Low"}{" "}
-                                    risk
+                                        ? t("networks.risk.medium")
+                                        : t("networks.risk.low")}{" "}
+                                    {t("networks.preview.risk")}
                                   </span>
                                 </span>
                               </span>
                               <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-[#17233C] border border-[#E2E8F0] rounded-full px-2 py-1 group-hover:bg-[#17233C] group-hover:text-white group-hover:border-[#17233C] transition">
-                                Explore Graph <ChevronRight size={12} />
+                                {t("networks.search.exploreGraph")} <ChevronRight size={12} />
                               </span>
                             </button>
                           ))}
@@ -755,7 +756,7 @@ export default function CriminalNetworks() {
                                 {c.label}
                               </span>
                               <span className="ml-auto text-[11px] text-[#64748B]">
-                                FIR
+                                {t("networks.search.firTag")}
                               </span>
                             </button>
                           ))}
@@ -780,7 +781,7 @@ export default function CriminalNetworks() {
                                 {s.label}
                               </span>
                               <span className="ml-auto text-[11px] text-[#64748B]">
-                                Station
+                                {t("networks.search.stationTag")}
                               </span>
                             </button>
                           ))}
@@ -791,24 +792,23 @@ export default function CriminalNetworks() {
                         !searchResults.stations?.length && (
                           <div className="px-4 py-8 text-center">
                             <p className="text-sm font-medium text-[#475569]">
-                              No matches
+                              {t("networks.search.noMatches")}
                             </p>
                             <p className="text-xs text-[#94A3B8] mt-1">
-                              Try a different name, FIR number, or station.
+                              {t("networks.search.tryDifferent")}
                             </p>
                           </div>
                         )}
                     </div>
                     <div className="bg-[#F8FAFC] border-t border-[#E2E8F0] px-3 py-2 flex items-center justify-between">
                       <span className="text-[10px] text-[#64748B] flex items-center gap-1">
-                        <Info size={11} /> Tip: Click “Explore Graph” to jump to
-                        network canvas · “View Timeline” in preview
+                        <Info size={11} /> {t("networks.search.tipExplore")}
                       </span>
                       <button
                         onClick={() => setShowDropdown(false)}
                         className="text-[11px] font-semibold text-[#64748B] hover:text-[#17233C] px-2 py-1 rounded-md hover:bg-white border border-transparent hover:border-[#E2E8F0] transition"
                       >
-                        Dismiss
+                        {t("networks.search.dismiss")}
                       </button>
                     </div>
                   </div>
@@ -824,11 +824,10 @@ export default function CriminalNetworks() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-[#64748B] flex items-center gap-1.5">
-                  <Activity size={12} className="text-[#17233C]" /> Network
-                  Overview — tap a card to filter
+                  <Activity size={12} className="text-[#17233C]" /> {t("networks.kpi.overview")}
                 </p>
                 <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-medium text-[#64748B] bg-white border border-[#E2E8F0] rounded-full px-2 py-1">
-                  <Filter size={10} /> Active:{" "}
+                  <Filter size={10} /> {t("networks.kpi.active")}{" "}
                   <span className="font-bold text-[#17233C]">
                     {activeKpiLabel}
                   </span>
@@ -876,12 +875,12 @@ export default function CriminalNetworks() {
                       </span>
                       {k.value > 0 && !active && (
                         <span className="absolute right-3 top-3 text-[10px] font-bold uppercase tracking-wide bg-white border border-white px-1.5 py-0.5 text-[#DC2626]">
-                          Action needed
+                          {t("networks.kpi.actionNeeded")}
                         </span>
                       )}
                       {active && (
                         <span className="absolute right-3 top-3 text-[10px] font-bold uppercase tracking-wide bg-white text-[#1A1A2E] px-1.5 py-0.5">
-                          Selected
+                          {t("networks.kpi.selected")}
                         </span>
                       )}
                     </button>
@@ -897,9 +896,9 @@ export default function CriminalNetworks() {
                   <h2 className="text-[13px] font-bold tracking-tight text-[#17233C] flex items-center gap-2">
                     <GitBranch size={14} className="text-purple-600" />
                     {activeKpi === "repeat"
-                      ? "Repeat Offenders — Top by FIRs"
+                      ? t("networks.landing.repeatTop")
                       : activeKpi === "highRisk"
-                        ? "High-Risk Individuals"
+                        ? t("networks.landing.highRiskInd")
                         : t("networks.bridgeIndividuals")}
                     <span className="inline-flex items-center rounded-full bg-white border border-[#E2E8F0] px-2 py-0.5 text-[11px] font-bold text-[#475569] tabular-nums">
                       {filteredBridges.length}
@@ -907,17 +906,19 @@ export default function CriminalNetworks() {
                   </h2>
                   <p className="text-xs text-[#64748B] mt-1">
                     {activeKpi === "bridges"
-                      ? "Individuals linking multiple groups & stations — click row for preview, then open Graph/Timeline."
+                      ? t("networks.landing.descBridges")
                       : activeKpi === "repeat"
-                        ? "Sorted by FIR volume — strong recidivism signal."
+                        ? t("networks.landing.descRepeat")
                         : activeKpi === "highRisk"
-                          ? "Filtered: FIR ≥4 or multi-district activity."
-                          : `Viewing ${activeKpiLabel.toLowerCase()} — table adapts without leaving page.`}
+                          ? t("networks.landing.descHighRisk")
+                          : t("networks.landing.descViewing", {
+                              label: activeKpiLabel.toLowerCase(),
+                            })}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold tracking-wide uppercase text-[#64748B] bg-white border border-[#E2E8F0] rounded-full px-2.5 py-1">
-                    <Shield size={10} /> Risk badges · hover for action
+                    <Shield size={10} /> {t("networks.landing.riskBadges")}
                   </span>
                 </div>
               </div>
@@ -930,7 +931,9 @@ export default function CriminalNetworks() {
                         <th className="text-left px-5 py-3 font-bold">
                           {t("networks.table.name")}
                         </th>
-                        <th className="text-right px-4 py-3 font-bold">Risk</th>
+                        <th className="text-right px-4 py-3 font-bold">
+                          {t("networks.landing.riskCol")}
+                        </th>
                         <th className="text-right px-4 py-3 font-bold">
                           {t("networks.columns.firs")}
                         </th>
@@ -952,6 +955,7 @@ export default function CriminalNetworks() {
                           b.fir_count,
                           b.stations_covered,
                           b.districts_covered,
+                          t,
                         );
                         return (
                           <tr
@@ -969,7 +973,7 @@ export default function CriminalNetworks() {
                                     {b.name}
                                   </p>
                                   <p className="text-[11px] text-[#64748B] mt-0.5 hidden sm:block">
-                                    Click for preview drawer →
+                                    {t("networks.landing.clickForPreview")}
                                   </p>
                                 </div>
                               </div>
@@ -998,7 +1002,7 @@ export default function CriminalNetworks() {
                             </td>
                             <td className="px-5 py-3.5 text-right whitespace-nowrap">
                               <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#17233C] border border-[#17233C] text-white text-xs font-semibold min-w-[152px] px-6 py-2.5 transition shadow-sm group-hover:bg-[#0f1a2e] group-hover:border-[#0f1a2e]">
-                                Explore Graph{" "}
+                                {t("networks.search.exploreGraph")}{" "}
                                 <ChevronRight
                                   size={12}
                                   className="group-hover:translate-x-0.5 transition-transform shrink-0"
@@ -1017,21 +1021,20 @@ export default function CriminalNetworks() {
                     <Users size={18} />
                   </div>
                   <p className="text-sm font-semibold text-[#334155] mt-3">
-                    No individuals in this view
+                    {t("networks.landing.noIndividuals")}
                   </p>
                   <p className="text-xs text-[#64748B] mt-1">
-                    Switch KPI tab or clear filters.
+                    {t("networks.landing.switchKpi")}
                   </p>
                 </div>
               )}
 
               <div className="px-5 py-3 bg-[#FAFBFC] border-t border-[#E2E8F0] flex items-center justify-between">
                 <span className="text-[11px] text-[#64748B] flex items-center gap-1.5">
-                  <Info size={12} /> Row click opens a slide-over preview — no
-                  disorienting jump.
+                  <Info size={12} /> {t("networks.landing.rowHint")}
                 </span>
                 <span className="text-[11px] font-medium text-[#94A3B8] hidden sm:block">
-                  Hover rows · Risk = FIR + stations + districts
+                  {t("networks.landing.hoverHint")}
                 </span>
               </div>
             </div>
@@ -1043,11 +1046,13 @@ export default function CriminalNetworks() {
                   <Network size={12} className="text-[#17233C]" />{" "}
                   {t("networks.topNetworks")} —{" "}
                   {activeKpi === "highRisk"
-                    ? "high-risk only"
-                    : "filtered view"}
+                    ? t("networks.landing.highRiskOnly")
+                    : t("networks.landing.filteredView")}
                 </h2>
                 <span className="text-[11px] text-[#94A3B8]">
-                  {filteredCommunities.length} networks
+                  {t("networks.landing.networksCount", {
+                    count: filteredCommunities.length,
+                  })}
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1077,21 +1082,21 @@ export default function CriminalNetworks() {
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="inline-flex items-center gap-1 rounded-full bg-[#F8FAFC] border border-[#E2E8F0] px-2 py-1 text-[11px] font-semibold text-[#475569]">
-                          <Users size={11} /> {net.member_count} members
+                          <Users size={11} /> {t("networks.landing.membersUnit", { count: net.member_count })}
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-full bg-[#F8FAFC] border border-[#E2E8F0] px-2 py-1 text-[11px] font-semibold text-[#475569]">
-                          <FileText size={11} /> {net.total_firs} FIRs
+                          <FileText size={11} /> {t("networks.landing.firsUnit", { count: net.total_firs })}
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-full bg-[#F8FAFC] border border-[#E2E8F0] px-2 py-1 text-[11px] font-semibold text-[#475569]">
-                          <MapPin size={11} /> {net.stations_covered} stations
+                          <MapPin size={11} /> {t("networks.landing.stationsUnit", { count: net.stations_covered })}
                         </span>
                       </div>
                       <div className="mt-3 flex items-center justify-between">
                         <span className="text-[11px] font-medium text-[#94A3B8] group-hover:text-[#475569] transition">
-                          Click for preview
+                          {t("networks.landing.clickPreview")}
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-full bg-[#17233C] text-white text-[11px] font-semibold px-3 py-1.5 opacity-90 group-hover:opacity-100 transition">
-                          Preview <ChevronRight size={12} />
+                          {t("networks.landing.previewBtn")} <ChevronRight size={12} />
                         </span>
                       </div>
                     </div>
@@ -1100,13 +1105,13 @@ export default function CriminalNetworks() {
                 {filteredCommunities.length === 0 && (
                   <div className="col-span-full bg-white border border-dashed border-[#E2E8F0] rounded-xl p-8 text-center">
                     <p className="text-sm font-medium text-[#475569]">
-                      No networks for this filter.
+                      {t("networks.landing.noNetworksFilter")}
                     </p>
                     <button
                       onClick={() => setActiveKpi("bridges")}
                       className="mt-2 text-xs font-semibold text-[#17233C] underline underline-offset-4"
                     >
-                      Show Bridge Individuals
+                      {t("networks.landing.showBridges")}
                     </button>
                   </div>
                 )}
@@ -1128,12 +1133,12 @@ export default function CriminalNetworks() {
             })
           }
           className="absolute bottom-6 right-6 z-20 inline-flex items-center gap-2 rounded-full bg-[#17233C] hover:bg-[#0f1a2e] text-white text-sm font-semibold px-5 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.22)] transition hover:shadow-[0_12px_32px_rgba(15,23,42,0.28)] hover:-translate-y-0.5"
-          title="Deep dive with AI — floating action"
+          title={t("networks.fab.title")}
         >
           <span className="h-7 w-7 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
             <Sparkles size={14} />
           </span>
-          Deep dive with AI
+          {t("networks.fab.label")}
           <span className="h-6 w-6 rounded-full bg-white text-[#17233C] flex items-center justify-center">
             <ArrowRight size={12} />
           </span>
@@ -1156,8 +1161,8 @@ export default function CriminalNetworks() {
                       <Network size={11} />
                     )}
                     {preview.type === "person"
-                      ? "Person Preview"
-                      : "Network Preview"}
+                      ? t("networks.preview.person")
+                      : t("networks.preview.network")}
                     <span className="h-1 w-1 rounded-full bg-[#CBD5E1]" />
                     {activeKpiLabel}
                   </p>
@@ -1168,8 +1173,16 @@ export default function CriminalNetworks() {
                   </h3>
                   <p className="text-xs text-[#64748B] mt-1">
                     {preview.type === "person"
-                      ? `${preview.data.fir_count} FIRs · ${preview.data.unique_associates ?? "—"} associates · ${preview.data.stations_covered ?? "—"} stations`
-                      : `${preview.data.member_count} members · ${preview.data.total_firs} FIRs · ${preview.data.risk} risk`}
+                      ? t("networks.preview.personSummary", {
+                          firs: preview.data.fir_count,
+                          associates: preview.data.unique_associates ?? "—",
+                          stations: preview.data.stations_covered ?? "—",
+                        })
+                      : t("networks.preview.networkSummary", {
+                          members: preview.data.member_count,
+                          firs: preview.data.total_firs,
+                          risk: preview.data.risk,
+                        })}
                   </p>
                 </div>
                 <button
@@ -1186,7 +1199,7 @@ export default function CriminalNetworks() {
                     <div className="grid grid-cols-3 gap-2">
                       <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-center">
                         <p className="text-[10px] font-bold tracking-wide uppercase text-[#64748B]">
-                          FIRs
+                          {t("networks.preview.firs")}
                         </p>
                         <p className="text-[20px] font-black text-[#17233C] tabular-nums">
                           {preview.data.fir_count}
@@ -1194,7 +1207,7 @@ export default function CriminalNetworks() {
                       </div>
                       <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-center">
                         <p className="text-[10px] font-bold tracking-wide uppercase text-[#64748B]">
-                          Associates
+                          {t("networks.preview.associates")}
                         </p>
                         <p className="text-[20px] font-black text-[#17233C] tabular-nums">
                           {preview.data.unique_associates ?? "—"}
@@ -1202,7 +1215,7 @@ export default function CriminalNetworks() {
                       </div>
                       <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-center">
                         <p className="text-[10px] font-bold tracking-wide uppercase text-[#64748B]">
-                          Districts
+                          {t("networks.preview.districts")}
                         </p>
                         <p className="text-[20px] font-black text-[#17233C] tabular-nums">
                           {preview.data.districts_covered ?? "—"}
@@ -1212,12 +1225,12 @@ export default function CriminalNetworks() {
 
                     <div className="rounded-xl border border-[#E2E8F0] bg-white p-4">
                       <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B] flex items-center gap-1.5">
-                        <TrendingUp size={12} /> Risk signals
+                        <TrendingUp size={12} /> {t("networks.preview.riskSignals")}
                       </p>
                       <div className="mt-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-medium text-[#475569]">
-                            Stations covered
+                            {t("networks.preview.stationsCovered")}
                           </span>
                           <span className="text-xs font-bold tabular-nums">
                             {preview.data.stations_covered}
@@ -1233,14 +1246,14 @@ export default function CriminalNetworks() {
                         </div>
                         <div className="flex items-center justify-between pt-1">
                           <span className="text-xs font-medium text-[#475569]">
-                            Cross-district
+                            {t("networks.preview.crossDistrict")}
                           </span>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${preview.data.districts_covered > 1 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-slate-50 text-slate-600 border-slate-200"}`}
                           >
                             {preview.data.districts_covered > 1
-                              ? "Bridge individual"
-                              : "Localized"}
+                              ? t("networks.preview.bridgeIndividual")
+                              : t("networks.preview.localized")}
                           </span>
                         </div>
                       </div>
@@ -1248,16 +1261,16 @@ export default function CriminalNetworks() {
 
                     <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-3">
                       <p className="text-[11px] font-bold text-amber-800 flex items-center gap-1.5">
-                        <Zap size={12} /> Investigation lead
+                        <Zap size={12} /> {t("networks.preview.investigationLead")}
                       </p>
                       <p className="text-xs text-[#92400E] leading-relaxed mt-1">
-                        This{" "}
-                        {preview.data.districts_covered > 1
-                          ? "bridge"
-                          : "repeat"}{" "}
-                        actor links {preview.data.unique_associates ?? 0}{" "}
-                        associates. Prioritize co-arrest analysis and
-                        station-wise FIR linkage.
+                        {t("networks.preview.leadDetail", {
+                          kind:
+                            preview.data.districts_covered > 1
+                              ? t("networks.preview.actorBridge")
+                              : t("networks.preview.actorRepeat"),
+                          count: preview.data.unique_associates ?? 0,
+                        })}
                       </p>
                     </div>
                   </>
@@ -1266,7 +1279,7 @@ export default function CriminalNetworks() {
                     <div className="grid grid-cols-3 gap-2">
                       <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-center">
                         <p className="text-[10px] font-bold uppercase text-[#64748B]">
-                          Members
+                          {t("networks.preview.members")}
                         </p>
                         <p className="text-xl font-black text-[#17233C]">
                           {preview.data.member_count}
@@ -1274,7 +1287,7 @@ export default function CriminalNetworks() {
                       </div>
                       <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-center">
                         <p className="text-[10px] font-bold uppercase text-[#64748B]">
-                          FIRs
+                          {t("networks.preview.firs")}
                         </p>
                         <p className="text-xl font-black text-[#17233C]">
                           {preview.data.total_firs}
@@ -1282,7 +1295,7 @@ export default function CriminalNetworks() {
                       </div>
                       <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-center">
                         <p className="text-[10px] font-bold uppercase text-[#64748B]">
-                          Risk
+                          {t("networks.preview.risk")}
                         </p>
                         <p className="text-xs font-black mt-1">
                           <span
@@ -1295,7 +1308,7 @@ export default function CriminalNetworks() {
                     </div>
                     <div>
                       <p className="text-[10px] font-bold tracking-wide uppercase text-[#64748B] mb-2">
-                        Members
+                        {t("networks.preview.members")}
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {preview.data.members?.slice(0, 8).map((m, i) => (
@@ -1322,7 +1335,7 @@ export default function CriminalNetworks() {
                   }}
                   className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#17233C] hover:bg-[#0f1a2e] text-white text-sm font-semibold py-3 shadow-sm transition"
                 >
-                  <Network size={14} /> Open Network Graph{" "}
+                  <Network size={14} /> {t("networks.preview.openGraph")}{" "}
                   <ChevronRight size={14} />
                 </button>
                 <button
@@ -1334,11 +1347,11 @@ export default function CriminalNetworks() {
                   }}
                   className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#334155] text-sm font-semibold py-3 transition"
                 >
-                  <Clock size={14} /> View Timeline{" "}
+                  <Clock size={14} /> {t("networks.preview.viewTimeline")}{" "}
                   <ChevronRight size={14} className="text-[#94A3B8]" />
                 </button>
                 <p className="text-[10px] text-center text-[#94A3B8]">
-                  Preview keeps you in context — choose a view.
+                  {t("networks.preview.previewHint")}
                 </p>
               </div>
             </div>
@@ -1364,7 +1377,7 @@ export default function CriminalNetworks() {
             }}
             className="font-semibold text-[#64748B] hover:text-[#17233C] transition"
           >
-            Criminal Networks
+            {t("networks.canvas.breadcrumb")}
           </button>
           <ChevronRight size={12} className="text-[#CBD5E1]" />
           <button
@@ -1411,12 +1424,12 @@ export default function CriminalNetworks() {
           ref={graphSearchRef}
         >
           <label className="block text-[9px] font-bold tracking-[0.12em] uppercase text-[#94A3B8] leading-none mb-1">
-            Global Search — jump to profile
+            {t("networks.search.jumpToProfile")}
           </label>
           <div className="relative">
             <input
               type="text"
-              placeholder="Search person, case, station…"
+              placeholder={t("networks.search.graphPlaceholder")}
               value={searchQuery}
               onChange={handleSearchChange}
               onFocus={() => searchResults && setShowDropdown(true)}
@@ -1441,7 +1454,7 @@ export default function CriminalNetworks() {
                       {p.name}
                     </span>
                     <span className="ml-auto text-[11px] font-medium text-[#64748B] bg-[#F8FAFC] border border-[#E2E8F0] rounded-full px-1.5 py-0.5">
-                      {p.case_count} FIRs
+                      {t("networks.firs", { count: p.case_count })}
                     </span>
                   </button>
                 ))}
@@ -1472,13 +1485,13 @@ export default function CriminalNetworks() {
               </div>
               <div className="px-3 py-2 bg-[#F8FAFC] border-t border-[#E2E8F0] flex justify-between">
                 <span className="text-[10px] text-[#64748B]">
-                  Enter to open · Esc to close
+                  {t("networks.search.enterEsc")}
                 </span>
                 <button
                   onClick={() => setShowDropdown(false)}
                   className="text-[11px] font-semibold text-[#64748B] hover:text-[#17233C]"
                 >
-                  Close
+                  {t("networks.search.close")}
                 </button>
               </div>
             </div>
@@ -1507,19 +1520,19 @@ export default function CriminalNetworks() {
               onClick={() => setActiveTab("graph")}
               className={`px-2.5 py-1 rounded-full text-xs font-bold ${activeTab === "graph" ? "bg-[#17233C] text-white" : "bg-white border border-[#E2E8F0] text-[#475569]"}`}
             >
-              Graph
+              {t("networks.graph")}
             </button>
             <button
               onClick={() => setActiveTab("timeline")}
               className={`px-2.5 py-1 rounded-full text-xs font-bold ${activeTab === "timeline" ? "bg-[#17233C] text-white" : "bg-white border border-[#E2E8F0] text-[#475569]"}`}
             >
-              Timeline
+              {t("networks.timeline")}
             </button>
           </div>
 
           <button
             onClick={clearHighlight}
-            title="Clear highlight · reset view"
+            title={t("networks.canvas.clearHighlightTitle")}
             className="hidden lg:inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#E2E8F0] bg-white text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#17233C] transition"
           >
             <SlidersHorizontal size={14} />
@@ -1534,7 +1547,7 @@ export default function CriminalNetworks() {
               <div className="bg-white border border-[#E2E8F0] rounded-xl px-5 py-4 shadow-sm flex items-center gap-3">
                 <Loader2 className="h-5 w-5 text-[#17233C] animate-spin" />
                 <span className="text-sm font-semibold text-[#334155]">
-                  Loading network…
+                  {t("networks.canvas.loading")}
                 </span>
               </div>
             </div>
@@ -1548,12 +1561,12 @@ export default function CriminalNetworks() {
                   <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] border border-[#E2E8F0]/80 overflow-hidden">
                     <div className="flex items-center justify-between px-3.5 py-2 border-b border-[#F1F5F9]">
                       <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-[#64748B] flex items-center gap-1.5">
-                        <Layers size={11} /> Legend — semantic zoom
+                        <Layers size={11} /> {t("networks.canvas.legendTitle")}
                       </p>
                       <button
                         onClick={() => setLegendCollapsed(true)}
                         className="h-6 w-6 rounded-full hover:bg-[#F1F5F9] flex items-center justify-center text-[#94A3B8] hover:text-[#475569] transition"
-                        title="Collapse legend"
+                        title={t("networks.canvas.collapseLegend")}
                       >
                         <EyeOff size={12} />
                       </button>
@@ -1561,12 +1574,12 @@ export default function CriminalNetworks() {
                     <div className="px-3.5 py-3 flex gap-5">
                       <div className="space-y-1.5">
                         <p className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#94A3B8]">
-                          Nodes
+                          {t("networks.canvas.nodes")}
                         </p>
                         <div className="flex items-center gap-2">
                           <span className="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-sm ring-1 ring-white shrink-0" />
                           <span className="text-[11px] font-medium text-[#334155]">
-                            Accused
+                            {t("networks.canvas.accused")}
                           </span>
                           <span className="text-[10px] font-bold tabular-nums bg-[#F8FAFC] border border-[#E2E8F0] rounded-full px-1.5 py-0">
                             {counts.accused}
@@ -1577,7 +1590,7 @@ export default function CriminalNetworks() {
                             <span className="w-1.5 h-1.5 bg-white rotate-45" />
                           </span>
                           <span className="text-[11px] font-medium text-[#334155]">
-                            FIR / Case
+                            {t("networks.canvas.firCase")}
                           </span>
                           <span className="text-[10px] font-bold tabular-nums bg-[#F8FAFC] border border-[#E2E8F0] rounded-full px-1.5 py-0">
                             {counts.cases}
@@ -1586,7 +1599,7 @@ export default function CriminalNetworks() {
                         <div className="flex items-center gap-2">
                           <span className="w-3.5 h-3 bg-emerald-500 rounded-[3px] ring-1 ring-white shrink-0" />
                           <span className="text-[11px] font-medium text-[#334155]">
-                            Station
+                            {t("networks.canvas.station")}
                           </span>
                           <span className="text-[10px] font-bold tabular-nums bg-[#F8FAFC] border border-[#E2E8F0] rounded-full px-1.5 py-0">
                             {counts.stations}
@@ -1595,7 +1608,7 @@ export default function CriminalNetworks() {
                         <div className="flex items-center gap-2">
                           <span className="w-3.5 h-3 bg-blue-500 rounded-[2px] ring-1 ring-white shrink-0" />
                           <span className="text-[11px] font-medium text-[#334155]">
-                            Officer
+                            {t("networks.canvas.officer")}
                           </span>
                           <span className="text-[10px] font-bold tabular-nums bg-[#F8FAFC] border border-[#E2E8F0] rounded-full px-1.5 py-0">
                             {counts.officers}
@@ -1605,14 +1618,14 @@ export default function CriminalNetworks() {
                       <div className="w-px bg-[#F1F5F9]" />
                       <div className="space-y-1.5">
                         <p className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#94A3B8]">
-                          Edges · hover to highlight
+                          {t("networks.canvas.edgesHint")}
                         </p>
                         <div className="flex items-center gap-2">
                           <span className="w-6 h-0 border-t-[2.5px] border-[#94A3B8] rounded-full relative">
                             <span className="absolute -right-1 -top-[4px] w-0 h-0 border-l-[5px] border-l-[#94A3B8] border-y-[4px] border-y-transparent" />
                           </span>
                           <span className="text-[11px] font-medium text-[#334155]">
-                            Person link
+                            {t("networks.canvas.personLink")}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1620,19 +1633,19 @@ export default function CriminalNetworks() {
                             <span className="absolute -right-1 -top-[4px] w-0 h-0 border-l-[5px] border-l-emerald-400 border-y-[4px] border-y-transparent" />
                           </span>
                           <span className="text-[11px] font-medium text-[#334155]">
-                            Station link
+                            {t("networks.canvas.stationLink")}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="w-6 h-0 border-t-[1.5px] border-dashed border-purple-400 rounded-full" />
                           <span className="text-[11px] font-medium text-[#334155]">
-                            Semantic
+                            {t("networks.canvas.semantic")}
                           </span>
                         </div>
                         <p className="text-[10px] text-[#94A3B8] leading-tight pt-1">
-                          Zoom: labels auto-hide when zoomed out.
+                          {t("networks.canvas.zoomLabelsHide")}
                           <br />
-                          Click node to highlight path.
+                          {t("networks.canvas.clickNode")}
                         </p>
                       </div>
                     </div>
@@ -1644,10 +1657,10 @@ export default function CriminalNetworks() {
                         }}
                         className="text-[10px] font-semibold text-[#475569] hover:text-[#17233C] bg-[#F8FAFC] hover:bg-white border border-[#E2E8F0] rounded-full px-2.5 py-1 transition"
                       >
-                        Fit view
+                        {t("networks.canvas.fitView")}
                       </button>
                       <span className="text-[10px] text-[#94A3B8]">
-                        · Scroll to zoom · drag to pan
+                        {t("networks.canvas.scrollZoom")}
                       </span>
                     </div>
                   </div>
@@ -1659,7 +1672,7 @@ export default function CriminalNetworks() {
                   className="absolute bottom-4 left-4 z-20 bg-white/90 backdrop-blur border border-[#E2E8F0] rounded-full px-3 py-1.5 text-xs font-semibold text-[#334155] hover:bg-white flex items-center gap-1.5 shadow-sm transition"
                   style={{ boxShadow: "0 2px 8px rgba(15,23,42,0.08)" }}
                 >
-                  <Eye size={12} /> Legend
+                  <Eye size={12} /> {t("networks.canvas.legend")}
                 </button>
               )}
 
@@ -1668,11 +1681,13 @@ export default function CriminalNetworks() {
                 <div className="absolute top-3 left-3 z-10 hidden lg:flex items-center gap-1.5 bg-white/90 backdrop-blur rounded-full border border-[#E2E8F0] px-2.5 py-1 shadow-sm">
                   <Globe size={10} className="text-[#64748B]" />
                   <span className="text-[10px] font-bold tracking-wide text-[#475569] tabular-nums">
-                    Zoom {Math.round(cyZoom * 100)}%
+                    {t("networks.canvas.zoom", { count: Math.round(cyZoom * 100) })}
                   </span>
                   <span className="h-3 w-px bg-[#E2E8F0]" />
                   <span className="text-[10px] text-[#94A3B8]">
-                    {cyZoom < 0.55 ? "labels hidden" : "labels visible"}
+                    {cyZoom < 0.55
+                      ? t("networks.canvas.labelsHidden")
+                      : t("networks.canvas.labelsVisible")}
                   </span>
                 </div>
               )}
@@ -1741,12 +1756,10 @@ export default function CriminalNetworks() {
                       <Network size={20} />
                     </div>
                     <p className="text-sm font-bold text-[#17233C] mt-3">
-                      Select a person to view their network graph
+                      {t("networks.canvas.emptyTitle")}
                     </p>
                     <p className="text-xs text-[#64748B] mt-1 leading-relaxed">
-                      Use Global Search above or pick from Bridge Individuals on
-                      the landing page. The canvas uses semantic zoom — labels
-                      hide when zoomed out for clarity.
+                      {t("networks.canvas.emptyDesc")}
                     </p>
                     <button
                       onClick={() => {
@@ -1754,7 +1767,7 @@ export default function CriminalNetworks() {
                       }}
                       className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#17233C] text-white text-xs font-semibold px-4 py-2 hover:bg-[#0f1a2e] transition"
                     >
-                      ← Back to landing
+                      {t("networks.canvas.backLanding")}
                     </button>
                   </div>
                 </div>
@@ -1765,12 +1778,12 @@ export default function CriminalNetworks() {
               <div className="max-w-[760px]">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-[11px] font-bold tracking-[0.12em] uppercase text-[#64748B] flex items-center gap-1.5">
-                    <Clock size={12} /> {t("networks.timeline")} — clickable
-                    cards
+                    <Clock size={12} /> {t("networks.timeline")}{" "}
+                    {t("networks.canvas.timelineSuffix")}
                   </h3>
                   {timeline.length > 0 && (
                     <span className="text-[11px] font-medium text-[#94A3B8] bg-white border border-[#E2E8F0] rounded-full px-2 py-0.5">
-                      {timeline.length} events
+                      {t("networks.canvas.eventsCount", { count: timeline.length })}
                     </span>
                   )}
                 </div>
@@ -1807,7 +1820,7 @@ export default function CriminalNetworks() {
                             {evt.type}
                           </span>
                           <span className="ml-auto text-[11px] font-semibold text-[#94A3B8] group-hover:text-[#17233C] flex items-center gap-1">
-                            Preview <ExternalLink size={10} />
+                            {t("networks.canvas.previewLink")} <ExternalLink size={10} />
                           </span>
                         </div>
                         <p className="text-[13.5px] font-bold text-[#17233C] leading-snug">
@@ -1825,10 +1838,10 @@ export default function CriminalNetworks() {
                   <div className="bg-white border border-dashed border-[#E2E8F0] rounded-xl p-8 text-center">
                     <Clock size={20} className="mx-auto text-[#CBD5E1]" />
                     <p className="text-sm font-semibold text-[#475569] mt-2">
-                      No timeline data available
+                      {t("crimeMap.timeline.empty")}
                     </p>
                     <p className="text-xs text-[#94A3B8] mt-1">
-                      This person has no chronological events yet.
+                      {t("networks.canvas.noTimelineDesc")}
                     </p>
                   </div>
                 )}
@@ -1855,7 +1868,7 @@ export default function CriminalNetworks() {
                     <Shield size={11} /> {t("networks.profile.title")}
                   </p>
                   <span className="text-[10px] font-medium text-[#94A3B8] bg-white border border-[#E2E8F0] rounded-full px-2 py-0.5">
-                    Map-aware
+                    {t("networks.canvas.mapAware")}
                   </span>
                 </div>
                 <div className="flex items-center gap-3 mt-3">
@@ -1869,7 +1882,7 @@ export default function CriminalNetworks() {
                     <p className="text-xs font-medium text-[#64748B] mt-0.5 flex items-center gap-1.5">
                       {t("networks.profile.person")} ·{" "}
                       <span className="inline-flex items-center gap-1 bg-white border border-[#E2E8F0] rounded-full px-1.5 py-0 text-[10px] font-bold text-[#475569]">
-                        <Target size={10} /> {profile.person.network_rank} rank
+                        <Target size={10} /> {t("networks.canvas.rankSuffix", { rank: profile.person.network_rank })}
                       </span>
                     </p>
                   </div>
@@ -1880,7 +1893,7 @@ export default function CriminalNetworks() {
                 {/* Key Metrics — larger/bolder than labels */}
                 <div>
                   <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B] mb-2.5">
-                    Key Metrics
+                    {t("networks.canvas.keyMetrics")}
                   </p>
                   <div className="grid grid-cols-2 gap-2.5">
                     <MetricItem
@@ -1918,8 +1931,9 @@ export default function CriminalNetworks() {
                       </p>
                       <p className="text-[11px] text-[#64748B] mt-1 flex items-center gap-1">
                         <Activity size={11} />{" "}
-                        {profile.person.recent_activity_60d} FIRs in last 60
-                        days
+                        {t("networks.canvas.firsLast60d", {
+                          count: profile.person.recent_activity_60d,
+                        })}
                       </p>
                     </div>
                   </div>
@@ -1932,9 +1946,9 @@ export default function CriminalNetworks() {
                       {t("networks.profile.investigationLeads")}
                     </h2>
                     <span className="group relative inline-flex items-center gap-1 rounded-full bg-[#FFFBEB] border border-amber-200 px-2 py-0.5 text-[10px] font-semibold text-amber-800 cursor-help">
-                      <Info size={10} /> Stars = confidence
+                      <Info size={10} /> {t("networks.canvas.starsConfidence")}
                       <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1.5 hidden group-hover:block whitespace-nowrap rounded-md bg-[#17233C] px-2.5 py-1.5 text-[11px] font-medium text-white shadow-lg z-20">
-                        ★ = linkage strength from co-arrest & FIR overlap
+                        {t("networks.canvas.starsTooltip")}
                       </span>
                     </span>
                   </div>
@@ -1966,7 +1980,7 @@ export default function CriminalNetworks() {
                         })}
                         detail={
                           profile.person.districts?.join(", ") ||
-                          "Multi-district activity"
+                          t("networks.canvas.multiDistrict")
                         }
                       />
                     )}
@@ -1988,7 +2002,7 @@ export default function CriminalNetworks() {
                     <h2 className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B] mb-2 flex items-center justify-between">
                       <span>{t("networks.analytics.title")}</span>
                       <span className="text-[10px] font-medium normal-case tracking-normal bg-white border border-[#E2E8F0] rounded-full px-2 py-0.5 text-[#475569] tabular-nums">
-                        {associates.length} associates
+                        {t("networks.canvas.associatesCount", { count: associates.length })}
                       </span>
                     </h2>
                     <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden">
@@ -2042,10 +2056,10 @@ export default function CriminalNetworks() {
                       </div>
                       <div className="px-3 py-2 bg-[#FAFBFC] border-t border-[#E2E8F0] flex items-center justify-between">
                         <span className="text-[10px] text-[#94A3B8]">
-                          Right-aligned numerics · more cell padding
+                          {t("networks.canvas.rightNumerics")}
                         </span>
                         <span className="text-[10px] font-medium text-[#64748B] bg-white border border-[#E2E8F0] rounded-full px-2 py-0.5">
-                          {associates.length} rows
+                          {t("networks.canvas.rowsCount", { count: associates.length })}
                         </span>
                       </div>
                     </div>
@@ -2056,7 +2070,7 @@ export default function CriminalNetworks() {
                 {selectedNode && (
                   <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3">
                     <p className="text-[10px] font-bold tracking-wide uppercase text-[#64748B] flex items-center gap-1.5">
-                      <Eye size={11} /> Selected · {selectedNode.type}
+                      <Eye size={11} /> {t("networks.canvas.selectedPrefix")} · {selectedNode.type}
                     </p>
                     <p className="text-sm font-bold text-[#17233C] mt-1">
                       {selectedNode.label}
@@ -2070,7 +2084,7 @@ export default function CriminalNetworks() {
                       onClick={clearHighlight}
                       className="mt-2 text-xs font-semibold text-[#64748B] hover:text-[#17233C] underline underline-offset-4"
                     >
-                      Clear highlight
+                      {t("networks.canvas.clearHighlight")}
                     </button>
                   </div>
                 )}
@@ -2089,8 +2103,7 @@ export default function CriminalNetworks() {
                   }}
                   className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#17233C] hover:bg-[#0f1a2e] text-white text-sm font-semibold py-3 shadow-sm transition"
                 >
-                  <MessageSquare size={14} className="opacity-90" /> Ask
-                  CrimeLens — map-aware
+                  <MessageSquare size={14} className="opacity-90" /> {t("networks.canvas.askMapAware")}
                   <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#17233C]">
                     <ArrowRight size={10} />
                   </span>
@@ -2101,7 +2114,7 @@ export default function CriminalNetworks() {
                   }
                   className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2.5 transition"
                 >
-                  Back to top <span className="text-[#94A3B8]">↑</span>
+                  {t("networks.canvas.backToTop")} <span className="text-[#94A3B8]">↑</span>
                 </button>
               </div>
             </div>
@@ -2115,17 +2128,14 @@ export default function CriminalNetworks() {
                   {t("networks.empty")}
                 </p>
                 <p className="text-xs text-[#64748B] mt-1 leading-relaxed">
-                  Search globally or pick a bridge individual — preview drawer
-                  keeps context before entering the full graph.
+                  {t("networks.canvas.emptyHint")}
                 </p>
                 <div className="mt-4 rounded-xl bg-amber-50 border border-amber-100 p-3 text-left">
                   <p className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
-                    <Info size={12} /> Global Search vs Chat
+                    <Info size={12} /> {t("networks.canvas.searchVsChat")}
                   </p>
                   <p className="text-xs text-amber-900/80 mt-1 leading-relaxed">
-                    Top bar = jump directly to a person&apos;s graph. Use the
-                    sidebar&apos;s &ldquo;Deep dive&rdquo; or CrimeLens
-                    workspace for open-ended AI chat.
+                    {t("networks.canvas.searchVsChatDesc")}
                   </p>
                 </div>
               </div>
@@ -2166,14 +2176,14 @@ export default function CriminalNetworks() {
             <div className="p-5">
               <div className="rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] p-3">
                 <p className="text-[11px] font-bold tracking-wide uppercase text-[#64748B]">
-                  Context
+                  {t("networks.canvas.contextTitle")}
                 </p>
                 <p className="text-xs text-[#334155] mt-1 leading-relaxed">
                   {timelinePreview.type === "FIR"
-                    ? "First Information Report — triggers investigation workflow."
+                    ? t("networks.canvas.contextFir")
                     : timelinePreview.type === "Arrest"
-                      ? "Custody event — check remand, bail, and linked FIRs."
-                      : "Procedural update — verify with case diary."}
+                      ? t("networks.canvas.contextArrest")
+                      : t("networks.canvas.contextOther")}
                 </p>
               </div>
               <div className="mt-4 flex gap-2">
@@ -2181,7 +2191,7 @@ export default function CriminalNetworks() {
                   onClick={() => setTimelinePreview(null)}
                   className="flex-1 rounded-xl border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-sm font-semibold py-2.5 transition"
                 >
-                  Close
+                  {t("networks.search.close")}
                 </button>
                 <button
                   onClick={() => {
@@ -2190,11 +2200,11 @@ export default function CriminalNetworks() {
                   }}
                   className="flex-1 rounded-xl bg-[#17233C] hover:bg-[#0f1a2e] text-white text-sm font-semibold py-2.5 inline-flex items-center justify-center gap-1.5 transition"
                 >
-                  <Sparkles size={14} /> Deep dive
+                  <Sparkles size={14} /> {t("networks.canvas.deepDiveBtn")}
                 </button>
               </div>
               <p className="text-[10px] text-center text-[#94A3B8] mt-2">
-                Quick-preview keeps you in the timeline — no page loss.
+                {t("networks.canvas.quickPreviewHint")}
               </p>
             </div>
           </div>
@@ -2254,6 +2264,7 @@ MetricItem.propTypes = {
 };
 
 function LeadCard({ stars, title, detail, onClick, active }) {
+  const { t } = useTranslation();
   return (
     <button
       onClick={onClick}
@@ -2264,7 +2275,7 @@ function LeadCard({ stars, title, detail, onClick, active }) {
         <StarRating count={stars} showTooltip />
         {onClick && (
           <span className="ml-auto text-[10px] font-bold text-[#17233C] bg-white border border-[#E2E8F0] rounded-full px-1.5 py-0.5 inline-flex items-center gap-1">
-            Open <ChevronRight size={10} />
+            {t("networks.canvas.openBtn")} <ChevronRight size={10} />
           </span>
         )}
       </div>

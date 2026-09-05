@@ -213,10 +213,10 @@ function buildMapContextBlock(mapContext) {
   return parts.join("\n");
 }
 
-function getContextSummary(mapContext) {
+function getContextSummary(mapContext, mapLabel = "Map") {
   if (!mapContext) return null;
   const bits = [];
-  bits.push(mapContext.viewMode || "Map");
+  bits.push(mapContext.viewMode || mapLabel);
   if (mapContext.dateFrom && mapContext.dateTo) {
     const f = mapContext.dateFrom.slice(0, 7);
     const t = mapContext.dateTo.slice(0, 7);
@@ -279,6 +279,7 @@ function buildStarterPrompts(mapContext) {
 }
 
 function AssistantAnalysisInline({ analysis, onMapAction }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   if (!analysis || (!analysis.sql_query && !analysis.sql_result?.length && !analysis.charts?.length)) return null;
 
@@ -296,12 +297,12 @@ function AssistantAnalysisInline({ analysis, onMapAction }) {
       const uniq = [...new Set(rows.map((r) => String(r[districtCol] || "").trim()).filter(Boolean))].slice(0, 3);
       uniq.forEach((d) => {
         if (DISTRICTS.includes(d) || normalizeDistrict(d))
-          mapChips.push({ label: `Focus ${d}`, type: "flyToDistrict", district: d });
+          mapChips.push({ label: t("mapPanel.focus", { name: d }), type: "flyToDistrict", district: d });
       });
     }
     if (crimeCol && mapChips.length < 4) {
       const uniq = [...new Set(rows.map((r) => String(r[crimeCol] || "").trim()).filter(Boolean))].slice(0, 2);
-      uniq.forEach((c) => mapChips.push({ label: `Filter ${c}`, type: "filterCrime", crime: c }));
+      uniq.forEach((c) => mapChips.push({ label: t("mapPanel.filter", { name: c }), type: "filterCrime", crime: c }));
     }
   }
 
@@ -313,20 +314,21 @@ function AssistantAnalysisInline({ analysis, onMapAction }) {
       >
         <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
           <BarChart3 className="h-3.5 w-3.5 text-slate-500" />
-          View data
+          {t("mapPanel.viewData")}
           <span className="text-[11px] font-normal text-slate-500">
-            · {rows.length} rows{charts.length ? ` · ${charts.length} chart${charts.length > 1 ? "s" : ""}` : ""}
+            · {t("mapPanel.rows", { count: rows.length })}
+            {charts.length ? ` · ${t("mapPanel.charts", { count: charts.length })}` : ""}
           </span>
         </span>
         <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-600">
-          {expanded ? "Hide" : "Show"} <Eye className="h-3 w-3" />
+          {expanded ? t("mapPanel.hide") : t("mapPanel.show")} <Eye className="h-3 w-3" />
         </span>
       </button>
 
       {mapChips.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-3 py-2 border-t border-slate-100 bg-white">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-            <Target className="h-3 w-3" /> On map
+            <Target className="h-3 w-3" /> {t("mapPanel.onMap")}
           </span>
           {mapChips.map((chip) => (
             <button
@@ -347,7 +349,7 @@ function AssistantAnalysisInline({ analysis, onMapAction }) {
               {charts.map((c, idx) => (
                 <div key={idx} className="overflow-hidden rounded-lg border border-slate-200 bg-white">
                   <div className="border-b border-slate-200 px-3 py-2">
-                    <p className="text-xs font-semibold text-slate-800">{c.title || c.intent || `Visual ${idx + 1}`}</p>
+                    <p className="text-xs font-semibold text-slate-800">{c.title || c.intent || t("mapPanel.visual", { index: idx + 1 })}</p>
                     {c.reason && <p className="mt-1 text-[11px] leading-relaxed text-slate-500">{c.reason}</p>}
                   </div>
                   <div className="h-[240px] p-2">
@@ -382,7 +384,7 @@ function AssistantAnalysisInline({ analysis, onMapAction }) {
                 ))}
               </tbody>
             </table>
-            {rows.length > 50 && <p className="px-3 py-1.5 text-[11px] text-slate-500">Showing 50 of {rows.length} rows</p>}
+            {rows.length > 50 && <p className="px-3 py-1.5 text-[11px] text-slate-500">{t("mapPanel.showing", { count: rows.length })}</p>}
           </div>
 
           {analysis.sql_query && (
@@ -439,7 +441,10 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
   const handleTranscript = useCallback((text) => setInput(text), []);
   const { supported, isListening, startListening, stopListening } = useSpeechRecognition(handleTranscript);
 
-  const contextSummary = useMemo(() => getContextSummary(mapContext), [mapContext]);
+  const contextSummary = useMemo(
+    () => getContextSummary(mapContext, t("mapPanel.mapLabel")),
+    [mapContext, t],
+  );
   const starterPrompts = useMemo(() => buildStarterPrompts(mapContext), [mapContext]);
   const contextBlock = useMemo(() => buildMapContextBlock(mapContext), [mapContext]);
 
@@ -494,11 +499,11 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
     const valid = [];
     for (const file of selected) {
       if (!allowed.includes(file.type)) {
-        alert(`"${file.name}" is unsupported. Upload PDF, Excel, Word, or image files.`);
+        alert(t("mapPanel.unsupported", { name: file.name }));
         continue;
       }
       if (file.size > 10 * 1024 * 1024) {
-        alert(`"${file.name}" exceeds the 10 MB limit.`);
+        alert(t("mapPanel.tooBig", { name: file.name }));
         continue;
       }
       valid.push(file);
@@ -676,11 +681,11 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
       // Prefer analysis-derived, fallback to text-derived
       const chips = [];
       districtsInText.slice(0, 3).forEach((d) => {
-        chips.push({ label: `Focus ${d}`, type: "flyToDistrict", district: d });
+        chips.push({ label: t("mapPanel.focus", { name: d }), type: "flyToDistrict", district: d });
       });
       return chips;
     },
-    [],
+    [t],
   );
 
   return (
@@ -697,9 +702,9 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
             </span>
             <span className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Map context included
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> {t("mapPanel.contextIncluded")}
               </p>
-              <p className="truncate text-xs font-semibold text-slate-800">{contextSummary || "Statewide overview"}</p>
+              <p className="truncate text-xs font-semibold text-slate-800">{contextSummary || t("mapPanel.statewide")}</p>
             </span>
           </span>
           <span className="shrink-0 text-slate-400">
@@ -710,7 +715,12 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
           <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2.5 space-y-2 animate-in fade-in">
             <div className="flex flex-wrap gap-1.5">
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 text-white px-2 py-1 text-[10px] font-bold uppercase tracking-wide">
-                <Layers size={11} /> {mapContext?.viewMode || "Heatmap"}
+                <Layers size={11} />{" "}
+                {mapContext?.viewMode === "Clusters"
+                  ? t("mapPanel.viewModes.clusters")
+                  : mapContext?.viewMode === "Administrative"
+                    ? t("mapPanel.viewModes.risk")
+                    : t("mapPanel.viewModes.heatmap")}
               </span>
               {mapContext?.dateFrom && mapContext?.dateTo && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-white border border-slate-200 px-2 py-1 text-[10px] font-semibold text-slate-700">
@@ -744,29 +754,29 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
                 {mapContext.selectedSpot.type === "Criminal Network" && <>{mapContext.selectedSpot.network_name} · {mapContext.selectedSpot.member_count} members</>}
               </p>
             ) : (
-              <p className="text-xs text-slate-600">No selection — analysis will use statewide context with current filters.</p>
+              <p className="text-xs text-slate-600">{t("mapPanel.noSelection")}</p>
             )}
             <div className="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
               <button
                 onClick={() => onMapAction?.({ type: "setViewMode", mode: "Heatmap" })}
                 className={`rounded-full px-2.5 py-1 text-[11px] font-semibold border transition cursor-pointer ${mapContext?.viewMode === "Heatmap" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
               >
-                Heatmap
+                {t("mapPanel.viewModes.heatmap")}
               </button>
               <button
                 onClick={() => onMapAction?.({ type: "setViewMode", mode: "Clusters" })}
                 className={`rounded-full px-2.5 py-1 text-[11px] font-semibold border transition cursor-pointer ${mapContext?.viewMode === "Clusters" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
               >
-                Clusters
+                {t("mapPanel.viewModes.clusters")}
               </button>
               <button
                 onClick={() => onMapAction?.({ type: "setViewMode", mode: "Administrative" })}
                 className={`rounded-full px-2.5 py-1 text-[11px] font-semibold border transition cursor-pointer ${mapContext?.viewMode === "Administrative" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
               >
-                District Risk
+                {t("mapPanel.viewModes.risk")}
               </button>
             </div>
-            <p className="text-[10px] text-slate-400">Map context is sent with every question. Switch layers or select a district to refine it.</p>
+            <p className="text-[10px] text-slate-400">{t("mapPanel.contextSent")}</p>
           </div>
         )}
       </div>
@@ -809,19 +819,19 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
                 {m.role === "user" && m.mapContext && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-700">
-                      <MapPin size={10} /> {m.mapContext.summary || "Map context"}
+                      <MapPin size={10} /> {m.mapContext.summary || t("mapPanel.mapContext")}
                     </span>
                   </div>
                 )}
 
                 {m.role === "assistant" && m.sources?.map && !isAssistantLastStreaming && (
                   <div className="mt-2 flex flex-wrap items-center gap-1 border-t border-slate-200/60 pt-2">
-                    <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-slate-400">Sources</span>
+                    <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-slate-400">{t("chat.sources")}</span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 text-white px-2 py-0.5 text-[10px] font-bold uppercase">
-                      <Building2 size={10} /> KSP DB
+                      <Building2 size={10} /> {t("mapPanel.kspDb")}
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-800">
-                      <MapPin size={10} /> Map view
+                      <MapPin size={10} /> {t("mapPanel.mapView")}
                     </span>
                   </div>
                 )}
@@ -875,7 +885,7 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
                     <button
                       onClick={() => handleFeedback(i, "up")}
                       className={`hidden h-6 w-6 items-center justify-center rounded transition cursor-pointer ${m.feedback === "up" ? "text-blue-600 bg-blue-100" : "text-slate-400 hover:bg-slate-200"}`}
-                      title="Helpful"
+                      title={t("chat.helpful")}
                     >
                       <span className="text-[11px]">👍</span>
                     </button>
@@ -911,7 +921,7 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
             <div className="flex items-center gap-2">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
               <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-slate-500 flex items-center gap-1">
-                <Sparkles size={11} className="text-amber-500" /> Try asking
+                <Sparkles size={11} className="text-amber-500" /> {t("mapPanel.tryAsking")}
               </span>
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             </div>
@@ -993,7 +1003,7 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
           <button
             onClick={() => fileInputRef.current?.click()}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 cursor-pointer"
-            title="Attach file"
+            title={t("mapPanel.attachFile")}
           >
             <Paperclip size={14} />
           </button>
@@ -1008,7 +1018,7 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
           <textarea
             ref={textareaRef}
             value={input}
-            placeholder="Ask about this map view…"
+            placeholder={t("mapPanel.inputPlaceholder")}
             rows={1}
             className="flex-1 resize-none bg-transparent text-[13px] leading-5 outline-none placeholder:text-slate-400 py-1.5 min-h-[32px] max-h-[96px]"
             onChange={(e) => setInput(e.target.value)}
@@ -1028,9 +1038,9 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
           </button>
         </div>
         <input ref={fileInputRef} type="file" multiple className="hidden" accept=".pdf,.xlsx,.xls,.doc,.docx,.png,.jpg,.jpeg,.gif" onChange={handleFileSelect} />
-        {isListening && <p className="mt-1.5 text-xs text-red-500 font-medium px-1">🎤 Listening…</p>}
+        {isListening && <p className="mt-1.5 text-xs text-red-500 font-medium px-1">🎤 {t("mapPanel.listening")}</p>}
         <p className="mt-1.5 flex items-center justify-center gap-1 text-[10px] text-slate-400">
-          <Zap size={10} /> Map context + KSP Database — answers blend live view with crime records
+          <Zap size={10} /> {t("mapPanel.footer")}
         </p>
       </div>
     </div>

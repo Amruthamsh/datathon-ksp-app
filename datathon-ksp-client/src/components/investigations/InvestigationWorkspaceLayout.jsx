@@ -1,4 +1,5 @@
 import { Outlet, useNavigate, useLocation, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   FileText,
@@ -11,15 +12,15 @@ import {
 } from "lucide-react";
 import Header from "../Header";
 
-const TABS = [
-  { id: "overview", label: "Case Brief", icon: FileText },
-  { id: "people", label: "People", icon: Users },
-  { id: "evidence", label: "Evidence", icon: Gavel },
-  { id: "timeline", label: "Timeline", icon: Clock },
-  { id: "intel", label: "Intelligence", icon: Share2 },
-];
-
 export default function InvestigationWorkspaceLayout() {
+  const { t } = useTranslation();
+  const TABS = [
+    { id: "overview", label: t("workspace.tabs.caseBrief"), icon: FileText },
+    { id: "people", label: t("workspace.tabs.people"), icon: Users },
+    { id: "evidence", label: t("workspace.tabs.evidence"), icon: Gavel },
+    { id: "timeline", label: t("workspace.tabs.timeline"), icon: Clock },
+    { id: "intel", label: t("workspace.tabs.intel"), icon: Share2 },
+  ];
   const navigate = useNavigate();
   const location = useLocation();
   const { caseId } = useParams();
@@ -49,7 +50,7 @@ export default function InvestigationWorkspaceLayout() {
               navigate(`/investigations${backQs ? `?${backQs}` : ""}`)
             }
             className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg border border-[#DDE3EC] bg-white text-[#1A1A2E] hover:bg-[#F4F6F9] cursor-pointer"
-            title="Back to queue"
+            title={t("workspace.notFound.backToQueue")}
           >
             <ArrowLeft size={16} />
           </button>
@@ -69,7 +70,7 @@ export default function InvestigationWorkspaceLayout() {
           })}
           <div className="flex-1" />
           <button
-            title="Export report"
+            title={t("workspace.side.exportReport")}
             onClick={() => window.dispatchEvent(new Event("ksp-export-report"))}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#DDE3EC] bg-white text-[#374151] hover:bg-[#F4F6F9] cursor-pointer"
           >

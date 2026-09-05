@@ -25,7 +25,7 @@ const Header = ({ hideSearch = true }) => {
   return (
     <header className="h-12 border-b border-line bg-surface flex items-center justify-between px-6">
       <div className="flex items-center gap-3">
-        <img src={logo} alt="Logo" className="h-8 w-8" />
+        <img src={logo} alt={t("header.logoAlt")} className="h-8 w-8" />
         <h1 className="text-lg font-semibold tracking-tight text-brand">
           {t("app.title")}
         </h1>
@@ -72,7 +72,7 @@ const Header = ({ hideSearch = true }) => {
           >
             <img
               src={profile}
-              alt="Profile"
+              alt={t("header.profileAlt")}
               className="h-7 w-7 rounded-full border border-line"
             />
             <span className="text-sm font-medium text-ink">

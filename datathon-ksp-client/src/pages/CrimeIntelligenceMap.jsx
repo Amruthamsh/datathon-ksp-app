@@ -561,36 +561,44 @@ export default function CrimeIntelligenceMap() {
                     className={`w-2 h-2 rounded-full shrink-0 ${intelligenceStatus?.poi_total ? "bg-[#16A34A]" : "bg-[#D97706]"}`}
                     title={
                       intelligenceStatus?.poi_total
-                        ? "Live OSM data loaded"
-                        : "No POI data yet — click refresh"
+                        ? t("crimeMap.status.liveOsmLoaded")
+                        : t("crimeMap.status.noPoiYet")
                     }
                   />
                   <span className="text-[10px] font-bold tracking-[0.08em] text-[#17233C] uppercase">
-                    Live intelligence
+                    {t("crimeMap.status.liveIntelligence")}
                   </span>
                 </span>
                 {intelligenceStatus && (
                   <span className="hidden sm:flex items-center gap-2 text-[11px] text-[#64748B]">
                     <span className="bg-[#F5F7FA] border border-[#E2E8F0] rounded-full px-2 py-0.5 font-medium tabular-nums">
-                      {formatNumber(intelligenceStatus.poi_total || 0)} POIs
+                      {t("crimeMap.status.pois", {
+                        count: formatNumber(
+                          intelligenceStatus.poi_total || 0,
+                        ),
+                      })}
                     </span>
                     <span className="bg-[#F5F7FA] border border-[#E2E8F0] rounded-full px-2 py-0.5 font-medium tabular-nums">
-                      {formatNumber(intelligenceStatus.weather_rows || 0)}{" "}
-                      weather
+                      {t("crimeMap.status.weatherRows", {
+                        count: formatNumber(
+                          intelligenceStatus.weather_rows || 0,
+                        ),
+                      })}
                     </span>
                     {intelligenceStatus.poi_last_refresh && (
                       <span className="text-[11px] text-[#94A3B8]">
-                        Updated{" "}
-                        {new Date(
-                          intelligenceStatus.poi_last_refresh,
-                        ).toLocaleDateString()}
+                        {t("crimeMap.status.updated", {
+                          date: new Date(
+                            intelligenceStatus.poi_last_refresh,
+                          ).toLocaleDateString(),
+                        })}
                       </span>
                     )}
                   </span>
                 )}
                 {enhancedRisk?.length > 0 && (
                   <span className="text-[10px] font-semibold tracking-wide text-[#334155] bg-[#F1F5F9] border border-[#E2E8F0] px-2 py-0.5 rounded-full">
-                    Enhanced risk
+                    {t("crimeMap.status.enhancedRisk")}
                   </span>
                 )}
               </div>
@@ -598,8 +606,8 @@ export default function CrimeIntelligenceMap() {
                 onClick={handleRefreshIntel}
                 disabled={refreshingIntel}
                 className="flex items-center justify-center h-7 w-7 rounded-full border border-[#E2E8F0] bg-white text-[#334155] hover:bg-[#F8FAFC] hover:border-[#CBD5E1] hover:text-[#17233C] disabled:opacity-50 transition-colors shrink-0 cursor-pointer"
-                title="Refresh live data"
-                aria-label="Refresh live data"
+                title={t("crimeMap.actions.refreshLiveData")}
+                aria-label={t("crimeMap.actions.refreshLiveData")}
               >
                 <RefreshCw
                   className={`h-3.5 w-3.5 ${refreshingIntel ? "animate-spin" : ""}`}
@@ -651,9 +659,10 @@ export default function CrimeIntelligenceMap() {
                     onClick={() => setShowCrimeTypesPanel(true)}
                     className="absolute top-4 right-4 z-20 bg-white/90 backdrop-blur-md rounded-full border border-[#E2E8F0] px-3 py-1.5 text-xs font-semibold text-[#334155] hover:bg-white flex items-center gap-1.5 cursor-pointer"
                     style={{ boxShadow: "0 2px 8px rgba(15,23,42,0.10)" }}
-                    title="Show crime types"
+                    title={t("crimeMap.actions.showCrimeTypes")}
                   >
-                    <Eye className="h-3.5 w-3.5" /> Crime Types
+                    <Eye className="h-3.5 w-3.5" />{" "}
+                    {t("crimeMap.legend.crimeTypes")}
                   </button>
                 ))}
 
@@ -681,9 +690,10 @@ export default function CrimeIntelligenceMap() {
                   onClick={() => setShowLayerPanel(true)}
                   className="absolute top-4 left-4 z-10 bg-white rounded-full border border-[#E2E8F0] px-3 py-1.5 text-xs font-semibold text-[#334155] hover:bg-[#F8FAFC] flex items-center gap-1.5 cursor-pointer"
                   style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
-                  title="Show map layers"
+                  title={t("crimeMap.actions.showMapLayers")}
                 >
-                  <Layers className="h-3.5 w-3.5" /> Map Layers{" "}
+                  <Layers className="h-3.5 w-3.5" />{" "}
+                  {t("crimeMap.layers.title")}{" "}
                   <Eye className="h-3 w-3 text-[#94A3B8]" />
                 </button>
               )}
@@ -694,7 +704,8 @@ export default function CrimeIntelligenceMap() {
                   style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
                 >
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                    <Building2 className="h-3 w-3 text-red-600" /> Unemployment
+                    <Building2 className="h-3 w-3 text-red-600" />{" "}
+                    {t("crimeMap.socioLegend.unemployment")}
                   </span>
                   <span className="flex items-center gap-1 text-[10px] font-semibold">
                     <span
@@ -718,7 +729,7 @@ export default function CrimeIntelligenceMap() {
                     9%+{" "}
                   </span>
                   <span className="text-[9px] text-slate-400 ml-1">
-                    red border = critical · deeper red = lower literacy
+                    {t("crimeMap.socioLegend.hint")}
                   </span>
                 </div>
               )}
@@ -802,29 +813,35 @@ function LayerSwitcher({
   const poiTypes = [
     {
       id: "Liquor_Store",
-      label: "Liquor Shops",
+      label: t("crimeMap.overlays.liquorShops"),
       icon: Beer,
       weight: 5,
       color: "#b45309",
     },
-    { id: "ATM", label: "ATMs", icon: Landmark, weight: 3, color: "#2563eb" },
+    {
+      id: "ATM",
+      label: t("crimeMap.overlays.atms"),
+      icon: Landmark,
+      weight: 3,
+      color: "#2563eb",
+    },
     {
       id: "Bus_Stop",
-      label: "Bus Stops",
+      label: t("crimeMap.overlays.busStops"),
       icon: Bus,
       weight: 2,
       color: "#16a34a",
     },
     {
       id: "Bank",
-      label: "Banks",
+      label: t("crimeMap.overlays.banks"),
       icon: Building2,
       weight: 2,
       color: "#1e3a8a",
     },
     {
       id: "Railway_Station",
-      label: "Railway",
+      label: t("crimeMap.overlays.railway"),
       icon: MapPin,
       weight: 2,
       color: "#dc2626",
@@ -846,8 +863,8 @@ function LayerSwitcher({
           <button
             onClick={onHide}
             className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-            title="Hide map layers"
-            aria-label="Hide map layers"
+            title={t("crimeMap.actions.hideMapLayers")}
+            aria-label={t("crimeMap.actions.hideMapLayers")}
           >
             <EyeOff className="h-3.5 w-3.5" />
           </button>
@@ -875,7 +892,7 @@ function LayerSwitcher({
       <div className="h-px bg-[#E2E8F0] my-1" />
       <div>
         <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.08em] px-2 mb-1">
-          Overlays
+          {t("crimeMap.overlays.title")}
         </p>
         <label
           className={`flex items-center gap-2 px-2.5 py-1 rounded-[6px] ${networkDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-[#F8FAFC] cursor-pointer"}`}
@@ -888,7 +905,7 @@ function LayerSwitcher({
             className="rounded border-slate-300 text-[#17233C] w-3 h-3 disabled:opacity-50 accent-[#17233C] cursor-pointer"
             title={
               networkDisabled
-                ? "Network overlay is unavailable in District Risk view"
+                ? t("crimeMap.overlays.unavailable")
                 : undefined
             }
           />
@@ -899,23 +916,24 @@ function LayerSwitcher({
         </label>
         {networkDisabled && (
           <p className="text-[9px] text-slate-400 px-3 pb-1">
-            Unavailable in District Risk view
+            {t("crimeMap.overlays.unavailableShort")}
           </p>
         )}
       </div>
       <div className="h-px bg-[#E2E8F0] my-1" />
       <div>
         <span className="text-[10px] font-bold text-[#17233C] uppercase tracking-[0.08em] px-2 py-1 flex items-center gap-1.5">
-          <Database className="h-3 w-3 text-[#334155]" /> Predictive Intel
+          <Database className="h-3 w-3 text-[#334155]" />{" "}
+          {t("crimeMap.overlays.predictiveIntel")}
           {intelReady ? (
             <span
               className="ml-auto w-1.5 h-1.5 rounded-full bg-[#16A34A]"
-              title="Live OSM data loaded"
+              title={t("crimeMap.status.liveOsmLoaded")}
             />
           ) : (
             <span
               className="ml-auto w-1.5 h-1.5 rounded-full bg-[#D97706]"
-              title="No POI data yet — click refresh"
+              title={t("crimeMap.status.noPoiYet")}
             />
           )}
         </span>
@@ -951,7 +969,7 @@ function LayerSwitcher({
           />
           <CloudRain className="h-3 w-3 text-[#334155]" />
           <span className="text-[12px] font-medium text-[#334155]">
-            Socio-Economic tint
+            {t("crimeMap.overlays.socioTint")}
           </span>
         </label>
       </div>
@@ -1047,8 +1065,8 @@ function CrimeLegend({
             <button
               onClick={onHide}
               className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-              title="Hide crime types"
-              aria-label="Hide crime types"
+              title={t("crimeMap.actions.hideCrimeTypes")}
+              aria-label={t("crimeMap.actions.hideCrimeTypes")}
             >
               <EyeOff className="h-3.5 w-3.5" />
             </button>
@@ -1229,7 +1247,7 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
                 min={0}
                 max={last}
                 value={safeLo}
-                aria-label="from"
+                aria-label={t("crimeMap.dateRange.from")}
                 onChange={(e) => {
                   const v = Number(e.target.value);
                   if (v <= safeHi) applyRange(v, safeHi);
@@ -1240,7 +1258,7 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
                 min={0}
                 max={last}
                 value={safeHi}
-                aria-label="to"
+                aria-label={t("crimeMap.dateRange.to")}
                 onChange={(e) => {
                   const v = Number(e.target.value);
                   if (v >= safeLo) applyRange(safeLo, v);
@@ -1253,7 +1271,9 @@ function RangeSlider({ dateFrom, dateTo, timelineData, onChange }) {
             <span className="bg-white border border-slate-200 px-1.5 py-0 rounded-full text-[9px] leading-[1.6]">
               {formatMonthLabel(months[0])}
             </span>
-            <span className="text-slate-300 text-[8px]">{months.length}m</span>
+            <span className="text-slate-300 text-[8px]">
+              {t("crimeMap.timeline.monthsCount", { count: months.length })}
+            </span>
             <span className="bg-white border border-slate-200 px-1.5 py-0 rounded-full text-[9px] leading-[1.6]">
               {formatMonthLabel(months[last])}
             </span>
@@ -1846,6 +1866,7 @@ function RightPanel({
   chatKey,
   onAskInMapChat,
 }) {
+  const { t } = useTranslation();
   const panelWrap =
     "w-[380px] xl:w-[400px] bg-white rounded-[12px] border border-[#E2E8F0] flex flex-col min-h-0 overflow-hidden shrink-0";
   const panelStyle = { boxShadow: "0 1px 3px rgba(15,23,42,0.08)" };
@@ -1928,7 +1949,7 @@ function RightPanel({
                 : "text-[#64748B] hover:text-[#334155]"
             }`}
           >
-            <Layers className="h-3.5 w-3.5" /> Details
+            <Layers className="h-3.5 w-3.5" /> {t("crimeMap.tabs.details")}
             {hasSelection && activeTab !== "details" && (
               <span className="ml-1 h-1.5 w-1.5 rounded-full bg-[#D92D20] animate-pulse" />
             )}
@@ -1944,19 +1965,18 @@ function RightPanel({
             <MessageSquare
               className={`h-3.5 w-3.5 ${activeTab === "chat" ? "text-white" : "text-slate-400"}`}
             />
-            <span className="hidden sm:inline">Ask AI</span>
-            <span className="sm:hidden">Chat</span>
+            <span className="hidden sm:inline">{t("crimeMap.tabs.askAI")}</span>
+            <span className="sm:hidden">{t("crimeMap.tabs.chat")}</span>
             <span
               className={`ml-1 flex h-4 items-center rounded-full px-1.5 text-[10px] font-bold ${activeTab === "chat" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700 border border-emerald-200"}`}
             >
-              Map-aware
+              {t("crimeMap.tabs.mapAware")}
             </span>
           </button>
         </div>
         {activeTab === "details" && hasSelection && (
           <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500 text-center">
-            Selected context is sent with every Ask AI question — switch tabs to
-            chat.
+            {t("crimeMap.tabs.hint")}
           </p>
         )}
       </div>
@@ -2058,13 +2078,13 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
                 : formatNumber(summary?.emerging_hotspots)}
             </span>
             <span className="ml-1.5 font-semibold text-[#17233C]">
-              districts show elevated risk
+              {t("crimeMap.overview.elevated")}
             </span>
           </p>
           <p className="text-xs text-[#64748B] leading-relaxed mt-1">
-            Economic stress is currently the strongest live multiplier.
+            {t("crimeMap.overview.multiplier")}
             {socioLens?.highRiskHighUnemp
-              ? ` ${socioLens.highRiskHighUnemp} high-risk districts sit above mean unemployment.`
+              ? ` ${t("crimeMap.overview.aboveMean", { count: socioLens.highRiskHighUnemp })}`
               : ""}
           </p>
           {hp && (
@@ -2136,7 +2156,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
         {/* Risk formula */}
         <div>
           <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B] mb-2">
-            Risk model
+            {t("crimeMap.overview.riskModel")}
           </p>
           <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[8px] px-3 py-2.5">
             <code className="text-[11px] font-mono font-semibold text-[#334155] leading-relaxed block">
@@ -2154,10 +2174,12 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B]">
-                Signals
+                {t("crimeMap.overview.signals")}
               </p>
               <span className="text-[10px] font-semibold text-[#64748B] bg-[#F1F5F9] border border-[#E2E8F0] rounded-full px-2 py-0.5">
-                {socioLens.vals.length} districts · live
+                {t("crimeMap.overview.districtsLive", {
+                  count: socioLens.vals.length,
+                })}
               </span>
             </div>
 
@@ -2190,13 +2212,13 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
                 })}
             </div>
             <p className="text-[10px] text-[#94A3B8]">
-              Unemployment gradient · neutral → amber → critical
+              {t("crimeMap.overview.gradient")}
             </p>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <p className="text-[10px] font-semibold tracking-wide uppercase text-[#94A3B8] mb-1.5">
-                  Highest unemployment
+                  {t("crimeMap.overview.highestUnemp")}
                 </p>
                 <div className="space-y-1">
                   {socioLens.topUnemp.map((d) => (
@@ -2222,7 +2244,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
               </div>
               <div>
                 <p className="text-[10px] font-semibold tracking-wide uppercase text-[#94A3B8] mb-1.5">
-                  Lowest literacy
+                  {t("crimeMap.overview.lowestLit")}
                 </p>
                 <div className="space-y-1">
                   {socioLens.lowLit.map((d) => (
@@ -2245,7 +2267,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
             <div className="grid grid-cols-3 gap-2 pt-1">
               <div className="text-center">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Avg unemployment
+                  {t("crimeMap.overview.avgUnemp")}
                 </p>
                 <p className="text-sm font-bold text-[#334155] tabular-nums">
                   {socioLens.avgUnemp.toFixed(1)}%
@@ -2253,7 +2275,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
               </div>
               <div className="text-center border-l border-[#E2E8F0]">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Avg literacy
+                  {t("crimeMap.overview.avgLit")}
                 </p>
                 <p className="text-sm font-bold text-[#334155] tabular-nums">
                   {socioLens.avgLit.toFixed(1)}%
@@ -2261,7 +2283,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
               </div>
               <div className="text-center border-l border-[#E2E8F0]">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Avg income
+                  {t("crimeMap.overview.avgIncome")}
                 </p>
                 <p className="text-sm font-bold text-[#334155] tabular-nums">
                   ₹{(socioLens.avgIncome / 1000).toFixed(0)}k
@@ -2272,8 +2294,8 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
         ) : (
           <div className="rounded-[8px] border border-dashed border-[#E2E8F0] bg-[#F8FAFC] p-3 text-center">
             <p className="text-xs font-medium text-[#475569] flex items-center justify-center gap-1.5">
-              <Loader2 className="h-3 w-3 animate-spin" /> Loading
-              socio-economic intelligence…
+              <Loader2 className="h-3 w-3 animate-spin" />{" "}
+              {t("crimeMap.overview.loadingSocio")}
             </p>
           </div>
         )}
@@ -2287,17 +2309,19 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
             style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.06)" }}
           >
             <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B]">
-              Recommended response
+              {t("crimeMap.overview.recommended")}
             </p>
             <p className="mt-1.5 text-sm font-semibold text-[#17233C] flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
-              {priorityCrime || "Elevated risk"}
+              {priorityCrime || t("crimeMap.overview.elevatedRisk")}
               {priorityDistrict ? ` · ${priorityDistrict}` : ""}
             </p>
             <p className="mt-1 text-xs text-[#64748B]">
-              Elevated risk detected
+              {t("crimeMap.overview.elevatedDetected")}
               {priorityCrime ? ` — ${priorityCrime} pattern` : ""} ·{" "}
-              {socioLens?.highRiskHighUnemp ?? ""} contributing factor(s)
+              {t("crimeMap.overview.factors", {
+                count: socioLens?.highRiskHighUnemp ?? "",
+              })}
             </p>
             <button
               onClick={() =>
@@ -2315,7 +2339,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
               }
               className="mt-3 w-full flex items-center justify-between rounded-[8px] border border-blue-900/15 bg-white hover:bg-blue-50/50 px-3 py-2.5 text-xs font-semibold text-blue-900 transition-colors cursor-pointer"
             >
-              <span>View response plan</span>
+              <span>{t("crimeMap.actions.viewResponsePlan")}</span>
               <span className="text-[#64748B]">→</span>
             </button>
           </div>
@@ -2341,7 +2365,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
           style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.12)" }}
         >
           <MessageSquare className="h-4 w-4 opacity-90" />
-          Ask CrimeLens — map-aware
+          {t("crimeMap.actions.askMapAware")}
         </button>
         <button
           onClick={() => {
@@ -2357,7 +2381,7 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
           }}
           className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2.5 transition-colors cursor-pointer"
         >
-          Open in full workspace <span className="text-[#94A3B8]">→</span>
+          {t("crimeMap.actions.openFullWorkspace")} <span className="text-[#94A3B8]">→</span>
         </button>
       </div>
     </div>
@@ -2382,8 +2406,8 @@ function TrendPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
       <>
         <PanelHeader
           id={spot.id || "…"}
-          name={spot.sub_type || "Loading…"}
-          type="Crime"
+          name={spot.sub_type || t("crimeMap.trend.loadingName")}
+          type={t("crimeMap.panelTypes.crime")}
           typeColor="bg-blue-900/90 text-white border-blue-900/90"
           typeIcon={<Shield size={10} />}
           onClose={onClose}
@@ -2410,7 +2434,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
           spot.crime_type ||
           t("crimeMap.legend.crimeTypes")
         }
-        type="Crime"
+        type={t("crimeMap.panelTypes.crime")}
         typeColor="bg-blue-900/90 text-white border-blue-900/90"
         typeIcon={<Shield size={10} />}
         onClose={onClose}
@@ -2527,7 +2551,9 @@ function TrendPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
           >
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
-              View response plan — {spot.sub_type || spot.crime_type}
+              {t("crimeMap.actions.viewResponsePlanFor", {
+                label: spot.sub_type || spot.crime_type,
+              })}
             </span>
             <span className="text-[#94A3B8]">→</span>
           </button>
@@ -2541,7 +2567,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
           className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#0f1a2e] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
         >
           <MessageSquare className="h-3.5 w-3.5 opacity-90" />
-          Ask CrimeLens — map-aware
+          {t("crimeMap.actions.askMapAware")}
         </button>
         <button
           onClick={() => {
@@ -2550,7 +2576,7 @@ function TrendPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
           }}
           className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2 transition-colors cursor-pointer"
         >
-          Open in full workspace <span className="text-[#94A3B8]">→</span>
+          {t("crimeMap.actions.openFullWorkspace")} <span className="text-[#94A3B8]">→</span>
         </button>
       </div>
     </>
@@ -2622,11 +2648,11 @@ function DistrictPanel({
       <PanelHeader
         id={``}
         name={spot.name}
-        type="District"
+        type={t("crimeMap.panelTypes.district")}
         typeColor="bg-blue-900/90 text-white border-blue-900/90"
         typeIcon={<Shield size={10} />}
         onClose={onClose}
-        subtitle={`Rank #${spot.rank || "—"} of 31 districts`}
+        subtitle={t("crimeMap.district.rankOf", { rank: spot.rank || "—" })}
       />
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-4">
         <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
@@ -2688,7 +2714,7 @@ function DistrictPanel({
         {spot.top_crime && (
           <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
             <p className="text-[10px] font-medium text-slate-500">
-              Top Crime Category
+              {t("crimeMap.district.topCrime")}
             </p>
             <p className="text-sm font-bold text-slate-900 mt-0.5">
               {spot.top_crime}
@@ -2720,19 +2746,25 @@ function DistrictPanel({
             {isEnhanced && (
               <>
                 <RiskBar
-                  label={`Unemployment ${m.unemployment_rate ?? "—"}%`}
+                  label={t("crimeMap.district.unempBar", {
+                    value: m.unemployment_rate ?? "—",
+                  })}
                   value={Math.min(
                     100,
                     Math.max(0, 50 + (m.unemployment_bonus || 0) * 4),
                   )}
                 />
                 <RiskBar
-                  label={`POI density (${m.poi_total ?? 0} pts)`}
+                  label={t("crimeMap.district.poiBar", {
+                    count: m.poi_total ?? 0,
+                  })}
                   value={Math.min(100, (m.poi_bonus || 0) * 8)}
                 />
                 {m.weather_bonus ? (
                   <RiskBar
-                    label={`Weather (rain ${m.weather_rain_14d_avg}mm)`}
+                    label={t("crimeMap.district.weatherBar", {
+                      value: m.weather_rain_14d_avg,
+                    })}
                     value={Math.min(100, (m.weather_bonus || 0) * 20)}
                   />
                 ) : null}
@@ -2745,8 +2777,10 @@ function DistrictPanel({
         {isEnhanced && spot.risk_drivers?.length > 0 && (
           <div className="bg-[#F4F6F9] border border-[#E5E7EB] rounded-xl p-3">
             <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-              <Zap className="h-3 w-3" /> Why risk is{" "}
-              {spot.risk_level.toLowerCase()} (enhanced)
+              <Zap className="h-3 w-3" />{" "}
+              {t("crimeMap.district.whyRisk", {
+                level: spot.risk_level.toLowerCase(),
+              })}
             </p>
             <ul className="text-xs text-slate-700 space-y-1">
               {spot.risk_drivers.map((d, i) => (
@@ -2755,9 +2789,11 @@ function DistrictPanel({
             </ul>
             {spot.risk_score_base != null && (
               <p className="text-[10px] text-slate-500 mt-1">
-                Base score {Math.round(spot.risk_score_base)} → Enhanced{" "}
-                {Math.round(spot.risk_score)} (Δ{" "}
-                {(spot.risk_score - spot.risk_score_base).toFixed(1)})
+                {t("crimeMap.district.baseToEnhanced", {
+                  base: Math.round(spot.risk_score_base),
+                  enhanced: Math.round(spot.risk_score),
+                  delta: (spot.risk_score - spot.risk_score_base).toFixed(1),
+                })}
               </p>
             )}
           </div>
@@ -2770,17 +2806,18 @@ function DistrictPanel({
             return (
               <div className="rounded-xl border border-dashed border-[#E5E7EB] bg-[#F4F6F9] p-3 text-center">
                 <p className="text-xs font-bold text-[#1E3A8A] flex items-center justify-center gap-1.5">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Socio-economic
-                  live data pending for {spot.name}
+                  <Loader2 className="h-3 w-3 animate-spin" />{" "}
+                  {t("crimeMap.district.socioPending", { name: spot.name })}
                 </p>
                 <p className="text-[11px] text-slate-600 mt-1">
-                  No row in DistrictSocioEconomic — tap{" "}
-                  <span className="font-bold">Refresh Live Data</span> in Layers
-                  to ingest OSM + Open-Meteo + data.gov.in for all 31 districts.
+                  {t("crimeMap.district.noRow")}{" "}
+                  <span className="font-bold">
+                    {t("crimeMap.district.refreshCta")}
+                  </span>{" "}
+                  {t("crimeMap.district.ingestHint")}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-1">
-                  Fallback: state means will show once refreshed. Enhanced risk
-                  currently uses base score only.
+                  {t("crimeMap.district.fallbackHint")}
                 </p>
               </div>
             );
@@ -2843,12 +2880,12 @@ function DistrictPanel({
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 flex items-center gap-1.5">
                   <Building2 className="h-3.5 w-3.5 text-slate-400" />{" "}
-                  Socio-Economic Intelligence
+                  {t("crimeMap.district.socioTitle")}
                 </p>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
                     <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />{" "}
-                    LIVE
+                    {t("crimeMap.district.live")}
                   </span>
                   <span className="text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
                     {s.year || new Date().getFullYear()} ▾
@@ -2860,7 +2897,8 @@ function DistrictPanel({
               <div className="grid grid-cols-2 gap-2">
                 {[
                   {
-                    label: "Unemployment",
+                    id: "unemployment",
+                    label: t("crimeMap.district.unemployment"),
                     value: s.unemployment_rate,
                     unit: "%",
                     avg: avgUnemp,
@@ -2869,7 +2907,8 @@ function DistrictPanel({
                     icon: "◉",
                   },
                   {
-                    label: "Literacy",
+                    id: "literacy",
+                    label: t("crimeMap.district.literacy"),
                     value: s.literacy_rate,
                     unit: "%",
                     avg: avgLit,
@@ -2877,14 +2916,16 @@ function DistrictPanel({
                     inv: false,
                   },
                   {
-                    label: "Density",
+                    id: "density",
+                    label: t("crimeMap.district.density"),
                     value: s.population_density,
                     unit: "/km²",
                     avg: avgDensity,
                     delta: dDensity,
                   },
                   {
-                    label: "Per-capita",
+                    id: "perCapita",
+                    label: t("crimeMap.district.perCapita"),
                     value: s.per_capita_income,
                     unit: "₹",
                     avg: avgIncome,
@@ -2900,11 +2941,11 @@ function DistrictPanel({
                     : metric.delta > 8;
                   // Semantic badge: only unemployment is critical red; density low is neutral/slate, not red
                   const badgeClass =
-                    metric.label === "Unemployment" && isBad
+                    metric.id === "unemployment" && isBad
                       ? "bg-[#D92D20] text-white"
-                      : metric.label === "Unemployment" && isGood
+                      : metric.id === "unemployment" && isGood
                         ? "bg-emerald-600 text-white"
-                        : metric.label === "Density" && isBad
+                        : metric.id === "density" && isBad
                           ? "bg-slate-200 text-slate-700"
                           : isBad
                             ? "bg-amber-500 text-white"
@@ -2913,7 +2954,7 @@ function DistrictPanel({
                               : "bg-slate-100 text-slate-600";
                   return (
                     <div
-                      key={metric.label}
+                      key={metric.id}
                       className="bg-[#F8FAFC] rounded-xl p-3"
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -2938,11 +2979,11 @@ function DistrictPanel({
                           style={{
                             width: `${Math.min(100, Math.max(8, (metric.value / (metric.avg * 1.4)) * 100))}%`,
                             background:
-                              metric.label === "Unemployment"
+                              metric.id === "unemployment"
                                 ? "#D92D20"
-                                : metric.label === "Literacy"
+                                : metric.id === "literacy"
                                   ? "#1e3a8a"
-                                  : metric.label === "Density"
+                                  : metric.id === "density"
                                     ? "#64748B"
                                     : "#D97706",
                             opacity: 0.85,
@@ -2953,11 +2994,13 @@ function DistrictPanel({
                           style={{
                             left: `${Math.min(100, Math.max(0, (metric.avg / (metric.avg * 1.4)) * 100))}%`,
                           }}
-                          title={`State avg ${metric.avg?.toFixed(1)}`}
+                          title={t("crimeMap.district.stateAvgTitle", {
+                            value: metric.avg?.toFixed(1),
+                          })}
                         />
                       </div>
                       <p className="text-[10px] text-slate-400 mt-1.5">
-                        State average{" "}
+                        {t("crimeMap.district.stateAvg")}{" "}
                         {metric.fmt
                           ? metric.fmt(metric.avg)
                           : `${metric.avg?.toFixed(1)}${metric.unit}`}
@@ -2970,12 +3013,12 @@ function DistrictPanel({
               {/* How it affects risk — centerpiece */}
               <div className="bg-[#F8FAFC] rounded-xl p-3">
                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">
-                  How this district lifts risk
+                  {t("crimeMap.district.howLifts")}
                 </p>
                 <div className="flex items-center justify-between">
                   <div className="text-center">
                     <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-                      Base risk
+                      {t("crimeMap.district.baseRisk")}
                     </p>
                     <p className="text-xl font-bold text-slate-700 tabular-nums">
                       {Math.round(base)}
@@ -2992,7 +3035,7 @@ function DistrictPanel({
                   </div>
                   <div className="text-center">
                     <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-                      Enhanced risk
+                      {t("crimeMap.district.enhancedRiskLabel")}
                     </p>
                     <p className="text-xl font-bold text-blue-900 tabular-nums">
                       {total.toFixed(1)}
@@ -3001,25 +3044,30 @@ function DistrictPanel({
                 </div>
                 <div className="mt-3 pt-3 border-t border-slate-200/60">
                   <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Contributing signals
+                    {t("crimeMap.district.contrib")}
                   </p>
                   <div className="space-y-2">
                     <div className="flex gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] mt-1.5 shrink-0" />
                       <div className="text-xs leading-snug">
                         <span className="font-medium text-slate-700">
-                          Unemployment
+                          {t("crimeMap.district.unemployment")}
                         </span>
                         <span className="text-slate-500">
                           {" "}
                           —{" "}
                           {dUnemp > 0
-                            ? `${dUnemp.toFixed(0)}% above`
-                            : `${Math.abs(dUnemp).toFixed(0)}% below`}{" "}
-                          state mean
+                            ? t("crimeMap.district.above", {
+                                pct: dUnemp.toFixed(0),
+                              })
+                            : t("crimeMap.district.below", {
+                                pct: Math.abs(dUnemp).toFixed(0),
+                              })}{" "}
+                          {t("crimeMap.district.stateMean")}
                         </span>
                         <span className="ml-1.5 text-[10px] font-semibold text-slate-600">
-                          +{(m.unemployment_bonus || 0).toFixed(1)} risk
+                          +{(m.unemployment_bonus || 0).toFixed(1)}{" "}
+                          {t("crimeMap.district.risk")}
                         </span>
                       </div>
                     </div>
@@ -3027,15 +3075,17 @@ function DistrictPanel({
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-900 mt-1.5 shrink-0" />
                       <div className="text-xs leading-snug">
                         <span className="font-medium text-slate-700">
-                          Literacy
+                          {t("crimeMap.district.literacy")}
                         </span>
                         <span className="text-slate-500">
                           {" "}
-                          — {Number(s.literacy_rate).toFixed(1)}% vs{" "}
-                          {avgLit?.toFixed(1)}% state mean
+                          — {Number(s.literacy_rate).toFixed(1)}% (
+                          {t("crimeMap.district.stateAvg")}{" "}
+                          {avgLit?.toFixed(1)}%)
                         </span>
                         <span className="ml-1.5 text-[10px] font-semibold text-slate-600">
-                          +{((75 - s.literacy_rate) * 0.15).toFixed(1)} risk
+                          +{((75 - s.literacy_rate) * 0.15).toFixed(1)}{" "}
+                          {t("crimeMap.district.risk")}
                         </span>
                       </div>
                     </div>
@@ -3043,12 +3093,15 @@ function DistrictPanel({
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                       <div className="text-xs leading-snug">
                         <span className="font-medium text-slate-700">
-                          POI exposure
+                          {t("crimeMap.district.poiExposure")}
                         </span>
                         <span className="text-slate-500">
                           {" "}
-                          — {poiCount?.total ?? m.poi_total ?? 0} points near
-                          liquor/ATM clusters
+                          —{" "}
+                          {t("crimeMap.district.poiNear", {
+                            count:
+                              poiCount?.total ?? m.poi_total ?? 0,
+                          })}
                         </span>
                       </div>
                     </div>
@@ -3060,10 +3113,11 @@ function DistrictPanel({
                 <span>OSM · Open-Meteo · data.gov.in</span>
                 <span className="flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-emerald-500" />{" "}
-                  Updated{" "}
-                  {s.updated_at
-                    ? new Date(s.updated_at).toLocaleDateString()
-                    : "today"}
+                  {t("crimeMap.district.updated", {
+                    date: s.updated_at
+                      ? new Date(s.updated_at).toLocaleDateString()
+                      : t("crimeMap.district.today"),
+                  })}
                 </span>
               </div>
             </div>
@@ -3074,7 +3128,8 @@ function DistrictPanel({
         <div className="grid grid-cols-2 gap-2">
           <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E5E7EB]">
             <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-              <Beer className="h-3 w-3 text-slate-400" /> POI Exposure
+              <Beer className="h-3 w-3 text-slate-400" />{" "}
+              {t("crimeMap.district.poiTitle")}
             </p>
             {(() => {
               const total = poiCount?.total ?? m.poi_total;
@@ -3083,16 +3138,24 @@ function DistrictPanel({
               return (
                 <>
                   <p className="text-base font-bold text-slate-900 mt-1">
-                    {hasData ? `${total} pts` : "—"}
+                    {hasData
+                      ? t("crimeMap.district.pts", { count: total })
+                      : "—"}
                   </p>
                   <p className="text-[10px] text-slate-400">
                     {hasData
                       ? liquor
-                        ? `${liquor} liquor outlets`
+                        ? t("crimeMap.district.liquorOutlets", {
+                            count: liquor,
+                          })
                         : poiCount?.risk_sum
-                          ? `Risk weight ${poiCount.risk_sum}`
-                          : `${total} POIs`
-                      : "Not ingested"}
+                          ? t("crimeMap.district.riskWeight", {
+                              count: poiCount.risk_sum,
+                            })
+                          : t("crimeMap.district.poisCount", {
+                              count: total,
+                            })
+                      : t("crimeMap.district.notIngested")}
                   </p>
                   {!hasData && (
                     <button
@@ -3104,7 +3167,7 @@ function DistrictPanel({
                       }
                       className="mt-1 text-[10px] font-bold text-amber-700 underline cursor-pointer"
                     >
-                      Ingest {spot.name} now
+                      {t("crimeMap.actions.ingestNow", { name: spot.name })}
                     </button>
                   )}
                 </>
@@ -3113,7 +3176,8 @@ function DistrictPanel({
           </div>
           <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E5E7EB]">
             <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-              <CloudRain className="h-3 w-3 text-slate-400" /> Weather
+              <CloudRain className="h-3 w-3 text-slate-400" />{" "}
+              {t("crimeMap.district.weather")}
             </p>
             {weather.length ? (
               <>
@@ -3124,7 +3188,9 @@ function DistrictPanel({
                   °C · {weather[0].rainfall ?? m.weather_rain_14d_avg ?? "—"}mm
                 </p>
                 <p className="text-[10px] text-slate-400">
-                  {weather.length} days · Open-Meteo
+                  {t("crimeMap.district.weatherDays", {
+                    count: weather.length,
+                  })}
                 </p>
               </>
             ) : (
@@ -3133,7 +3199,9 @@ function DistrictPanel({
                   {m.weather_temp_14d_avg ?? "—"}°C ·{" "}
                   {m.weather_rain_14d_avg ?? "—"}mm
                 </p>
-                <p className="text-[10px] text-slate-400">Open-Meteo live</p>
+                <p className="text-[10px] text-slate-400">
+                  {t("crimeMap.district.openMeteoLive")}
+                </p>
               </>
             )}
           </div>
@@ -3154,7 +3222,9 @@ function DistrictPanel({
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
             {spot.top_crime
-              ? `View response plan — ${spot.top_crime}`
+              ? t("crimeMap.actions.viewResponsePlanFor", {
+                  label: spot.top_crime,
+                })
               : `${t("crimeMap.generatePatrolPlan")} — ${spot.name}`}
           </span>
           <span className="text-[#94A3B8]">→</span>
@@ -3174,7 +3244,7 @@ function DistrictPanel({
           className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#0f1a2e] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
         >
           <MessageSquare className="h-3.5 w-3.5 opacity-90" />
-          Ask CrimeLens — map-aware
+          {t("crimeMap.actions.askMapAware")}
         </button>
         <button
           onClick={() => {
@@ -3189,7 +3259,7 @@ function DistrictPanel({
           }}
           className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2 transition-colors cursor-pointer"
         >
-          Open in full workspace <span className="text-[#94A3B8]">→</span>
+          {t("crimeMap.actions.openFullWorkspace")} <span className="text-[#94A3B8]">→</span>
         </button>
       </div>
     </>
@@ -3232,6 +3302,7 @@ RiskBar.propTypes = {
 };
 
 function POIPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const typeColor =
     {
@@ -3241,12 +3312,12 @@ function POIPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
       Bus_Stop: "bg-emerald-50 text-emerald-700 border-emerald-200",
       Railway_Station: "bg-red-50 text-red-700 border-red-200",
     }[spot.poi_type] || "bg-slate-50 text-slate-700 border-slate-200";
-  const riskNote =
+  const riskNoteKey =
     spot.risk_weight >= 5
-      ? "High-crime attractor — prioritize patrol"
+      ? "crimeMap.poi.high"
       : spot.risk_weight === 3
-        ? "Moderate risk — check CCTV"
-        : "Baseline infrastructure";
+        ? "crimeMap.poi.moderate"
+        : "crimeMap.poi.baseline";
   return (
     <>
       <PanelHeader
@@ -3256,45 +3327,45 @@ function POIPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
         typeColor={typeColor}
         typeIcon={<MapPin size={10} />}
         onClose={onClose}
-        subtitle={`${spot.district || ""} · Risk weight ${spot.risk_weight ?? "—"} · ${riskNote}`}
+        subtitle={`${spot.district || ""} · ${t("crimeMap.poi.riskWeightSub", { value: spot.risk_weight ?? "—" })} · ${t(riskNoteKey)}`}
       />
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-4">
         <div className={`p-3 rounded-lg border ${typeColor}`}>
           <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">
-            Infrastructure Risk
+            {t("crimeMap.poi.infraRisk")}
           </p>
-          <p className="text-sm font-bold mt-1">{riskNote}</p>
+          <p className="text-sm font-bold mt-1">{t(riskNoteKey)}</p>
           <p className="text-[11px] mt-1 opacity-80">
             Live data via OpenStreetMap Overpass · OSM ID {spot.id}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
-            <p className="text-[10px] text-slate-500">Coordinates</p>
+            <p className="text-[10px] text-slate-500">
+              {t("crimeMap.poi.coordinates")}
+            </p>
             <p className="text-xs font-bold">
               {Number(spot.lat).toFixed(4)}, {Number(spot.lng).toFixed(4)}
             </p>
           </div>
           <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
-            <p className="text-[10px] text-slate-500">District</p>
+            <p className="text-[10px] text-slate-500">
+              {t("crimeMap.poi.district")}
+            </p>
             <p className="text-xs font-bold">{spot.district || "—"}</p>
           </div>
         </div>
         <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
           <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
-            Predictive Insight
+            {t("crimeMap.poi.predictive")}
           </p>
           <p className="text-xs text-slate-700 leading-relaxed">
-            {spot.poi_type === "Liquor_Store" &&
-              "Liquor outlets correlate with brawls & public order offences — recommend evening beat near this POI."}
-            {spot.poi_type === "ATM" &&
-              "ATMs attract property crime — toggle ATM layer with crime heatmap to spot robbery clusters."}
-            {spot.poi_type === "Bus_Stop" &&
-              "Transit hubs see chain snatching & theft — align patrol with peak commute."}
-            {spot.poi_type === "Bank" &&
-              "Banks are economic-offence hotspots — coordinate with EOW."}
+            {spot.poi_type === "Liquor_Store" && t("crimeMap.poi.liquor")}
+            {spot.poi_type === "ATM" && t("crimeMap.poi.atm")}
+            {spot.poi_type === "Bus_Stop" && t("crimeMap.poi.bus")}
+            {spot.poi_type === "Bank" && t("crimeMap.poi.bank")}
             {spot.poi_type === "Railway_Station" &&
-              "Stations funnel inter-district movement — check repeat offender transit."}
+              t("crimeMap.poi.railway")}
           </p>
         </div>
         <button
@@ -3322,7 +3393,7 @@ function POIPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
         >
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
-            Patrol near this POI
+            {t("crimeMap.actions.patrolNearPoi")}
           </span>
           <span className="text-[#94A3B8]">→</span>
         </button>
@@ -3335,7 +3406,7 @@ function POIPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
           className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#0f1a2e] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
         >
           <MessageSquare className="h-3.5 w-3.5 opacity-90" />
-          Ask CrimeLens — map-aware
+          {t("crimeMap.actions.askMapAware")}
         </button>
         <button
           onClick={() => {
@@ -3344,7 +3415,7 @@ function POIPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
           }}
           className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2 transition-colors cursor-pointer"
         >
-          Open in full workspace <span className="text-[#94A3B8]">→</span>
+          {t("crimeMap.actions.openFullWorkspace")} <span className="text-[#94A3B8]">→</span>
         </button>
       </div>
     </>
@@ -3371,7 +3442,7 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol, onAskInMapChat }) {
       <PanelHeader
         id={`CLS`}
         name={displayName}
-        type="Hotspot"
+        type={t("crimeMap.panelTypes.hotspot")}
         typeColor="bg-red-700 text-white border-red-700"
         typeIcon={<AlertTriangle size={10} />}
         onClose={onClose}
@@ -3507,7 +3578,9 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol, onAskInMapChat }) {
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
             {detail?.dominant_crime || spot.dominant_crime
-              ? `View response plan — ${detail?.dominant_crime || spot.dominant_crime}`
+              ? t("crimeMap.actions.viewResponsePlanFor", {
+                  label: detail?.dominant_crime || spot.dominant_crime,
+                })
               : t("crimeMap.generatePatrolPlan")}
           </span>
           <span className="text-[#94A3B8]">→</span>
@@ -3530,7 +3603,7 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol, onAskInMapChat }) {
               className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#0f1a2e] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
             >
               <MessageSquare className="h-3.5 w-3.5 opacity-90" />
-              Ask CrimeLens — map-aware
+              {t("crimeMap.actions.askMapAware")}
             </button>
             <button
               onClick={() => {
@@ -3546,7 +3619,7 @@ function ClusterPanel({ spot, detail, onClose, onOpenPatrol, onAskInMapChat }) {
               }}
               className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2 transition-colors cursor-pointer"
             >
-              Open in full workspace <span className="text-[#94A3B8]">→</span>
+              {t("crimeMap.actions.openFullWorkspace")} <span className="text-[#94A3B8]">→</span>
             </button>
           </>
         )}
@@ -3573,7 +3646,7 @@ function NetworkPanel({ spot, onClose, onAskInMapChat }) {
       <PanelHeader
         id={spot.network_name || "NET"}
         name={spot.network_name || "Network"}
-        type="Network"
+        type={t("crimeMap.panelTypes.network")}
         typeColor="bg-red-700 text-white border-red-700"
         typeIcon={<Users size={10} />}
         onClose={onClose}
@@ -3658,7 +3731,7 @@ function NetworkPanel({ spot, onClose, onAskInMapChat }) {
                     {m.name}
                   </span>
                   <span className="text-[10px] font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">
-                    {m.firs} FIRs
+                    {t("crimeMap.network.firsBadge", { count: m.firs })}
                   </span>
                 </div>
               ))}
@@ -3692,7 +3765,7 @@ function NetworkPanel({ spot, onClose, onAskInMapChat }) {
           className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#0f1a2e] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
         >
           <MessageSquare className="h-3.5 w-3.5 opacity-90" />
-          Ask CrimeLens — map-aware
+          {t("crimeMap.actions.askMapAware")}
         </button>
         <button
           onClick={() => {
@@ -3706,7 +3779,7 @@ function NetworkPanel({ spot, onClose, onAskInMapChat }) {
           }}
           className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#334155] text-xs font-semibold py-2 transition-colors cursor-pointer"
         >
-          Open in full workspace <span className="text-[#94A3B8]">→</span>
+          {t("crimeMap.actions.openFullWorkspace")} <span className="text-[#94A3B8]">→</span>
         </button>
       </div>
     </>
@@ -4066,14 +4139,16 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
 
                   <div className="bg-blue-50/60 border border-blue-100 rounded-lg p-3.5">
                     <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">
-                      Threat Summary
+                      {t("crimeMap.response.threatSummary")}
                     </p>
                     <p className="text-xs font-medium text-slate-700 leading-relaxed">
                       {prevention.threat_summary}
                     </p>
                     {prevention.why_this_deployment && (
                       <p className="text-[11px] text-slate-600 mt-2 bg-white border border-blue-100 rounded-lg px-2.5 py-1.5">
-                        <span className="font-bold">Why</span>{" "}
+                        <span className="font-bold">
+                          {t("crimeMap.response.why")}
+                        </span>{" "}
                         {prevention.why_this_deployment}
                       </p>
                     )}
@@ -4087,7 +4162,7 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
                   {prevention.immediate_actions?.length > 0 && (
                     <div>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        Immediate Actions
+                        {t("crimeMap.response.immediate")}
                       </p>
                       <div className="space-y-2">
                         {prevention.immediate_actions.map((a, i) => (
@@ -4120,7 +4195,7 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
                   {prevention.preventive_measures?.length > 0 && (
                     <div>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        Preventive Measures
+                        {t("crimeMap.response.preventive")}
                       </p>
                       <div className="space-y-1.5">
                         {prevention.preventive_measures.map((p, i) => (
@@ -4146,7 +4221,7 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
                   {prevention.metrics_to_track?.length > 0 && (
                     <div className="bg-slate-900 text-slate-100 rounded-lg p-3">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                        Metrics to Track
+                        {t("crimeMap.response.metrics")}
                       </p>
                       <ul className="text-xs space-y-1">
                         {prevention.metrics_to_track.map((m, i) => (
@@ -4175,8 +4250,7 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
                 if (!isPhysical)
                   return (
                     <p className="text-xs text-slate-500 bg-amber-50 border border-amber-100 rounded-lg p-3 text-center">
-                      Physical patrol limited — focus on specialized cell
-                      deployment above. Routes omitted.
+                      {t("crimeMap.response.physicalLimited")}
                     </p>
                   );
                 if (!routes.length) return null;
@@ -4221,13 +4295,19 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
                         </p>
                         <div className="flex gap-3 mt-2 text-[10px]">
                           <span className="bg-slate-100 px-1.5 py-0.5 rounded">
-                            {r.crime_density} crimes
+                            {t("crimeMap.response.crimes", {
+                              count: r.crime_density,
+                            })}
                           </span>
                           <span className="bg-slate-100 px-1.5 py-0.5 rounded">
-                            {r.repeat_offenders} repeat
+                            {t("crimeMap.response.repeat", {
+                              count: r.repeat_offenders,
+                            })}
                           </span>
                           <span className="bg-slate-100 px-1.5 py-0.5 rounded">
-                            {r.gravity_cases} heinous
+                            {t("crimeMap.response.heinous", {
+                              count: r.gravity_cases,
+                            })}
                           </span>
                         </div>
                       </div>
@@ -4258,7 +4338,9 @@ function PatrolModal({ token, selectedSpot, initialContext, onClose }) {
               {loading
                 ? t("crimeMap.patrol.generating")
                 : initialContext?.crimeLabel
-                  ? `Generate ${initialContext.crimeLabel} Response Plan`
+                  ? t("crimeMap.actions.generateResponsePlanFor", {
+                      label: initialContext.crimeLabel,
+                    })
                   : t("crimeMap.generatePatrolPlan")}
             </button>
           ) : (
