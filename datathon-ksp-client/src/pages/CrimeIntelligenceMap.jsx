@@ -649,8 +649,8 @@ export default function CrimeIntelligenceMap() {
                 ) : (
                   <button
                     onClick={() => setShowCrimeTypesPanel(true)}
-                    className="absolute top-4 right-4 z-20 bg-white rounded-full border border-[#E2E8F0] px-3 py-1.5 text-xs font-semibold text-[#334155] hover:bg-[#F8FAFC] flex items-center gap-1.5 cursor-pointer"
-                    style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
+                    className="absolute bottom-[88px] left-4 z-20 bg-white/90 backdrop-blur-md rounded-full border border-[#E2E8F0] px-3 py-1.5 text-xs font-semibold text-[#334155] hover:bg-white flex items-center gap-1.5 cursor-pointer"
+                    style={{ boxShadow: "0 2px 8px rgba(15,23,42,0.10)" }}
                     title="Show crime types"
                   >
                     <Eye className="h-3.5 w-3.5" /> Crime Types
@@ -835,8 +835,8 @@ function LayerSwitcher({
 
   return (
     <div
-      className="absolute top-4 left-4 bg-white rounded-[10px] border border-[#E2E8F0] p-2 flex flex-col gap-1 z-10 w-[210px] max-h-[calc(100%-6rem)] overflow-y-auto"
-      style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
+      className="absolute top-4 left-4 bg-white/95 backdrop-blur-md rounded-[10px] border border-[#E2E8F0] p-2 flex flex-col gap-1 z-10 w-[210px] max-h-[calc(100%-6rem)] overflow-y-auto"
+      style={{ boxShadow: "0 4px 16px rgba(15,23,42,0.10)" }}
     >
       <div className="flex items-center justify-between px-2 py-1">
         <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.08em]">
@@ -1029,8 +1029,8 @@ function CrimeLegend({
 
   return (
     <div
-      className="absolute top-4 right-4 bg-white rounded-[10px] border border-[#E2E8F0] p-2.5 z-20 w-[200px] max-h-[calc(100%-12rem)] flex flex-col"
-      style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
+      className="absolute bottom-[88px] left-4 bg-white/90 backdrop-blur-md rounded-[10px] border border-[#E2E8F0] p-2.5 z-20 w-[200px] max-h-[min(320px,calc(100%-11rem))] flex flex-col"
+      style={{ boxShadow: "0 4px 16px rgba(15,23,42,0.10)" }}
     >
       <div className="flex items-center justify-between mb-2 shrink-0 gap-2">
         <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.08em]">
@@ -2093,39 +2093,39 @@ function DefaultPanel({ summary, enhancedRisk, onOpenPatrol, onAskInMapChat }) {
           )}
         </div>
 
-        {/* Stats — muted, not screaming */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-white border border-[#E2E8F0] rounded-[8px] px-3 py-2.5">
-            <p className="text-[10px] font-semibold tracking-wide uppercase text-[#64748B]">
+        {/* Stats — emphasized metrics: larger, bolder values than labels */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="bg-white border border-[#E2E8F0] rounded-[10px] px-3 py-3">
+            <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B]">
               {t("crimeMap.summary.todaysRisk")}
             </p>
             <p
-              className={`text-[13px] font-bold mt-1 ${summary?.today_risk === "HIGH" ? "text-[#D92D20]" : summary?.today_risk === "MEDIUM" ? "text-[#D97706]" : "text-[#17233C]"}`}
+              className={`text-[18px] font-black leading-none mt-1.5 tracking-tight ${summary?.today_risk === "HIGH" ? "text-[#D92D20]" : summary?.today_risk === "MEDIUM" ? "text-[#D97706]" : "text-[#17233C]"}`}
             >
               {summary?.today_risk || "—"}
             </p>
           </div>
-          <div className="bg-white border border-[#E2E8F0] rounded-[8px] px-3 py-2.5">
-            <p className="text-[10px] font-semibold tracking-wide uppercase text-[#64748B]">
+          <div className="bg-white border border-[#E2E8F0] rounded-[10px] px-3 py-3">
+            <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B]">
               {t("crimeMap.summary.emergingHotspots")}
             </p>
-            <p className="text-[13px] font-bold text-[#17233C] mt-1 tabular-nums">
+            <p className="text-[20px] font-black leading-none mt-1.5 tracking-tight text-[#17233C] tabular-nums">
               {formatNumber(summary?.emerging_hotspots)}
             </p>
           </div>
-          <div className="bg-white border border-[#E2E8F0] rounded-[8px] px-3 py-2.5">
-            <p className="text-[10px] font-semibold tracking-wide uppercase text-[#64748B]">
+          <div className="bg-white border border-[#E2E8F0] rounded-[10px] px-3 py-3">
+            <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B]">
               {t("crimeMap.summary.repeatOffenders")}
             </p>
-            <p className="text-[13px] font-bold text-[#17233C] mt-1 tabular-nums">
+            <p className="text-[20px] font-black leading-none mt-1.5 tracking-tight text-[#17233C] tabular-nums">
               {formatNumber(summary?.repeat_offender_areas)}
             </p>
           </div>
-          <div className="bg-white border border-[#E2E8F0] rounded-[8px] px-3 py-2.5">
-            <p className="text-[10px] font-semibold tracking-wide uppercase text-[#64748B]">
+          <div className="bg-white border border-[#E2E8F0] rounded-[10px] px-3 py-3">
+            <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B]">
               {t("crimeMap.summary.crimes30d")}
             </p>
-            <p className="text-[13px] font-bold text-[#17233C] mt-1 tabular-nums">
+            <p className="text-[20px] font-black leading-none mt-1.5 tracking-tight text-[#17233C] tabular-nums">
               {formatNumber(summary?.active_hotspots)}
             </p>
           </div>

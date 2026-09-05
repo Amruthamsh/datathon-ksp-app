@@ -74,6 +74,18 @@ export default function DashboardLayout() {
     }
   };
 
+  // Allow child routes (e.g., Criminal Networks graph) to auto-collapse the left nav
+  // for maximum canvas space — listens for a custom event as fallback if Outlet context not used.
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.detail && typeof e.detail.expanded === "boolean") {
+        setExpanded(e.detail.expanded);
+      }
+    };
+    window.addEventListener("ksp-nav-expanded", handler);
+    return () => window.removeEventListener("ksp-nav-expanded", handler);
+  }, []);
+
   return (
     // 'flex flex-col' keeps the header at the top
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
@@ -90,7 +102,9 @@ export default function DashboardLayout() {
           onDeleteConversation={handleDelete}
         />
         <main className="flex-1 h-full overflow-hidden">
-          <Outlet context={{ refreshConversations }} />
+          <Outlet
+            context={{ refreshConversations, setNavExpanded: setExpanded, navExpanded: expanded }}
+          />
         </main>
       </div>
     </div>
