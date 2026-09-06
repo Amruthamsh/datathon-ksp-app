@@ -11,7 +11,9 @@
       "open": "Open",
       "chargesheetLate": "Chargesheet {{count}}d late",
       "dueIn": "Due in {{count}}d",
-      "searchPlaceholder": "Search within this case…"
+      "searchPlaceholder": "Search within this case…",
+      "priorityCritical": "Critical",
+      "priorityHigh": "High"
     },
     "tabs": {
       "caseBrief": "Case Brief",
@@ -60,7 +62,9 @@
         "intel0": "Find similar cases",
         "intel1": "Is this part of a larger pattern?",
         "intel2": "Show shared accused links"
-      }
+      },
+      "voice": "Voice input",
+      "listening": "Listening…"
     },
     "dossier": {
       "title": "Investigation dossier",
@@ -79,7 +83,8 @@
       "bailable": "Bailable",
       "nonBailable": "Non-bailable",
       "indiaCode": "IndiaCode",
-      "indianKanoon": "Indian Kanoon"
+      "indianKanoon": "Indian Kanoon",
+      "regenerate": "Regenerate"
     },
     "synopsis": {
       "reportedOn": "Reported on",

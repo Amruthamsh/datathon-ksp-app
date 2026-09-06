@@ -11,7 +11,9 @@
       "open": "ತೆರೆದಿದೆ",
       "chargesheetLate": "ದೋಷಾರೋಪಣೆ {{count}} ದಿನ ತಡ",
       "dueIn": "{{count}} ದಿನಗಳಲ್ಲಿ ಸಲ್ಲಿಸಬೇಕು",
-      "searchPlaceholder": "ಈ ಪ್ರಕರಣದಲ್ಲಿ ಹುಡುಕಿ…"
+      "searchPlaceholder": "ಈ ಪ್ರಕರಣದಲ್ಲಿ ಹುಡುಕಿ…",
+      "priorityCritical": "ನಿರ್ಣಾಯಕ",
+      "priorityHigh": "ಹೆಚ್ಚು"
     },
     "tabs": {
       "caseBrief": "ಪ್ರಕರಣ ಸಂಕ್ಷಿಪ್ತ",
@@ -60,7 +62,9 @@
         "intel0": "ಇದೇ ರೀತಿಯ ಪ್ರಕರಣಗಳನ್ನು ಹುಡುಕಿ",
         "intel1": "ಇದು ದೊಡ್ಡ ಮಾದರಿಯ ಭಾಗವೇ?",
         "intel2": "ಹಂಚಿಕೆಯ ಆರೋಪಿ ಸಂಪರ್ಕಗಳನ್ನು ತೋರಿಸಿ"
-      }
+      },
+      "voice": "ಧ್ವನಿ ಇನ್‍ಪುಟ್",
+      "listening": "ಆಲಿಸುತ್ತಿದೆ…"
     },
     "dossier": {
       "title": "ತನಿಖಾ ದಸ್ತಾವೇಜು",
@@ -79,7 +83,8 @@
       "bailable": "ಜಾಮೀನು ಪಡೆಯಬಹುದಾದ",
       "nonBailable": "ಜಾಮೀನು ಪಡೆಯಲಾಗದ",
       "indiaCode": "ಇಂಡಿಯಾಕೋಡ್",
-      "indianKanoon": "ಇಂಡಿಯನ್ ಕಾನೂನ್"
+      "indianKanoon": "ಇಂಡಿಯನ್ ಕಾನೂನ್",
+      "regenerate": "ಪುನಃ ರಚಿಸಿ"
     },
     "synopsis": {
       "reportedOn": "ವರದಿಯಾದ ದಿನಾಂಕ",

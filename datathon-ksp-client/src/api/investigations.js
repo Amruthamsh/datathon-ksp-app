@@ -100,3 +100,16 @@ export async function getSimilarCases(token, caseId) {
   });
   return handleResponse(res);
 }
+
+export async function getCaseBrief(token, caseId, params = {}) {
+  const queryString = buildQueryString({ language: params.language });
+  const res = await fetch(
+    `${BASE}/investigations/${caseId}/brief${queryString}`,
+    {
+      headers: {
+        "X-Auth-Token": token,
+      },
+    },
+  );
+  return handleResponse(res);
+}

@@ -13,7 +13,6 @@ import CrimeIntelligenceMap from "./pages/CrimeIntelligenceMap";
 import Networks from "./pages/Networks";
 import Reports from "./pages/Reports";
 import DashboardLayout from "./components/DashboardLayout";
-import InvestigationWorkspaceLayout from "./components/investigations/InvestigationWorkspaceLayout";
 
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
@@ -52,12 +51,10 @@ function AppRoutes() {
           <Route path="/" element={<Home />} />
           <Route path="/chat/:id" element={<Home />} />
           <Route path="/investigations" element={<InvestigationsQueue />} />
+          <Route path="/investigations/:caseId" element={<InvestigationWorkspace />} />
           <Route path="/crime-intelligence-map" element={<CrimeIntelligenceMap />} />
           <Route path="/networks" element={<Networks />} />
           <Route path="/reports" element={<Reports />} />
-        </Route>
-        <Route element={<ProtectedRoute><InvestigationWorkspaceLayout /></ProtectedRoute>}>
-          <Route path="/investigations/:caseId" element={<InvestigationWorkspace />} />
         </Route>
       </Routes>
     </>

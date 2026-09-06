@@ -538,7 +538,7 @@ export default function CriminalNetworks() {
     return base;
   }, [summary]);
 
-  // Same palette as InvestigationsQueue stat bar: bg-red-400 / bg-orange-300 / bg-blue-900/90 — active = bg-[#1A1A2E]
+  // Original palette: bg-red-400 / bg-orange-300 / bg-blue-900/90 + distinct 4th — active = bg-[#1A1A2E]
   const kpiMeta = useMemo(
     () => [
       {
@@ -590,7 +590,7 @@ export default function CriminalNetworks() {
         icon: AlertTriangle,
         desc: t("networks.kpi.descHighRisk"),
         sub: t("networks.kpi.subCritical"),
-        bg: "bg-red-400",
+        bg: "bg-emerald-600",
         valueColor: "text-white",
         dot: "bg-white",
         labelColor: "text-white/85",
@@ -826,12 +826,28 @@ export default function CriminalNetworks() {
                 <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-[#64748B] flex items-center gap-1.5">
                   <Activity size={12} className="text-[#17233C]" /> {t("networks.kpi.overview")}
                 </p>
-                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-medium text-[#64748B] bg-white border border-[#E2E8F0] rounded-full px-2 py-1">
-                  <Filter size={10} /> {t("networks.kpi.active")}{" "}
-                  <span className="font-bold text-[#17233C]">
-                    {activeKpiLabel}
+                <div className="flex items-center gap-2">
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-medium text-[#64748B] bg-white border border-[#E2E8F0] rounded-full px-2 py-1">
+                    <Filter size={10} /> {t("networks.kpi.active")}{" "}
+                    <span className="font-bold text-[#17233C]">
+                      {activeKpiLabel}
+                    </span>
                   </span>
-                </span>
+                  <button
+                    onClick={() =>
+                      navigate("/", {
+                        state: {
+                          initialMessage: `Analyze overall criminal network intelligence: ${nodeCounts.accused} repeat offenders, ${nodeCounts.groups} criminal groups, ${nodeCounts.bridges} bridge individuals, ${nodeCounts.highRisk} high risk networks. What are the key patterns, risk areas, and recommended investigation priorities?`,
+                        },
+                      })
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#17233C] hover:bg-[#0f1a2e] text-white text-[11px] font-bold px-3 py-1.5 shadow-sm transition"
+                    title={t("networks.fab.title")}
+                  >
+                    <Sparkles size={12} />
+                    {t("networks.fab.label")}
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {kpiMeta.map((k) => {
@@ -965,11 +981,11 @@ export default function CriminalNetworks() {
                           >
                             <td className="px-5 py-3.5">
                               <div className="flex items-center gap-3">
-                                <span className="h-8 w-8 rounded-full bg-[#17233C] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                                <span className="h-8 w-8 rounded-full bg-blue-900/90 text-white flex items-center justify-center text-xs font-bold shrink-0">
                                   {b.name.charAt(0)}
                                 </span>
                                 <div className="min-w-0">
-                                  <p className="font-semibold text-[#17233C] leading-none truncate">
+                                  <p className="font-semibold text-blue-950 leading-none truncate">
                                     {b.name}
                                   </p>
                                   <p className="text-[11px] text-[#64748B] mt-0.5 hidden sm:block">
@@ -988,20 +1004,20 @@ export default function CriminalNetworks() {
                                 {badge.label}
                               </span>
                             </td>
-                            <td className="px-4 py-3.5 text-right tabular-nums font-semibold text-[#0F172A]">
+                            <td className="px-4 py-3.5 text-right tabular-nums font-semibold text-blue-950">
                               {b.fir_count}
                             </td>
-                            <td className="px-4 py-3.5 text-right tabular-nums text-[#475569]">
+                            <td className="px-4 py-3.5 text-right tabular-nums text-blue-900/70">
                               {b.unique_associates}
                             </td>
-                            <td className="px-4 py-3.5 text-right tabular-nums text-[#475569]">
+                            <td className="px-4 py-3.5 text-right tabular-nums text-blue-900/70">
                               {b.stations_covered}
                             </td>
-                            <td className="px-4 py-3.5 text-right tabular-nums text-[#475569]">
+                            <td className="px-4 py-3.5 text-right tabular-nums text-blue-900/70">
                               {b.districts_covered}
                             </td>
                             <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                              <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#17233C] border border-[#17233C] text-white text-xs font-semibold min-w-[152px] px-6 py-2.5 transition shadow-sm group-hover:bg-[#0f1a2e] group-hover:border-[#0f1a2e]">
+                              <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-blue-900/90 border border-blue-900/90 text-white text-xs font-semibold min-w-[152px] px-6 py-2.5 transition shadow-sm group-hover:bg-blue-900 group-hover:border-blue-900">
                                 {t("networks.search.exploreGraph")}{" "}
                                 <ChevronRight
                                   size={12}
@@ -1122,27 +1138,6 @@ export default function CriminalNetworks() {
             <div className="pb-6" />
           </div>
         </div>
-
-        {/* FAB — anchored bottom-right, persistent */}
-        <button
-          onClick={() =>
-            navigate("/", {
-              state: {
-                initialMessage: `Analyze overall criminal network intelligence: ${nodeCounts.accused} repeat offenders, ${nodeCounts.groups} criminal groups, ${nodeCounts.bridges} bridge individuals, ${nodeCounts.highRisk} high risk networks. What are the key patterns, risk areas, and recommended investigation priorities?`,
-              },
-            })
-          }
-          className="absolute bottom-6 right-6 z-20 inline-flex items-center gap-2 rounded-full bg-[#17233C] hover:bg-[#0f1a2e] text-white text-sm font-semibold px-5 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.22)] transition hover:shadow-[0_12px_32px_rgba(15,23,42,0.28)] hover:-translate-y-0.5"
-          title={t("networks.fab.title")}
-        >
-          <span className="h-7 w-7 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
-            <Sparkles size={14} />
-          </span>
-          {t("networks.fab.label")}
-          <span className="h-6 w-6 rounded-full bg-white text-[#17233C] flex items-center justify-center">
-            <ArrowRight size={12} />
-          </span>
-        </button>
 
         {/* Slide-over Preview Drawer */}
         {preview && (
