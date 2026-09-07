@@ -45,6 +45,12 @@ Faker.seed(SEED)
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Karnataka boundary — accurate polygon for lat/lng clipping
+try:
+    from karnataka_boundary import point_in_karnataka  # when run from synthetic-data/
+except ImportError:
+    from synthetic_data.karnataka_boundary import point_in_karnataka  # fallback
+
 
 # ----------------------------------------------------------------------------
 # Small helpers
@@ -474,9 +480,55 @@ junction_id_counter = id_gen()
 # per (unit_id, category_code, year) running serial, per the CrimeNo spec
 serial_counters = {}
 
-# Karnataka's rough bounding box, for plausible lat/long
+# District centroids — used to keep lat/lng tightly within Karnataka
+# (same coordinates as crime_map_repository for consistency)
+_KARNATAKA_DISTRICT_CENTERS = {
+    "Bagalkot": (16.18, 75.70), "Ballari": (15.14, 76.92), "Belagavi": (15.86, 74.50),
+    "Bengaluru Rural": (13.24, 77.70), "Bengaluru Urban": (12.97, 77.59),
+    "Bidar": (17.91, 77.33), "Chamarajanagar": (11.92, 76.94), "Chikballapur": (13.44, 77.73),
+    "Chikkamagaluru": (13.32, 75.78), "Chitradurga": (14.23, 76.40),
+    "Dakshina Kannada": (12.87, 75.21), "Davanagere": (14.47, 75.92), "Dharwad": (15.46, 75.01),
+    "Gadag": (15.43, 75.63), "Hassan": (13.01, 76.10), "Haveri": (14.80, 75.40),
+    "Kalaburagi": (17.33, 76.83), "Kodagu": (12.34, 75.81), "Kolar": (13.14, 78.13),
+    "Koppal": (15.35, 76.27), "Mandya": (12.52, 76.90), "Mysuru": (12.30, 76.64),
+    "Raichur": (16.21, 77.37), "Ramanagara": (12.72, 77.28), "Shivamogga": (13.93, 75.57),
+    "Tumakuru": (13.34, 77.10), "Udupi": (13.34, 74.74), "Uttara Kannada": (14.79, 74.59),
+    "Vijayapura": (16.83, 75.71), "Yadgir": (16.77, 77.14), "Vijayanagara": (15.21, 76.46),
+}
+# jitter radius in degrees (~28 km) — small enough to stay inside district
+_DISTRICT_JITTER = 0.25
+# Fallback bbox (only if district lookup fails — should not happen)
 LAT_RANGE = (11.6, 18.4)
 LON_RANGE = (74.1, 78.6)
+
+def _generate_karnataka_point(district_name: str):
+    """Generate a (lat, lng) inside Karnataka, biased to the given district.
+    Uses rejection sampling against the true state polygon."""
+    center = _KARNATAKA_DISTRICT_CENTERS.get(district_name)
+    # try district-biased sampling first (fast: most hits are inside)
+    for _ in range(30):
+        if center:
+            lat = random.gauss(center[0], 0.12)
+            lng = random.gauss(center[1], 0.12)
+            # clamp jitter to keep within _DISTRICT_JITTER worst case
+            # gaussian may overshoot but rejection handles it
+            if point_in_karnataka(lng, lat):
+                return round(lat, 6), round(lng, 6)
+        else:
+            lat = random.uniform(*LAT_RANGE)
+            lng = random.uniform(*LON_RANGE)
+            if point_in_karnataka(lng, lat):
+                return round(lat, 6), round(lng, 6)
+    # fallback: pure bbox rejection (guaranteed to terminate)
+    for _ in range(200):
+        lat = random.uniform(*LAT_RANGE)
+        lng = random.uniform(*LON_RANGE)
+        if point_in_karnataka(lng, lat):
+            return round(lat, 6), round(lng, 6)
+    # last resort: return district center (always inside)
+    if center:
+        return round(center[0], 6), round(center[1], 6)
+    return round(15.3173, 6), round(75.7139, 6)
 
 BRIEF_TEMPLATES = {
     "Murder": "Complainant reported the death of the victim under suspicious circumstances at the scene.",
@@ -538,8 +590,8 @@ for _ in range(NUM_CASES):
     crime_no = f"{cat_code}{district_id:04d}{station_id:04d}{reg_year_actual}{serial:05d}"
     case_no = f"{reg_year_actual}{serial:05d}"
 
-    lat = round(random.uniform(*LAT_RANGE), 6)
-    lon = round(random.uniform(*LON_RANGE), 6)
+    district_name = KARNATAKA_DISTRICTS[district_id - 1]
+    lat, lon = _generate_karnataka_point(district_name)
 
     brief = BRIEF_TEMPLATES.get(SUBHEAD_NAME_BY_ID.get(subhead_id), "Complainant reported an incident requiring investigation.")
 

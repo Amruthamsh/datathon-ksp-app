@@ -13,18 +13,19 @@ import {
   File,
   X,
   Plus,
-  MapPin,
-  Globe,
   Database,
   Check,
   Loader2,
+  BookOpen,
+  ScanSearch,
+  Crosshair,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import useSpeechRecognition from "../hooks/useSpeechRecognition";
 import useSpeechSynthesis from "../hooks/useSpeechSynthesis";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
 import {
   useParams,
   useNavigate,
@@ -38,6 +39,12 @@ import { generateResponse, getConversation, sendFeedback } from "../api/chat";
 const CHAT_WIDTH_DEFAULT = 47;
 const CHAT_WIDTH_MIN = 25;
 const CHAT_WIDTH_MAX = 75;
+
+// Fixed scene-context radius — no UI control, always a 10km query.
+const SCENE_RADIUS_KM = 10;
+
+// Lazy map picker so the home chat chunk never pays for maplibre up front.
+const ScenePinMap = lazy(() => import("../components/ScenePinMap"));
 
 const clampChatWidth = (value) =>
   Math.min(CHAT_WIDTH_MAX, Math.max(CHAT_WIDTH_MIN, value));
@@ -72,18 +79,20 @@ export default function Home() {
 
   const [attachedFiles, setAttachedFiles] = useState([]);
 
-  // — Intelligence context state —
+  // — Intelligence context state (investigator-framed sources) —
   const [showContextMenu, setShowContextMenu] = useState(false);
-  const [webEnabled, setWebEnabled] = useState(false);
-  const [locationEnabled, setLocationEnabled] = useState(false);
-  const [locationCoords, setLocationCoords] = useState(null);
-  const [locationRadius, setLocationRadius] = useState(5);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [locationError, setLocationError] = useState(null);
-  const [showLocationDetail, setShowLocationDetail] = useState(false);
+  // Legal Codebook toggle
+  const [codebookEnabled, setCodebookEnabled] = useState(false);
+  // OSINT Lookup — plain toggle; entities are picked up from the query itself
+  const [osintEnabled, setOsintEnabled] = useState(false);
+  // Active Scene Pin — dropped on a mini map (never typed)
+  const [scenePinEnabled, setScenePinEnabled] = useState(false);
+  const [sceneLat, setSceneLat] = useState(null);
+  const [sceneLng, setSceneLng] = useState(null);
+  const [sceneGpsLoading, setSceneGpsLoading] = useState(false);
+  const [sceneError, setSceneError] = useState(null);
   const [showAllFiles, setShowAllFiles] = useState(false);
   const contextMenuRef = useRef(null);
-  const locationDetailRef = useRef(null);
 
   const layoutRef = useRef(null);
   const [chatWidth, setChatWidth] = useState(() => {
@@ -103,7 +112,7 @@ export default function Home() {
 
   // Close popovers on outside click / Esc
   useEffect(() => {
-    if (!showContextMenu && !showLocationDetail) return;
+    if (!showContextMenu) return;
     const onDown = (e) => {
       if (
         showContextMenu &&
@@ -112,18 +121,10 @@ export default function Home() {
       ) {
         setShowContextMenu(false);
       }
-      if (
-        showLocationDetail &&
-        locationDetailRef.current &&
-        !locationDetailRef.current.contains(e.target)
-      ) {
-        setShowLocationDetail(false);
-      }
     };
     const onKey = (e) => {
       if (e.key === "Escape") {
         setShowContextMenu(false);
-        setShowLocationDetail(false);
       }
     };
     document.addEventListener("mousedown", onDown);
@@ -132,43 +133,55 @@ export default function Home() {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [showContextMenu, showLocationDetail]);
+  }, [showContextMenu]);
 
-  const handleToggleLocation = useCallback(() => {
-    if (locationEnabled) {
-      setLocationEnabled(false);
-      setLocationCoords(null);
-      setLocationError(null);
-      setShowLocationDetail(false);
-      return;
-    }
-    setLocationLoading(true);
-    setLocationError(null);
+  // Active Scene Pin: toggle on/off; the pin itself is dropped on the map.
+  // Turning it off clears the pin so stale coords never leak into a query.
+  const handleToggleScenePin = useCallback(() => {
+    setScenePinEnabled((v) => {
+      if (v) {
+        setSceneLat(null);
+        setSceneLng(null);
+        setSceneError(null);
+      }
+      return !v;
+    });
+  }, []);
+
+  const handleScenePick = useCallback((lat, lng) => {
+    setSceneLat(Number(lat.toFixed(4)));
+    setSceneLng(Number(lng.toFixed(4)));
+    setSceneError(null);
+  }, []);
+
+  const handleSceneGpsDetect = useCallback(() => {
+    setSceneGpsLoading(true);
+    setSceneError(null);
     if (!navigator.geolocation) {
-      setLocationError("Geolocation not supported");
-      setLocationEnabled(true);
-      setLocationLoading(false);
+      setSceneGpsLoading(false);
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLocationCoords({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        });
-        setLocationEnabled(true);
-        setLocationLoading(false);
+        handleScenePick(pos.coords.latitude, pos.coords.longitude);
+        setSceneGpsLoading(false);
       },
       (err) => {
-        setLocationError(err.message || "Unable to fetch location");
-        setLocationEnabled(true);
-        setLocationLoading(false);
+        setSceneError(err.message || "GPS failed");
+        setSceneGpsLoading(false);
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
     );
-  }, [locationEnabled]);
+  }, [handleScenePick]);
 
-  const handleToggleWeb = useCallback(() => setWebEnabled((v) => !v), []);
+  const handleToggleCodebook = useCallback(
+    () => setCodebookEnabled((v) => !v),
+    [],
+  );
+
+  const handleToggleOsint = useCallback(() => {
+    setOsintEnabled((v) => !v);
+  }, []);
 
   useEffect(() => {
     // Cancel any fake streaming if user switches conversation / new chat
@@ -333,13 +346,11 @@ export default function Home() {
     const valid = [];
     for (const file of selected) {
       if (!allowed.includes(file.type)) {
-        alert(
-          `"${file.name}" is unsupported. Upload PDF, Excel, Word, or image files.`,
-        );
+        alert(t("home.upload.unsupported", { name: file.name }));
         continue;
       }
       if (file.size > 10 * 1024 * 1024) {
-        alert(`"${file.name}" exceeds the 10 MB limit.`);
+        alert(t("home.upload.tooBig", { name: file.name }));
         continue;
       }
       valid.push(file);
@@ -449,14 +460,24 @@ export default function Home() {
     stop();
 
     // Capture context snapshot for this turn (used for display + backend)
+    const hasSceneCoords =
+      scenePinEnabled &&
+      Number.isFinite(sceneLat) &&
+      Number.isFinite(sceneLng);
     const contextSnapshot = {
-      useLocation: locationEnabled,
-      useWeb: webEnabled,
-      location: locationEnabled
+      // Legacy flags (kept for backend compat): scene pin maps to location,
+      // OSINT lookup maps to web.
+      useLocation: scenePinEnabled,
+      useWeb: osintEnabled,
+      // Investigator-framed sources
+      useCodebook: codebookEnabled,
+      useOsint: osintEnabled,
+      useScenePin: scenePinEnabled,
+      location: scenePinEnabled
         ? {
-            lat: locationCoords?.lat ?? null,
-            lng: locationCoords?.lng ?? null,
-            radiusKm: locationRadius,
+            lat: hasSceneCoords ? sceneLat : null,
+            lng: hasSceneCoords ? sceneLng : null,
+            radiusKm: SCENE_RADIUS_KM,
           }
         : null,
     };
@@ -499,8 +520,9 @@ export default function Home() {
         created_at: data.created_at,
         sources: {
           crimeDatabase: true,
-          location: contextSnapshot.useLocation,
-          web: contextSnapshot.useWeb,
+          location: contextSnapshot.useScenePin,
+          web: contextSnapshot.useOsint,
+          codebook: contextSnapshot.useCodebook,
           locationRadius: contextSnapshot.location?.radiusKm ?? null,
         },
       };
@@ -690,40 +712,54 @@ export default function Home() {
                   {/* Per-message intelligence-source badges */}
                   {m.role === "user" &&
                     m.context &&
-                    (m.context.useLocation || m.context.useWeb) && (
+                    (m.context.useScenePin ||
+                      m.context.useOsint ||
+                      m.context.useCodebook) && (
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {m.context.useLocation && (
+                        {m.context.useScenePin && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase text-emerald-700">
-                            <MapPin size={10} />{" "}
-                            {m.context.location?.radiusKm ?? 5}km radius
+                            <Crosshair size={10} /> {t("sources.scenePin")}
                           </span>
                         )}
-                        {m.context.useWeb && (
+                        {m.context.useOsint && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase text-sky-700">
-                            <Globe size={10} /> Open Web
+                            <ScanSearch size={10} />{" "}
+                            {t("sources.osintLookup")}
+                          </span>
+                        )}
+                        {m.context.useCodebook && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase text-amber-700">
+                            <BookOpen size={10} /> {t("sources.legalCodebook")}
                           </span>
                         )}
                       </div>
                     )}
                   {m.role === "assistant" &&
                     m.sources &&
-                    (m.sources.location || m.sources.web) && (
+                    (m.sources.location ||
+                      m.sources.web ||
+                      m.sources.codebook) && (
                       <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-slate-200/60 pt-2">
                         <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-slate-400">
-                          Sources
+                          {t("chat.sources")}
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 text-white px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
-                          <Database size={10} /> KSP Database
+                          <Database size={10} /> {t("sources.crimeDatabase")}
                         </span>
                         {m.sources.location && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-800">
-                            <MapPin size={10} /> Location ·{" "}
-                            {m.sources.locationRadius ?? 5}km
+                            <Crosshair size={10} /> {t("sources.scenePin")}
                           </span>
                         )}
                         {m.sources.web && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 border border-sky-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-800">
-                            <Globe size={10} /> Open Web
+                            <ScanSearch size={10} /> {t("sources.osintLookup")}
+                          </span>
+                        )}
+                        {m.sources.codebook && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800">
+                            <BookOpen size={10} />{" "}
+                            {t("sources.legalCodebook")}
                           </span>
                         )}
                       </div>
@@ -869,7 +905,7 @@ export default function Home() {
                     className="group relative flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-left shadow-sm transition-all duration-200 hover:border-red-200 hover:bg-red-50/40 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 focus-visible:border-red-300 cursor-pointer animate-in fade-in slide-in-from-bottom-1"
                   >
                     {/* Left accent icon */}
-                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-colors duration-200 group-hover:bg-red-600 group-active:bg-red-700">
+                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white shadow-sm transition-colors duration-200 group-hover:bg-red-600 group-active:bg-red-700">
                       <ArrowUpRight size={14} strokeWidth={2.2} />
                     </span>
                     <span className="flex-1 text-[13.5px] font-medium leading-5 text-slate-800 group-hover:text-slate-900">
@@ -894,20 +930,25 @@ export default function Home() {
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4">
           <div className="relative">
             {/* Context chips row — appears inside the input shell when sources enabled */}
-            {(locationEnabled || webEnabled || attachedFiles.length > 0) && (
+            {(scenePinEnabled ||
+              osintEnabled ||
+              codebookEnabled ||
+              attachedFiles.length > 0) && (
               <div className="flex flex-wrap items-center gap-2 rounded-t-[28px] border border-b-0 border-slate-300 bg-slate-50/70 px-3 pt-2.5 pb-2 -mb-2 max-h-[92px] overflow-y-auto overscroll-contain [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
-                {locationEnabled && (
+                {scenePinEnabled && (
                   <div className="relative">
                     <button
-                      onClick={() => setShowLocationDetail((v) => !v)}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12.5px] font-medium leading-none text-emerald-800 shadow-sm hover:bg-emerald-100 transition cursor-pointer"
+                      onClick={() => setShowContextMenu(true)}
+                      title={t("sources.scenePinTitle")}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12.5px] font-medium leading-none text-ink shadow-sm hover:bg-surface-subtle transition cursor-pointer"
                     >
-                      <MapPin size={13} className="text-emerald-600 shrink-0" />
+                      <Crosshair size={13} className="shrink-0 text-success" />
                       <span>
-                        {locationCoords ? "Near me" : "My Location"} ·{" "}
-                        {locationRadius} km
+                        {sceneLat != null && sceneLng != null
+                          ? `${sceneLat.toFixed(4)}, ${sceneLng.toFixed(4)}`
+                          : t("sources.scenePinTapToDrop")}
                       </span>
-                      {locationLoading && (
+                      {sceneGpsLoading && (
                         <Loader2
                           size={12}
                           className="animate-spin text-emerald-600"
@@ -915,114 +956,41 @@ export default function Home() {
                       )}
                     </button>
                     <button
-                      onClick={handleToggleLocation}
+                      onClick={handleToggleScenePin}
                       className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-slate-700 text-white hover:bg-slate-900 shadow transition cursor-pointer"
-                      title="Remove location"
+                      title={t("sources.removeScenePin")}
                     >
                       <X size={9} strokeWidth={2.5} />
                     </button>
-                    {/* Location detail popover — radius + status */}
-                    {showLocationDetail && (
-                      <div
-                        ref={locationDetailRef}
-                        className="absolute bottom-full left-0 mb-2 w-[300px] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl z-20 animate-in fade-in slide-in-from-bottom-1"
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-slate-500">
-                            Location Context
-                          </p>
-                          <button
-                            onClick={() => setShowLocationDetail(false)}
-                            className="text-slate-400 hover:text-slate-600 cursor-pointer"
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                        <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 mb-3">
-                          <p className="text-[11px] font-medium tracking-wide uppercase text-slate-500 mb-1">
-                            Current location
-                          </p>
-                          {locationCoords ? (
-                            <p className="text-[13px] font-medium text-slate-800">
-                              {locationCoords.lat.toFixed(4)},{" "}
-                              {locationCoords.lng.toFixed(4)}
-                            </p>
-                          ) : locationLoading ? (
-                            <p className="text-[13px] text-slate-500 flex items-center gap-1.5">
-                              <Loader2 size={13} className="animate-spin" />{" "}
-                              Locating…
-                            </p>
-                          ) : locationError ? (
-                            <p className="text-[12px] text-amber-700">
-                              {locationError}
-                            </p>
-                          ) : (
-                            <p className="text-[13px] text-slate-500">
-                              Detecting location…
-                            </p>
-                          )}
-                          <p className="text-[11px] text-slate-400 mt-1">
-                            Bengaluru, Karnataka — GPS
-                          </p>
-                        </div>
-                        <p className="text-[11px] font-semibold tracking-wide uppercase text-slate-500 mb-2">
-                          Search radius
-                        </p>
-                        <div className="grid grid-cols-4 gap-1.5 mb-3">
-                          {[1, 5, 10, 25].map((r) => (
-                            <button
-                              key={r}
-                              onClick={() => setLocationRadius(r)}
-                              className={`rounded-full px-2 py-1.5 text-[13px] font-medium border transition cursor-pointer ${
-                                locationRadius === r
-                                  ? "bg-slate-900 text-white border-slate-900 shadow"
-                                  : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                              }`}
-                            >
-                              {r} km
-                            </button>
-                          ))}
-                        </div>
-                        <div className="space-y-1.5 text-[11.5px] text-slate-600">
-                          <label className="flex items-center gap-2">
-                            <span className="h-3 w-3 rounded-sm bg-emerald-500 border border-emerald-600 inline-block" />
-                            Crime incidents
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <span className="h-3 w-3 rounded-sm bg-emerald-500 border border-emerald-600 inline-block" />
-                            Crime clusters
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <span className="h-3 w-3 rounded-sm bg-emerald-500 border border-emerald-600 inline-block" />
-                            Police stations
-                          </label>
-                        </div>
-                        {locationError && (
-                          <button
-                            onClick={handleToggleLocation}
-                            className="mt-3 w-full rounded-xl bg-slate-900 text-white text-[13px] font-medium py-2 hover:bg-slate-800 transition cursor-pointer"
-                          >
-                            Retry location
-                          </button>
-                        )}
-                      </div>
-                    )}
                   </div>
                 )}
-                {webEnabled && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[12.5px] font-medium leading-none text-sky-800 shadow-sm">
-                    <Globe size={13} className="text-sky-600 shrink-0" />
-                    Open Web
+                {osintEnabled && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12.5px] font-medium leading-none text-ink shadow-sm">
+                    <ScanSearch size={13} className="shrink-0 text-primary" />
+                    {t("sources.osintLookup")}
                     <button
-                      onClick={handleToggleWeb}
-                      className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-sky-100 text-sky-700 hover:bg-sky-200 transition cursor-pointer"
-                      title="Remove Open Web"
+                      onClick={handleToggleOsint}
+                      className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition cursor-pointer"
+                      title={t("sources.removeOsint")}
                     >
                       <X size={9} strokeWidth={2.5} />
                     </button>
                   </span>
                 )}
-                {/* Files — collapsed by default to keep the input bar compact */}
+                {codebookEnabled && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12.5px] font-medium leading-none text-ink shadow-sm">
+                    <BookOpen size={13} className="shrink-0 text-amber-600" />
+                    {t("sources.legalCodebook")}
+                    <button
+                      onClick={handleToggleCodebook}
+                      className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition cursor-pointer"
+                      title={t("sources.removeCodebook")}
+                    >
+                      <X size={9} strokeWidth={2.5} />
+                    </button>
+                  </span>
+                )}
+                {/* Files — generic attachments, as before */}
                 {(showAllFiles ? attachedFiles : attachedFiles.slice(0, 2)).map(
                   (file, idx) => {
                     // when collapsed, idx maps to real index 0..1; when expanded, idx is real index
@@ -1030,13 +998,13 @@ export default function Home() {
                     return (
                       <span
                         key={`${file.name}-${realIdx}`}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[12.5px] font-medium leading-none text-violet-800 shadow-sm"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12.5px] font-medium leading-none text-ink shadow-sm"
                       >
-                        <File size={13} className="text-violet-600 shrink-0" />
+                        <File size={13} className="shrink-0 text-ink-muted" />
                         <span className="max-w-[140px] truncate">
                           {file.name}
                         </span>
-                        <span className="hidden sm:inline text-violet-500 font-normal">
+                        <span className="hidden sm:inline text-ink-muted font-normal">
                           {formatFileSize(file.size)}
                         </span>
                         <button
@@ -1045,8 +1013,8 @@ export default function Home() {
                               prev.filter((_, i) => i !== realIdx),
                             )
                           }
-                          className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition cursor-pointer"
-                          title="Remove file"
+                          className="ml-0.5 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition cursor-pointer"
+                          title={t("sources.removeFile")}
                         >
                           <X size={9} strokeWidth={2.5} />
                         </button>
@@ -1059,7 +1027,9 @@ export default function Home() {
                     onClick={() => setShowAllFiles(true)}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-medium leading-none text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition cursor-pointer"
                   >
-                    +{attachedFiles.length - 2} more
+                    {t("sources.moreFiles", {
+                      count: attachedFiles.length - 2,
+                    })}
                     <span className="text-slate-400 font-normal">
                       ·{" "}
                       {formatFileSize(
@@ -1073,7 +1043,7 @@ export default function Home() {
                     onClick={() => setShowAllFiles(false)}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition cursor-pointer"
                   >
-                    Show less
+                    {t("sources.showLess")}
                   </button>
                 )}
                 {attachedFiles.length > 1 && (
@@ -1084,7 +1054,7 @@ export default function Home() {
                     }}
                     className="ml-auto text-[11px] font-medium text-slate-500 hover:text-slate-700 underline underline-offset-2 decoration-slate-300 hover:decoration-slate-500 transition cursor-pointer"
                   >
-                    Clear all
+                    {t("sources.clearAll")}
                   </button>
                 )}
               </div>
@@ -1093,7 +1063,10 @@ export default function Home() {
             {/* Main input shell */}
             <div
               className={`flex items-end gap-1.5 border bg-white px-3 py-2 shadow-sm transition focus-within:border-slate-400 ${
-                locationEnabled || webEnabled || attachedFiles.length > 0
+                scenePinEnabled ||
+                osintEnabled ||
+                codebookEnabled ||
+                attachedFiles.length > 0
                   ? "rounded-b-[28px] border-slate-300"
                   : "rounded-[28px] border-slate-300"
               }`}
@@ -1104,14 +1077,15 @@ export default function Home() {
                   onClick={() => setShowContextMenu((v) => !v)}
                   className={`flex h-10 w-10 items-center justify-center rounded-full border transition cursor-pointer ${
                     showContextMenu ||
-                    locationEnabled ||
-                    webEnabled ||
+                    scenePinEnabled ||
+                    osintEnabled ||
+                    codebookEnabled ||
                     attachedFiles.length > 0
-                      ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                      ? "bg-slate-900/90 text-white border-blue-900/90 shadow-sm"
                       : "text-slate-600 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
                   }`}
-                  title="Add intelligence sources"
-                  aria-label="Add context"
+                  title={t("sources.addIntelligenceSources")}
+                  aria-label={t("sources.addContext")}
                 >
                   <Plus
                     size={16}
@@ -1120,161 +1094,72 @@ export default function Home() {
                 </button>
 
                 {showContextMenu && (
-                  <div className="absolute bottom-full left-0 mb-3 w-[320px] rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-1">
-                    <div className="px-4 pt-4 pb-2">
-                      <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-500">
-                        Add Intelligence Sources
+                  <div className="absolute bottom-full left-0 mb-2.5 w-[320px] max-h-[75vh] overflow-y-auto overscroll-contain rounded-popover border border-slate-200 bg-white shadow-xl z-20 animate-in fade-in slide-in-from-bottom-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
+                    <div className="border-b border-slate-100 bg-slate-50 px-3.5 py-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                        {t("sources.menuTitle")}
                       </p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        CrimeLens augments the KSP case database with contextual
-                        intelligence.
+                      <p className="mt-0.5 truncate text-[10.5px] text-slate-400">
+                        {t("sources.menuSubtitle")}
                       </p>
                     </div>
 
                     {/* Crime Database — always on */}
-                    <div className="mx-2 rounded-xl border border-slate-900 bg-slate-900 px-3 py-3 flex items-start gap-3">
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white border border-white/20">
-                        <Database size={15} />
+                    <div className="mx-2 mt-2 flex items-start gap-2.5 rounded-card bg-slate-900/90 px-2.5 py-2.5">
+                      <span className="mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white border border-white/20">
+                        <Database size={14} />
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold leading-none text-white">
-                          Crime Database
+                        <p className="text-[12.5px] font-semibold leading-none text-white">
+                          {t("sources.crimeDatabase")}
                         </p>
-                        <p className="text-[11.5px] leading-4 text-slate-300 mt-1">
-                          KSP case records — authoritative internal intelligence
+                        <p className="mt-1 text-[11px] leading-3.75 text-white/70">
+                          {t("sources.crimeDatabaseDesc")}
                         </p>
                       </div>
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
-                        <Check size={12} strokeWidth={3} />
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+                        <Check size={11} strokeWidth={3} />
                       </span>
                     </div>
 
-                    {/* My Location row */}
-                    <button
-                      onClick={handleToggleLocation}
-                      className={`mx-2 mt-2 flex w-[calc(100%-16px)] items-start gap-3 rounded-xl border px-3 py-3 text-left transition cursor-pointer ${
-                        locationEnabled
-                          ? "border-emerald-200 bg-emerald-50"
-                          : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
-                      }`}
-                    >
-                      <span
-                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
-                          locationEnabled
-                            ? "bg-emerald-600 text-white border-emerald-600"
-                            : "bg-slate-50 text-slate-600 border-slate-200"
-                        }`}
-                      >
-                        <MapPin size={15} />
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={`text-[13px] font-semibold leading-none ${locationEnabled ? "text-emerald-900" : "text-slate-800"}`}
-                        >
-                          Use My Location
-                        </p>
-                        <p className="text-[11.5px] leading-4 text-slate-500 mt-1">
-                          Find nearby incidents, suspects & clusters around me
-                        </p>
-                        {locationEnabled && locationCoords && (
-                          <p className="text-[11px] font-medium text-emerald-700 mt-1">
-                            ● {locationCoords.lat.toFixed(2)},{" "}
-                            {locationCoords.lng.toFixed(2)} · {locationRadius}{" "}
-                            km
-                          </p>
-                        )}
-                        {locationLoading && (
-                          <p className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1">
-                            <Loader2 size={11} className="animate-spin" />{" "}
-                            Locating…
-                          </p>
-                        )}
-                      </div>
-                      <span
-                        className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
-                          locationEnabled
-                            ? "bg-emerald-600 border-emerald-600 text-white"
-                            : "bg-white border-slate-300"
-                        }`}
-                      >
-                        {locationEnabled && <Check size={10} strokeWidth={3} />}
-                      </span>
-                    </button>
-
-                    {/* Open Web row */}
-                    <button
-                      onClick={handleToggleWeb}
-                      className={`mx-2 mt-2 flex w-[calc(100%-16px)] items-start gap-3 rounded-xl border px-3 py-3 text-left transition cursor-pointer ${
-                        webEnabled
-                          ? "border-sky-200 bg-sky-50"
-                          : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
-                      }`}
-                    >
-                      <span
-                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
-                          webEnabled
-                            ? "bg-sky-600 text-white border-sky-600"
-                            : "bg-slate-50 text-slate-600 border-slate-200"
-                        }`}
-                      >
-                        <Globe size={15} />
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={`text-[13px] font-semibold leading-none ${webEnabled ? "text-sky-900" : "text-slate-800"}`}
-                        >
-                          Open Web
-                        </p>
-                        <p className="text-[11.5px] leading-4 text-slate-500 mt-1">
-                          Search public sources beyond KSP records
-                        </p>
-                      </div>
-                      <span
-                        className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
-                          webEnabled
-                            ? "bg-sky-600 border-sky-600 text-white"
-                            : "bg-white border-slate-300"
-                        }`}
-                      >
-                        {webEnabled && <Check size={10} strokeWidth={3} />}
-                      </span>
-                    </button>
-
-                    {/* Documents & Evidence row — file intelligence source */}
+                    {/* Documents & Evidence row — generic file picker */}
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className={`mx-2 mt-2 mb-2 flex w-[calc(100%-16px)] items-start gap-3 rounded-xl border px-3 py-3 text-left transition cursor-pointer ${
+                      className={`mx-2 mt-1.5 flex w-[calc(100%-16px)] items-start gap-2.5 rounded-card border px-2.5 py-2.5 text-left transition cursor-pointer ${
                         attachedFiles.length > 0
-                          ? "border-violet-200 bg-violet-50"
-                          : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
+                          ? "border-slate-900/90 bg-slate-900/90"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                       }`}
                     >
                       <span
-                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
+                        className={`mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
                           attachedFiles.length > 0
-                            ? "bg-violet-600 text-white border-violet-600"
-                            : "bg-slate-50 text-slate-600 border-slate-200"
+                            ? "bg-white/10 text-white border-white/20"
+                            : "bg-slate-100 text-slate-600 border-slate-200"
                         }`}
                       >
-                        <Paperclip size={15} />
+                        <Paperclip size={14} />
                       </span>
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-[13px] font-semibold leading-none ${attachedFiles.length > 0 ? "text-violet-900" : "text-slate-800"}`}
+                          className={`text-[12.5px] font-semibold leading-none ${attachedFiles.length > 0 ? "text-white" : "text-slate-800"}`}
                         >
-                          Documents & Evidence
+                          {t("sources.documentsEvidence")}
                         </p>
-                        <p className="text-[11.5px] leading-4 text-slate-500 mt-1">
-                          Upload PDFs, images, or case files for analysis
+                        <p
+                          className={`mt-1 text-[11px] leading-[15px] ${attachedFiles.length > 0 ? "text-white/70" : "text-slate-500"}`}
+                        >
+                          {t("sources.documentsEvidenceDesc")}
                         </p>
                         {attachedFiles.length > 0 && (
-                          <p className="text-[11px] font-medium text-violet-700 mt-1">
-                            {attachedFiles.length} file
-                            {attachedFiles.length > 1 ? "s" : ""} attached ·{" "}
-                            {attachedFiles
-                              .map((f) => f.name)
-                              .join(", ")
-                              .slice(0, 48)}
+                          <p className="mt-1 text-[10.5px] font-medium text-white/80">
+                            {t("sources.filesAttached", {
+                              count: attachedFiles.length,
+                              names: attachedFiles
+                                .map((f) => f.name)
+                                .join(", ")
+                                .slice(0, 48),
+                            })}
                             {attachedFiles.map((f) => f.name).join(", ")
                               .length > 48
                               ? "…"
@@ -1283,32 +1168,206 @@ export default function Home() {
                         )}
                       </div>
                       <span
-                        className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                        className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition ${
                           attachedFiles.length > 0
-                            ? "bg-violet-600 border-violet-600 text-white"
-                            : "bg-white border-slate-300"
+                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            : "border-slate-300 text-transparent"
                         }`}
                       >
                         {attachedFiles.length > 0 && (
-                          <Check size={10} strokeWidth={3} />
+                          <Check size={9} strokeWidth={3} />
                         )}
                       </span>
                     </button>
 
-                    <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 flex items-center justify-between">
-                      <span className="text-[11px] text-slate-500">
-                        CrimeLens sources
+                    {/* Legal Codebook row */}
+                    <button
+                      onClick={handleToggleCodebook}
+                      className={`mx-2 mt-1.5 flex w-[calc(100%-16px)] items-start gap-2.5 rounded-card border px-2.5 py-2.5 text-left transition cursor-pointer ${
+                        codebookEnabled
+                          ? "border-slate-900/90 bg-slate-900/90"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span
+                        className={`mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
+                          codebookEnabled
+                            ? "bg-white/10 text-white border-white/20"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}
+                      >
+                        <BookOpen size={14} />
                       </span>
-                      <span className="text-[11px] font-medium text-slate-600">
-                        {
-                          [
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-[12.5px] font-semibold leading-none ${codebookEnabled ? "text-white" : "text-slate-800"}`}
+                        >
+                          {t("sources.legalCodebook")}
+                        </p>
+                        <p
+                          className={`mt-1 text-[11px] leading-[15px] ${codebookEnabled ? "text-white/70" : "text-slate-500"}`}
+                        >
+                          {t("sources.legalCodebookDesc")}
+                        </p>
+                      </div>
+                      <span
+                        className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                          codebookEnabled
+                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            : "border-slate-300 text-transparent"
+                        }`}
+                      >
+                        {codebookEnabled && <Check size={9} strokeWidth={3} />}
+                      </span>
+                    </button>
+
+                    {/* OSINT Lookup row — plain toggle, entities come from the query */}
+                    <button
+                      onClick={handleToggleOsint}
+                      className={`mx-2 mt-1.5 flex w-[calc(100%-16px)] items-start gap-2.5 rounded-card border px-2.5 py-2.5 text-left transition cursor-pointer ${
+                        osintEnabled
+                          ? "border-slate-900/90 bg-slate-900/90"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span
+                        className={`mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
+                          osintEnabled
+                            ? "bg-white/10 text-white border-white/20"
+                            : "bg-sky-50 text-sky-700 border-sky-200"
+                        }`}
+                      >
+                        <ScanSearch size={14} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-[12.5px] font-semibold leading-none ${osintEnabled ? "text-white" : "text-slate-800"}`}
+                        >
+                          {t("sources.osintLookup")}
+                        </p>
+                        <p
+                          className={`mt-1 text-[11px] leading-[15px] ${osintEnabled ? "text-white/70" : "text-slate-500"}`}
+                        >
+                          {t("sources.osintLookupDesc")}
+                        </p>
+                      </div>
+                      <span
+                        className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                          osintEnabled
+                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            : "border-slate-300 text-transparent"
+                        }`}
+                      >
+                        {osintEnabled && <Check size={9} strokeWidth={3} />}
+                      </span>
+                    </button>
+
+                    {/* Active Scene Pin section — toggle + inline map picker.
+                        The map lives in normal flow (never in an overflow-
+                        clipped popover) so it can't be hidden. */}
+                    <div
+                      className={`mx-2 mt-1.5 mb-2 rounded-card border px-2.5 py-2.5 transition ${
+                        scenePinEnabled
+                          ? "border-slate-900/90 bg-slate-900/90"
+                          : "border-slate-200 bg-white"
+                      }`}
+                    >
+                      <button
+                        onClick={handleToggleScenePin}
+                        className="flex w-full items-start gap-2.5 text-left cursor-pointer"
+                      >
+                        <span
+                          className={`mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
+                            scenePinEnabled
+                              ? "bg-white/10 text-white border-white/20"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          }`}
+                        >
+                          <Crosshair size={14} />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={`text-[12.5px] font-semibold leading-none ${scenePinEnabled ? "text-white" : "text-slate-800"}`}
+                          >
+                            {t("sources.scenePin")}
+                          </p>
+                          <p
+                            className={`mt-1 text-[11px] leading-[15px] ${scenePinEnabled ? "text-white/70" : "text-slate-500"}`}
+                          >
+                            {t("sources.scenePinDesc")}
+                          </p>
+                          {scenePinEnabled &&
+                            sceneLat != null &&
+                            sceneLng != null && (
+                              <p className="mt-1 text-[10.5px] font-medium text-white/80">
+                                ● {sceneLat.toFixed(4)}, {sceneLng.toFixed(4)}
+                              </p>
+                            )}
+                        </div>
+                        <span
+                          className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                            scenePinEnabled
+                              ? "bg-emerald-500 border-emerald-500 text-white"
+                              : "border-slate-300 text-transparent"
+                          }`}
+                        >
+                          {scenePinEnabled && (
+                            <Check size={9} strokeWidth={3} />
+                          )}
+                        </span>
+                      </button>
+                      {scenePinEnabled && (
+                        <div className="mt-2">
+                          <Suspense
+                            fallback={
+                              <div className="flex h-[190px] w-full items-center justify-center rounded-xl bg-white/10 text-[12px] text-white/60">
+                                {t("sources.mapLoading")}
+                              </div>
+                            }
+                          >
+                            <ScenePinMap
+                              lat={sceneLat}
+                              lng={sceneLng}
+                              onPick={handleScenePick}
+                            />
+                          </Suspense>
+                          <p className="mt-2 text-[11px] leading-4 text-white/70">
+                            {sceneLat != null && sceneLng != null
+                              ? `${sceneLat.toFixed(4)}, ${sceneLng.toFixed(4)} · ${t("sources.scenePinFixed")}`
+                              : t("sources.scenePinHint")}
+                          </p>
+                          {sceneError && (
+                            <p className="mt-1 text-[11px] text-amber-300">
+                              {sceneError}
+                            </p>
+                          )}
+                          <button
+                            onClick={handleSceneGpsDetect}
+                            disabled={sceneGpsLoading}
+                            className="mt-2 w-full rounded-xl border border-white/20 bg-white/10 text-white/90 text-[12.5px] font-medium py-1.5 hover:bg-white/20 transition cursor-pointer disabled:opacity-60"
+                          >
+                            {sceneGpsLoading
+                              ? t("sources.locating")
+                              : t("sources.detectViaGps")}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-3.5 py-2">
+                      <span className="text-[10.5px] text-slate-500">
+                        {t("sources.footer")}
+                      </span>
+                      <span className="text-[10.5px] font-medium text-slate-600">
+                        {t("sources.active", {
+                          count: [
                             true,
-                            locationEnabled,
-                            webEnabled,
+                            scenePinEnabled,
+                            osintEnabled,
+                            codebookEnabled,
                             attachedFiles.length > 0,
-                          ].filter(Boolean).length
-                        }{" "}
-                        active
+                          ].filter(Boolean).length,
+                        })}
                       </span>
                     </div>
                   </div>
@@ -1348,7 +1407,7 @@ export default function Home() {
               <button
                 disabled={loading || isStreaming}
                 onClick={() => sendMessage()}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-300 transition cursor-pointer"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white hover:bg-blue-900/90 disabled:bg-slate-300 transition cursor-pointer"
               >
                 <ArrowUp size={18} />
               </button>
@@ -1360,7 +1419,7 @@ export default function Home() {
             type="file"
             multiple
             className="hidden"
-            accept=".pdf,.xlsx,.xls,.doc,.docx,.png,.jpg,.jpeg,.gif"
+            accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.png,.jpg,.jpeg,.gif"
             onChange={handleFileSelect}
           />
 
@@ -1383,7 +1442,7 @@ export default function Home() {
         }}
         onDoubleClick={() => setChatWidth(CHAT_WIDTH_DEFAULT)}
         className="group relative w-1.5 shrink-0 cursor-col-resize touch-none select-none flex items-center justify-center"
-        title="Drag to resize — double-click to reset"
+        title={t("home.location.resizeHint")}
       >
         <div
           className={`absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors ${

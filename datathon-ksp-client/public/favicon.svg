@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="KSP CrimeLens favicon">
+  <!-- Karnataka red background -->
+  <rect width="32" height="32" rx="7" fill="#C00000"/>
+  <!-- Shield - lighter yellow -->
+  <path d="M16 5.2 L24.6 9 V16.4 C24.6 21.1 20.3 25.4 16 27.2 C11.7 25.4 7.4 21.1 7.4 16.4 V9 Z" fill="#FFE066"/>
+</svg>

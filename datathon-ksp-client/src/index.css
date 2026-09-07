@@ -1,19 +1,48 @@
 @import "tailwindcss";
 
-:root {
-  --ksp-ink: #1A1A2E;
-  --ksp-paper: #F4F6F9;
-  --ksp-critical: #D62828;
-  --ksp-high: #F97316;
-  --ksp-done: #2D6A4F;
-  --ksp-muted: #374151;
-  --ksp-rule: #DDE3EC;
-  --ksp-abscond: #FEF3C7;
+@theme {
+  --color-brand: #c00000;
+  --color-brand-deep: #9a0000;
+  --color-brand-soft: #fdf3f3;
+
+  --color-primary: #2563eb;
+  --color-primary-strong: #1d4ed8;
+  --color-primary-soft: #eef4ff;
+  --color-primary-line: #bfdbfe;
+
+  /* Operational navy — primary interaction color (replaces red as CTA) */
+  --color-navy: #17233c;
+  --color-navy-hover: #1e344d;
+  --color-navy-soft: #eef2f7;
+
+  --color-intel: #1e293b;
+  --color-intel-soft: #f1f5f9;
+
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f5f7fa;
+  --color-surface-raised: #f8fafc;
+
+  --color-ink: #0f172a;
+  --color-ink-secondary: #475569;
+  --color-ink-muted: #94a3b8;
+
+  --color-line: #e2e8f0;
+  --color-line-strong: #cbd5e1;
+
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-critical: #d92d20;
+
+  --radius-control: 0.5rem;
+  --radius-card: 0.625rem;
+  --radius-panel: 0.75rem;
+  --radius-popover: 0.75rem;
+  --radius-pill: 9999px;
+
+  --shadow-soft: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-card: 0 1px 4px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.ksp-queue, .ksp-workspace {
-  color: var(--ksp-ink);
-}
-.ksp-mono {
-  font-family: inherit;
+body {
+  background-color: var(--color-surface-subtle);
 }

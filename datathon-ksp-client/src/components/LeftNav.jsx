@@ -58,8 +58,8 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
 
   return (
     <div
-      className={`group relative flex items-center rounded-lg transition ${
-        isActive ? "bg-blue-900/90 text-white" : "hover:bg-slate-100"
+      className={`group relative flex items-center rounded-md transition ${
+        isActive ? "bg-slate-100 text-primary" : "hover:bg-slate-100"
       }`}
     >
       {editing ? (
@@ -91,15 +91,15 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
         <>
           <button
             onClick={() => onSelect(conv.conversation_id)}
-            className={`flex min-w-0 flex-1 items-start gap-2 px-3 py-2 text-left cursor-pointer ${
-              isActive ? "text-white" : "text-slate-700"
+            className={`flex min-w-0 flex-1 items-start gap-2 px-3 py-1.5 text-left cursor-pointer ${
+              isActive ? "text-primary" : "text-ink-secondary"
             }`}
           >
             <MessageSquare
               size={15}
-              className={`mt-0.5 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`}
+              className={`mt-0.5 shrink-0 ${isActive ? "text-primary-strong" : "text-ink-muted"}`}
             />
-            <span className="min-w-0 flex-1 truncate text-sm leading-5">
+            <span className="min-w-0 flex-1 truncate text-[13px] leading-5">
               {conv.title || conv.last_message || t("nav.untitled")}
             </span>
           </button>
@@ -110,11 +110,11 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
                 e.stopPropagation();
                 setMenuOpen((o) => !o);
               }}
-              className={`mr-1 rounded p-1 transition ${
+              className={`mr-1 rounded p-1 cursor-pointer transition ${
                 isActive
                   ? menuOpen
-                    ? "bg-white/20 text-white"
-                    : "opacity-0 group-hover:opacity-100 hover:bg-white/20 text-white"
+                    ? "bg-primary/15 text-primary"
+                    : "opacity-0 group-hover:opacity-100 hover:bg-primary/15 text-primary"
                   : menuOpen
                     ? "bg-slate-200"
                     : "opacity-0 group-hover:opacity-100 hover:bg-slate-200"
@@ -122,7 +122,7 @@ const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
             >
               <MoreHorizontal
                 size={14}
-                className={isActive ? "text-white" : "text-slate-500"}
+                className={isActive ? "text-primary-strong" : "text-slate-500"}
               />
             </button>
 
@@ -223,6 +223,11 @@ const LeftNav = ({
 
       <nav className="flex-1 overflow-y-auto">
         <div className="px-2 py-3 space-y-1">
+          {expanded && (
+            <p className="mb-1 px-4 pt-1 text-[10px] font-bold uppercase tracking-wide text-red-700">
+              {t("nav.workspace")}
+            </p>
+          )}
           {(translatedMenuItems || []).map((item) => {
             const Icon = item.icon;
             const targetPath = routeMap[item.title];
@@ -232,16 +237,22 @@ const LeftNav = ({
               <button
                 key={item.title}
                 onClick={() => navigate(targetPath)}
-                className={`w-full flex items-center rounded-lg transition-colors cursor-pointer ${
-                  expanded ? "gap-4 px-4 py-2" : "justify-center py-3"
-                } ${isActive ? "bg-blue-900/90 text-white" : "text-slate-700 hover:bg-slate-100"}`}
+                className={`w-full flex items-center rounded-md transition-colors cursor-pointer ${
+                  expanded ? "gap-3 px-4 py-2" : "justify-center py-3"
+                } ${
+                  isActive
+                    ? "bg-slate-100 text-primary"
+                    : "text-ink-secondary hover:bg-slate-100"
+                }`}
               >
                 <Icon
                   size={18}
-                  className={isActive ? "text-white" : "text-slate-500"}
+                  className={`${isActive ? "text-primary-strong" : "text-ink-muted"}`}
                 />
                 {expanded && (
-                  <span className="text-sm font-medium">{item.title}</span>
+                  <span className="text-[13px] font-semibold">
+                    {item.title}
+                  </span>
                 )}
               </button>
             );
@@ -251,12 +262,12 @@ const LeftNav = ({
         {expanded && (
           <>
             <div className="mx-3 my-2 border-t border-slate-200" />
-            <div className="px-3">
-              <p className="mb-2 pl-2 text-sm font-semibold tracking-wide text-red-700">
+            <div className="px-3 pb-6">
+              <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-wide text-red-700">
                 {t("nav.recentChats")}
               </p>
 
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {Array.isArray(conversations) &&
                   [...conversations]
                     .sort(

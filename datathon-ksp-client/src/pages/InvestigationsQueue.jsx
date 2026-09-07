@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -81,7 +81,9 @@ export default function InvestigationsQueue() {
     ).length;
     const diff = getChargesheetDiff(row);
     if (diff !== null && diff < 0)
-      return `Chargesheet ${Math.abs(diff)}d overdue`;
+      return t("investigations.queue.why.chargesheetOverdue", {
+        count: Math.abs(diff),
+      });
     if (mock.fsl.status === "overdue") {
       const days = Math.max(
         5,
@@ -89,17 +91,20 @@ export default function InvestigationsQueue() {
           (Date.now() - new Date(mock.fsl.sentDate).getTime()) / 864e5,
         ),
       );
-      return `FSL overdue ${days}d`;
+      return t("investigations.queue.why.fslOverdue", { count: days });
     }
-    if (abscond > 0) return `${abscond} accused absconding`;
-    if (mock.fsl.status === "pending") return "FSL pending";
+    if (abscond > 0)
+      return t("investigations.queue.why.absconding", { count: abscond });
+    if (mock.fsl.status === "pending")
+      return t("investigations.queue.why.fslPending");
     const cs = String(row.CaseStatusName || "").toLowerCase();
-    if (cs.includes("under investigation")) return "Investigation pending";
+    if (cs.includes("under investigation"))
+      return t("investigations.queue.why.investigationPending");
     return String(row.Gravity || "")
       .toLowerCase()
       .includes("heinous")
-      ? "Heinous — requires attention"
-      : "Review needed";
+      ? t("investigations.queue.why.heinousAttention")
+      : t("investigations.queue.why.reviewNeeded");
   };
 
   const getNextAction = (row) => {
@@ -111,13 +116,14 @@ export default function InvestigationsQueue() {
       (a) => a.arrestStatus === "Absconding",
     ).length;
     const diff = getChargesheetDiff(row);
-    if (diff !== null && diff < 0) return "File chargesheet";
-    if (abscond > 0) return "Locate accused";
+    if (diff !== null && diff < 0)
+      return t("investigations.queue.next.fileChargesheet");
+    if (abscond > 0) return t("investigations.queue.next.locateAccused");
     if (mock.fsl.status === "overdue" || mock.fsl.status === "pending")
-      return "Follow up FSL";
+      return t("investigations.queue.next.followFsl");
     if (mock.witnesses.filter((w) => !w.examined).length)
-      return "Examine witnesses";
-    return "Review case";
+      return t("investigations.queue.next.examineWitnesses");
+    return t("investigations.queue.next.reviewCase");
   };
 
   const getPriorityWeight = (priorityStr) => {
@@ -138,35 +144,36 @@ export default function InvestigationsQueue() {
         bg: "bg-[#D62828]",
         fg: "text-white",
         border: "border-[#D62828]",
-        label: "CRITICAL",
+        label: t("investigations.priority.critical"),
       };
     if (v.includes("high"))
       return {
         bg: "bg-[#F97316]",
         fg: "text-white",
         border: "border-[#F97316]",
-        label: "HIGH",
+        label: t("investigations.priority.high"),
       };
     if (v.includes("medium"))
       return {
         bg: "bg-white",
         fg: "text-[#374151]",
         border: "border-[#DDE3EC]",
-        label: "MEDIUM",
+        label: t("investigations.priority.medium"),
       };
     return {
       bg: "bg-white",
       fg: "text-[#6B7280]",
       border: "border-[#DDE3EC]",
-      label: "LOW",
+      label: t("investigations.priority.low"),
     };
   };
 
   // one-line intelligence per row — why it's critical, not just that it is
   // sourced from checklist + similarity data we already have (mock deterministically per caseId)
   // Never mid-word truncate: drop signals to fit ~38ch (≈260px at 11px) instead of truncating.
-  const getRowIntel = (row) => {
-    const mock = getMockExtensions(row.CaseMasterID, {
+  const getRowIntel = useCallback(
+    (row) => {
+      const mock = getMockExtensions(row.CaseMasterID, {
       accused: Array(Math.max(1, Number(row.AccusedCount) || 1)).fill({}),
       victims: Array(Number(row.VictimCount) || 0).fill({}),
     });
@@ -174,7 +181,8 @@ export default function InvestigationsQueue() {
     const abscond = mock.mockAccused.filter(
       (a) => a.arrestStatus === "Absconding",
     ).length;
-    if (abscond > 0) parts.push(`${abscond} accused absconding`);
+    if (abscond > 0)
+      parts.push(t("investigations.queue.why.absconding", { count: abscond }));
     if (mock.fsl.status === "overdue") {
       const days = Math.max(
         5,
@@ -182,21 +190,31 @@ export default function InvestigationsQueue() {
           (Date.now() - new Date(mock.fsl.sentDate).getTime()) / 864e5,
         ),
       );
-      parts.push(`FSL overdue ${days}d`);
+      parts.push(t("investigations.queue.why.fslOverdue", { count: days }));
     } else if (mock.fsl.status === "pending") {
-      parts.push("FSL pending");
+      parts.push(t("investigations.queue.why.fslPending"));
     }
     // deterministic similar FIRs (0-3) — stands in for similarity engine until queue API returns it
     let x = (Number(row.CaseMasterID) * 999) % 2 ** 32;
     x = (x * 1664525 + 1013904223) % 2 ** 32;
     const similar = Math.floor((x / 2 ** 32) * 4);
-    if (similar > 0) parts.push(`${similar} similar FIRs`);
+    if (similar > 0)
+      parts.push(t("investigations.queue.why.similarFirs", { count: similar }));
     if (parts.length === 0) {
       if (String(row.Gravity).toLowerCase().includes("heinous"))
-        parts.push(`Heinous · ${row.CrimeGroupName || ""}`.trim());
+        parts.push(
+          row.CrimeGroupName
+            ? t("investigations.queue.why.heinousGroup", {
+                group: row.CrimeGroupName,
+              })
+            : t("investigations.queue.why.heinousAttention"),
+        );
       else
         parts.push(
-          `${row.AccusedCount ?? 0} accused · ${row.CaseStatusName || "Open"}`,
+          t("investigations.queue.why.accusedStatus", {
+            count: row.AccusedCount ?? 0,
+            status: row.CaseStatusName || t("investigations.queue.statusOpen"),
+          }),
         );
     }
     // budget fit: prefer complete signals over truncated ones
@@ -205,7 +223,9 @@ export default function InvestigationsQueue() {
     if (join(3).length <= BUDGET) return join(3);
     if (join(2).length <= BUDGET) return join(2);
     return join(1);
-  };
+    },
+    [t],
+  );
 
   useEffect(() => {
     loadPage();
@@ -395,7 +415,7 @@ export default function InvestigationsQueue() {
           wb = getPriorityWeight(b.Priority);
         return sortAscending ? wa - wb : wb - wa;
       });
-  }, [cases, searchQuery, activeFilters, sortAscending, activeStat]);
+  }, [cases, searchQuery, activeFilters, sortAscending, activeStat, getRowIntel]);
 
   const handleFilterSelect = (filterKey, value) => {
     const paramMap = {
@@ -416,7 +436,7 @@ export default function InvestigationsQueue() {
     setSelected((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
       if (prev.length >= 4) {
-        toast.error("Select up to 4 cases for cross-case analysis");
+        toast.error(t("investigations.queue.selectUpTo4"));
         return prev;
       }
       return [...prev, id];
@@ -453,8 +473,7 @@ export default function InvestigationsQueue() {
 
   const greetingName =
     authOfficer?.full_name?.split(" ")[0] ||
-    authOfficer?.FirstName ||
-    "Officer";
+    authOfficer?.FirstName || t("investigations.queue.defaultOfficer");
   const criticalCount = useMemo(
     () =>
       cases.filter((r) => String(r.Priority).toLowerCase().includes("critical"))
@@ -495,22 +514,29 @@ export default function InvestigationsQueue() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280]">
-              Morning Briefing
+              {t("investigations.queue.morningBriefing")}
             </p>
             <h1 className="mt-0.5 text-[18px] font-bold tracking-tight text-[#1A1A2E]">
-              Good morning, {greetingName}
+              {t("investigations.queue.goodMorning", { name: greetingName })}
             </h1>
             <p className="mt-1 text-[13px] leading-tight text-[#374151]">
-              {filteredCases.length} investigations need attention
+              {t("investigations.queue.needAttention", {
+                count: filteredCases.length,
+              })}
               {criticalCount > 0 && (
                 <span className="ml-2 inline-flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D62828] inline-block" />
-                  {criticalCount} critical
+                  {t("investigations.queue.criticalSuffix", {
+                    count: criticalCount,
+                  })}
                 </span>
               )}
               {searchQuery || hasActiveFilters ? (
                 <span className="ml-2 text-[#6B7280]">
-                  · {filteredCases.length} of {cases.length} shown
+                  {t("investigations.queue.shownOf", {
+                    shown: filteredCases.length,
+                    total: cases.length,
+                  })}
                 </span>
               ) : null}
             </p>
@@ -545,7 +571,7 @@ export default function InvestigationsQueue() {
           {[
             {
               id: "overdue",
-              label: "OVERDUE CHARGESHEETS",
+              labelKey: "investigations.queue.statOverdue",
               value: statCounts.overdue,
               bg: "bg-red-400",
               valueColor: "text-white",
@@ -553,11 +579,11 @@ export default function InvestigationsQueue() {
               labelColor: "text-white/85",
               subColor: "text-white/80",
               badgeColor: "text-[#DC2626]",
-              sub: "past due date",
+              subKey: "investigations.queue.subPastDue",
             },
             {
               id: "absconding",
-              label: "ACCUSED ABSCONDING",
+              labelKey: "investigations.queue.statAbsconding",
               value: statCounts.abscondingTotal,
               bg: "bg-orange-300",
               valueColor: "text-slate-900",
@@ -565,11 +591,11 @@ export default function InvestigationsQueue() {
               labelColor: "text-slate-800",
               subColor: "text-slate-700",
               badgeColor: "text-slate-800",
-              sub: "at large",
+              subKey: "investigations.queue.subAtLarge",
             },
             {
               id: "chargesheet_pending",
-              label: "CHARGESHEET PENDING",
+              labelKey: "investigations.queue.statChargesheet",
               value: statCounts.chargesheetPending,
               bg: "bg-blue-900/90",
               valueColor: "text-white",
@@ -577,7 +603,7 @@ export default function InvestigationsQueue() {
               labelColor: "text-white/85",
               subColor: "text-white/80",
               badgeColor: "text-[#2563EB]",
-              sub: "not filed",
+              subKey: "investigations.queue.subNotFiled",
             },
           ].map((m) => {
             const active = activeStat === m.id;
@@ -588,14 +614,16 @@ export default function InvestigationsQueue() {
                 className={`relative flex flex-col items-start gap-1 rounded-sm px-4 py-3 text-left transition ${active ? "bg-[#1A1A2E] text-white" : `${m.bg} hover:brightness-[0.98]`}`}
                 title={
                   active
-                    ? "Click to clear filter"
-                    : `Filter to ${m.label.toLowerCase()}`
+                    ? t("investigations.queue.clearFilterTitle")
+                    : t("investigations.queue.filterTo", {
+                        label: t(m.labelKey).toLowerCase(),
+                      })
                 }
               >
                 <span
                   className={`text-[10px] font-bold uppercase tracking-[0.1em] ${active ? "text-white/70" : m.labelColor || "text-white/85"}`}
                 >
-                  {m.label}
+                  {t(m.labelKey)}
                 </span>
                 <span className="flex items-baseline gap-2">
                   <span
@@ -609,14 +637,14 @@ export default function InvestigationsQueue() {
                   <span
                     className={`text-[11px] font-medium ${active ? "text-white/60" : m.subColor || "text-white/80"}`}
                   >
-                    {m.sub}
+                    {t(m.subKey)}
                   </span>
                 </span>
                 {m.value > 0 && !active && (
                   <span
                     className={`absolute right-3 top-3 text-[10px] font-bold uppercase tracking-wide ${m.badgeColor || m.valueColor} border border-white bg-white px-1.5 py-0.5`}
                   >
-                    Action needed
+                    {t("investigations.queue.actionNeeded")}
                   </span>
                 )}
               </button>
@@ -677,7 +705,11 @@ export default function InvestigationsQueue() {
           onClick={() => setParam("sortDir", sortAscending ? "" : "asc")}
           className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#374151] hover:text-[#1A1A2E]"
         >
-          Priority {sortAscending ? "▲" : "▼"}
+          {t(
+            sortAscending
+              ? "investigations.queue.sortPriorityAsc"
+              : "investigations.queue.sortPriorityDesc",
+          )}
         </button>
       </div>
 
@@ -688,22 +720,22 @@ export default function InvestigationsQueue() {
             <tr>
               <th className="w-8 px-2 py-2"></th>
               <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
-                Priority
+                {t("investigations.queue.colPriority")}
               </th>
               <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
-                Case
+                {t("investigations.queue.colCase")}
               </th>
               <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
-                Why now
+                {t("investigations.queue.colWhy")}
               </th>
               <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
-                Next action
+                {t("investigations.queue.colNext")}
               </th>
               <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
-                Age
+                {t("investigations.queue.colAge")}
               </th>
               <th className="hidden lg:table-cell px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9CA3AF]">
-                Station · Head
+                {t("investigations.queue.colStationHead")}
               </th>
             </tr>
           </thead>
@@ -764,7 +796,7 @@ export default function InvestigationsQueue() {
                         {why}
                       </span>
                       <div className="text-[11px] text-[#6B7280]">
-                        {row.CaseStatusName || "Open"} · {row.Gravity || "—"}
+                        {row.CaseStatusName || t("investigations.queue.statusOpen")} · {row.Gravity || "—"}
                       </div>
                     </td>
                     <td className="px-3 py-2.5 align-top">
@@ -778,17 +810,22 @@ export default function InvestigationsQueue() {
                             const d = Math.floor(Number(row.AgeDays));
                             if (d > 30) {
                               const m = Math.floor(d / 30);
-                              return `${m}mo ${d % 30}d`;
+                              return t("investigations.queue.ageMonths", {
+                                months: m,
+                                days: d % 30,
+                              });
                             }
-                            return `${d}d`;
+                            return t("investigations.queue.ageDays", {
+                              count: d,
+                            });
                           })()
                         : "—"}
                     </td>
                     <td
                       className="hidden lg:table-cell px-3 py-2.5 align-top text-[11px] text-[#9CA3AF] max-w-[160px] truncate"
-                      title={`${row.AssignedOfficer || row.FirstName || "Unassigned"} — ${row.DistrictName || ""}`}
+                      title={`${row.AssignedOfficer || row.FirstName || t("investigations.queue.unassigned")} — ${row.DistrictName || ""}`}
                     >
-                      {row.AssignedOfficer || row.FirstName || "Unassigned"}
+                      {row.AssignedOfficer || row.FirstName || t("investigations.queue.unassigned")}
                       {row.DistrictName ? ` · ${row.DistrictName}` : ""}
                     </td>
                   </tr>
@@ -812,8 +849,12 @@ export default function InvestigationsQueue() {
         <div className="pointer-events-none fixed inset-x-4 bottom-2 z-40 flex justify-center sm:inset-x-auto sm:bottom-3 sm:right-3 sm:justify-end">
           <div className="pointer-events-auto flex items-center gap-2.5 rounded-full border border-[#1A1A2E] bg-[#1A1A2E] py-1.5 pl-3.5 pr-1.5 shadow-[0_8px_24px_rgba(26,26,46,0.28),0_2px_8px_rgba(0,0,0,0.12)]">
             <span className="whitespace-nowrap text-xs font-medium text-white/90">
-              {selected.length}{" "}
-              {selected.length === 1 ? "case selected" : "cases selected"}
+              {t(
+                selected.length === 1
+                  ? "investigations.queue.caseSelectedOne"
+                  : "investigations.queue.caseSelectedOther",
+                { count: selected.length },
+              )}
             </span>
             <span className="h-4 w-px bg-white/15" />
             <button
@@ -821,14 +862,14 @@ export default function InvestigationsQueue() {
               className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.06em] text-[#1A1A2E] shadow-sm transition hover:bg-[#F4F6F9]"
             >
               {selected.length === 1
-                ? "Chat about this case"
-                : "Cross-case analysis"}
+                ? t("investigations.queue.chatAbout")
+                : t("investigations.queue.crossCase")}
               <ArrowRight size={12} />
             </button>
             <button
               onClick={() => setSelected([])}
               className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white"
-              title="Clear selection"
+              title={t("investigations.queue.clearSelection")}
             >
               <X size={14} />
             </button>

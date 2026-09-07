@@ -30,27 +30,54 @@ export async function generateResponse(
   // can distinguish sources without changing the API contract.
   let enrichedQuery = userQuery;
   const ctxHints = [];
-  if (context.useLocation && context.location) {
-    const { lat, lng, radiusKm } = context.location;
-    ctxHints.push(
-      `[Location context: lat ${lat.toFixed(4)}, lng ${lng.toFixed(4)}, radius ${radiusKm}km]`,
-    );
-  } else if (context.useLocation) {
-    ctxHints.push(`[Location context: enabled, radius ${context.location?.radiusKm ?? 5}km]`);
+  // Active Scene Pin (maps to legacy location flags for backend compat)
+  if (context.useScenePin ?? context.useLocation) {
+    const loc = context.location;
+    if (loc && Number.isFinite(loc.lat) && Number.isFinite(loc.lng)) {
+      ctxHints.push(
+        `[Scene pin: lat ${loc.lat.toFixed(4)}, lng ${loc.lng.toFixed(4)}, radius ${loc.radiusKm ?? 0.5}km — crime history + POIs within radius]`,
+      );
+    } else {
+      ctxHints.push(
+        `[Scene pin: enabled, radius ${loc?.radiusKm ?? 0.5}km — no coords dropped yet]`,
+      );
+    }
   }
-  if (context.useWeb) ctxHints.push("[Open Web: include public sources]");
+  // Legal Codebook
+  if (context.useCodebook) {
+    ctxHints.push(
+      "[Legal Codebook: resolve IPC / BNS / NDPS / POCSO section — bailability, punishment, plain-language meaning]",
+    );
+  }
+  // OSINT Lookup (maps to legacy web flag for backend compat).
+  // Entities (name / vehicle / phone / location) are picked up dynamically
+  // from the user query — scoped to Karnataka/India news (last 2y),
+  // eCourts public records, and general web. No social-media scraping.
+  if (context.useOsint ?? context.useWeb) {
+    ctxHints.push(
+      "[OSINT Lookup: extract person / vehicle / phone / location entities from the query — search Karnataka/India news coverage (last 2 years: Deccan Herald, Prajavani, Vijaya Karnataka, TOI-KA, NDTV, The Hindu), eCourts public records, and general web]",
+    );
+  }
   // Crime Database is always the authoritative source
   if (ctxHints.length) enrichedQuery += `\n\n${ctxHints.join(" ")}`;
 
   formData.append("user_query", enrichedQuery);
   formData.append("language", language);
   if (conversationId) formData.append("conversation_id", conversationId);
-  // Forward raw context flags for future backend use
-  if (context.useLocation) formData.append("use_location", "true");
-  if (context.location?.lat) formData.append("location_lat", String(context.location.lat));
-  if (context.location?.lng) formData.append("location_lng", String(context.location.lng));
-  if (context.location?.radiusKm) formData.append("location_radius_km", String(context.location.radiusKm));
-  if (context.useWeb) formData.append("use_web", "true");
+  // Forward raw context flags (legacy + investigator-framed) for backend use
+  const locOn = context.useScenePin ?? context.useLocation;
+  const webOn = context.useOsint ?? context.useWeb;
+  if (locOn) formData.append("use_location", "true");
+  if (context.location?.lat != null)
+    formData.append("location_lat", String(context.location.lat));
+  if (context.location?.lng != null)
+    formData.append("location_lng", String(context.location.lng));
+  if (context.location?.radiusKm != null)
+    formData.append("location_radius_km", String(context.location.radiusKm));
+  if (webOn) formData.append("use_web", "true");
+  if (context.useCodebook) formData.append("use_codebook", "true");
+  if (context.useOsint) formData.append("use_osint", "true");
+  if (context.useScenePin) formData.append("use_scene_pin", "true");
   for (const file of files) {
     formData.append("files", file);
   }

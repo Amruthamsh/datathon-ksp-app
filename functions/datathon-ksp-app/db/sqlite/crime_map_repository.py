@@ -348,6 +348,37 @@ class CrimeMapRepository:
             }
 
     # ------------------------------------------------------------------
+    # Station coverage (police-station centroids for response-time rings)
+    # Unit has no lat/lng of its own, so the centroid is the AVG of its
+    # FIR coordinates — the operational jurisdiction footprint.
+    # ------------------------------------------------------------------
+    def get_station_coverage(self, date_from=None, date_to=None):
+        with get_connection() as conn:
+            sql = """
+                SELECT u.UnitName AS station,
+                       d.DistrictName AS district,
+                       AVG(cm.latitude) AS lat,
+                       AVG(cm.longitude) AS lng,
+                       COUNT(*) AS crime_count
+                FROM CaseMaster cm
+                JOIN Unit u ON cm.PoliceStationID = u.UnitID
+                JOIN District d ON u.DistrictID = d.DistrictID
+                WHERE cm.latitude IS NOT NULL
+                  AND cm.longitude IS NOT NULL
+            """
+            params = []
+            if date_from:
+                sql += " AND cm.CrimeRegisteredDate >= ?"
+                params.append(date_from)
+            if date_to:
+                sql += " AND cm.CrimeRegisteredDate <= ?"
+                params.append(date_to)
+            sql += " GROUP BY u.UnitID HAVING lat IS NOT NULL AND lng IS NOT NULL"
+            sql += " ORDER BY crime_count DESC"
+            rows = conn.execute(sql, params).fetchall()
+            return [dict(r) for r in rows]
+
+    # ------------------------------------------------------------------
     # Heatmap
     # ------------------------------------------------------------------
     def get_heatmap(self, district=None, station=None, crime_head=None,

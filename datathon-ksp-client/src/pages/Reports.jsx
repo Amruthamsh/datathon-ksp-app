@@ -108,7 +108,7 @@ const Reports = () => {
                 `Query failed for report ${report.report_id}:`,
                 err,
               );
-              return { ...report, data: [], error: "Failed to load data" };
+              return { ...report, data: [], error: t("reports.loadFailed") };
             }
           }),
         );
@@ -125,16 +125,16 @@ const Reports = () => {
     return () => {
       isMounted = false;
     };
-  }, [token]);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps -- t is stable; no refetch on language switch
 
   const handleDelete = async (reportId) => {
-    if (!window.confirm("Are you sure you want to delete this report?")) return;
+    if (!window.confirm(t("reports.deleteConfirm"))) return;
     try {
       await deleteReport(token, reportId);
       setReports((prev) => prev.filter((r) => r.report_id !== reportId));
     } catch (err) {
       console.error("Delete failed:", err);
-      alert("Failed to delete the report. Please try again.");
+      alert(t("reports.deleteFailed"));
     }
   };
 

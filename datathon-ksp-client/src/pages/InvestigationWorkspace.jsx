@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import {
   useParams,
   useNavigate,
@@ -12,25 +12,26 @@ import {
   Loader2,
   Search,
   X,
-  Bot,
   Trash2,
-  Send,
   ExternalLink,
   ArrowRight,
-  MapPin,
+  ArrowUpRight,
+  ArrowUp,
   Sparkles,
+  RefreshCw,
   Clock3,
-  Users,
-  FileClock,
-  CalendarDays,
+  ChevronRight,
   Siren,
   CheckCircle2,
-  ChevronDown,
+  Mic,
+  MicOff,
 } from "lucide-react";
+import useSpeechRecognition from "../hooks/useSpeechRecognition";
 import {
   getCaseDetails,
   getCaseIntel,
   getSimilarCases,
+  getCaseBrief,
 } from "../api/investigations";
 import { generateResponse } from "../api/chat";
 import { useAuth } from "../auth/AuthContext";
@@ -197,17 +198,19 @@ export default function InvestigationWorkspace() {
     const abscond = mock.mockAccused.filter(
       (a) => a.arrestStatus === "Absconding",
     ).length;
-    if (abscond) parts.push(`${abscond} absconding`);
+    if (abscond) parts.push(t("workspace.health.absconding", { count: abscond }));
     if (mock.fsl.status === "overdue" || mock.fsl.status === "pending")
-      parts.push(`FSL ${mock.fsl.status}`);
-    const onTrack = chargesheet?.diff > 14 ? "on track" : "at risk";
+      parts.push(t("workspace.health.fslStatus", { status: mock.fsl.status }));
+    const onTrack = chargesheet?.diff > 14 ? t("workspace.health.chargesheetOnTrack") : t("workspace.health.chargesheetAtRisk");
     parts.push(`chargesheet ${onTrack}`);
     if (mock.witnesses.filter((w) => !w.examined).length)
       parts.push(
-        `${mock.witnesses.filter((w) => !w.examined).length} witnesses pending`,
+        t("workspace.health.witnessesPending", {
+          count: mock.witnesses.filter((w) => !w.examined).length,
+        }),
       );
     return parts.join(" · ");
-  }, [caseData, mock, chargesheet]);
+  }, [caseData, mock, chargesheet, t]);
   const handleChatSend = async (override) => {
     const qRaw = typeof override === "string" ? override : chatInput;
     if (!qRaw.trim() || chatSending) return;
@@ -234,7 +237,7 @@ export default function InvestigationWorkspace() {
         [],
       );
       const answer =
-        res?.data?.answer || res?.answer || res?.response || "No response.";
+        res?.data?.answer || res?.answer || res?.response || t("workspace.copilot.noResponse");
       setChatMessages((prev) => [
         ...prev,
         {
@@ -248,8 +251,7 @@ export default function InvestigationWorkspace() {
         ...prev,
         {
           role: "assistant",
-          content:
-            "Unable to get response. Check Investigation Checklist and People table for next steps.",
+          content: t("workspace.copilot.errorFallback"),
           at: new Date().toISOString(),
         },
       ]);
@@ -259,61 +261,61 @@ export default function InvestigationWorkspace() {
   };
   const copilotPlaceholder = useMemo(() => {
     const map = {
-      overview: "Ask about this case — evidence gaps, next steps, similar MO",
-      people: "Ask about these people — prior cases, associates, whereabouts",
-      evidence: "Ask about evidence — FSL, seizure, legal sections",
-      timeline: "Ask about this timeline — why stalled, what's pending",
-      intel: "Ask about these connections — patterns, networks, similar cases",
+      overview: t("workspace.copilot.placeholders.overview"),
+      people: t("workspace.copilot.placeholders.people"),
+      evidence: t("workspace.copilot.placeholders.evidence"),
+      timeline: t("workspace.copilot.placeholders.timeline"),
+      intel: t("workspace.copilot.placeholders.intel"),
     };
-    return map[activeTab] || "Ask CrimeLens about this case…";
-  }, [activeTab]);
+    return map[activeTab] || t("workspace.copilot.placeholders.default");
+  }, [activeTab, t]);
   const starterPrompts = useMemo(() => {
     const base = {
       overview: [
-        "Why is this case critical?",
-        "What should I do next?",
-        "Summarize this investigation",
+        t("workspace.copilot.prompts.overview0"),
+        t("workspace.copilot.prompts.overview1"),
+        t("workspace.copilot.prompts.overview2"),
       ],
       people: [
-        "What other cases involve this accused?",
-        "Who are their known associates?",
-        "Where have they appeared?",
+        t("workspace.copilot.prompts.people0"),
+        t("workspace.copilot.prompts.people1"),
+        t("workspace.copilot.prompts.people2"),
       ],
       evidence: [
-        "What evidence is missing?",
-        "What sections apply?",
-        "Is FSL blocking chargesheet?",
+        t("workspace.copilot.prompts.evidence0"),
+        t("workspace.copilot.prompts.evidence1"),
+        t("workspace.copilot.prompts.evidence2"),
       ],
       timeline: [
-        "Why has this investigation stalled?",
-        "What's happened so far?",
-        "What is still pending?",
+        t("workspace.copilot.prompts.timeline0"),
+        t("workspace.copilot.prompts.timeline1"),
+        t("workspace.copilot.prompts.timeline2"),
       ],
       intel: [
-        "Find similar cases",
-        "Is this part of a larger pattern?",
-        "Show shared accused links",
+        t("workspace.copilot.prompts.intel0"),
+        t("workspace.copilot.prompts.intel1"),
+        t("workspace.copilot.prompts.intel2"),
       ],
     };
     return base[activeTab] || base.overview;
-  }, [activeTab]);
+  }, [activeTab, t]);
 
   if (loading)
     return (
-      <div className="ksp-workspace flex h-full items-center justify-center bg-[#F4F6F9]">
-        <Loader2 className="animate-spin text-[#6B7280]" size={22} />
-        <span className="ml-2 text-sm text-[#374151]">Loading case…</span>
+      <div className="ksp-workspace flex h-full items-center justify-center bg-slate-50">
+        <Loader2 className="animate-spin text-slate-500" size={22} />
+        <span className="ml-2 text-sm text-slate-700">{t("workspace.loading")}</span>
       </div>
     );
   if (!caseData)
     return (
-      <div className="ksp-workspace p-8 text-sm text-[#374151]">
-        Case not found.{" "}
+      <div className="ksp-workspace p-8 text-sm text-slate-700">
+        {t("workspace.notFound.title")}{" "}
         <button
           onClick={() => navigate("/investigations")}
           className="underline"
         >
-          Back to queue
+          {t("workspace.notFound.backToQueue")}
         </button>
       </div>
     );
@@ -323,87 +325,63 @@ export default function InvestigationWorkspace() {
     String(text || "")
       .toLowerCase()
       .includes(scopeQuery.toLowerCase());
+  const setTab = (id) => {
+    const sp = new URLSearchParams(location.search);
+    sp.set("tab", id);
+    setSearchParams(sp, { replace: true });
+  };
+  const priority =
+    chargesheet?.tone === "overdue" ||
+    (mock?.mockAccused || []).some((a) => a.arrestStatus === "Absconding") ||
+    String(caseData.Gravity).toLowerCase().includes("heinous")
+      ? "critical"
+      : chargesheet?.tone === "critical" ||
+          chargesheet?.tone === "warning" ||
+          mock?.fsl.status === "overdue" ||
+          (mock?.witnesses || []).some((w) => !w.examined)
+        ? "high"
+        : "normal";
+
+  const TABS = [
+    ["overview", t("workspace.tabs.caseBrief")],
+    ["people", t("workspace.tabs.people")],
+    ["evidence", t("workspace.tabs.evidence")],
+    ["timeline", t("workspace.tabs.timeline")],
+    ["intel", t("workspace.tabs.intel")],
+  ];
 
   return (
-    <div className="ksp-workspace flex h-full flex-col overflow-hidden bg-[#F4F6F9] relative">
-      {/* Header — Case Brief identity */}
-      <div className="shrink-0 border-b border-[#DDE3EC] bg-white">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-6 pt-3 pb-2.5">
-          <h1 className="ksp-mono text-[19px] font-black tracking-tight text-[#1A1A2E]">
-            {caseData.CrimeNo || `#${caseData.CaseMasterID}`}
-          </h1>
-          <span className="border border-blue-900/90 bg-blue-900/90 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
-            {caseData.CrimeGroupName || caseData.CrimeHeadName || "—"}
-          </span>
-          <span
-            className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] ${String(caseData.Gravity).toLowerCase().includes("heinous") ? "bg-[#D62828] text-white shadow-sm" : "border border-[#DDE3EC] bg-white text-[#374151]"}`}
+    <div className="ksp-workspace flex h-full overflow-hidden bg-slate-50 relative">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* Sub-header — breadcrumb + identity, tags moved to Key Facts */}
+      <div className="shrink-0 border-b border-slate-200 bg-white">
+        <div className="flex items-center gap-2 px-4 pt-2.5 sm:px-5">
+          <button
+            onClick={() => navigate("/investigations")}
+            className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
           >
-            {caseData.Gravity || "—"}
+            {t("nav.investigations")}
+          </button>
+          <ChevronRight size={12} className="shrink-0 text-slate-400" />
+          <span className="ksp-mono truncate text-xs font-semibold text-slate-900">
+            {caseData.CrimeNo || `#${caseData.CaseMasterID}`}
           </span>
-          {chargesheet?.tone === "overdue" && (
-            <span className="bg-[#D62828] px-2 py-0.5 text-[11px] font-black uppercase tracking-[0.08em] text-white">
-              Chargesheet {Math.abs(chargesheet.diff)}d late
-            </span>
-          )}
-          {chargesheet?.tone === "critical" && (
-            <span className="bg-[#C85A00] px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
-              Due in {chargesheet.diff}d
-            </span>
-          )}
-          <span className="hidden h-4 w-px bg-[#E5E7EB] sm:block" />
-          <span className="text-xs text-[#4B5563]">
-            <span className="font-bold text-[#1A1A2E]">
-              IO {caseData.FirstName || "—"}
-            </span>{" "}
-            <span className="text-[#9CA3AF]">·</span>{" "}
-            {caseData.CaseStatusName || "Open"}
-          </span>
-          <span className="ml-auto hidden items-center gap-1.5 text-xs font-medium text-[#4B5563] sm:flex">
-            <CalendarDays size={13} className="text-[#6B7280]" />
-            {formatDate(caseData.CrimeRegisteredDate)}{" "}
-            <span className="text-[#9CA3AF]">·</span>{" "}
-            {caseData.DistrictName || ""}
-            {caseData.DistrictName && caseData.UnitName ? " · " : ""}
-            {caseData.UnitName || "—"}
-          </span>
-        </div>
-        <div className="flex gap-1 border-t border-[#DDE3EC] bg-white px-6 overflow-x-auto">
-          {[
-            ["overview", "Case Brief"],
-            ["people", "People"],
-            ["evidence", "Evidence"],
-            ["timeline", "Timeline"],
-            ["intel", "Intelligence"],
-          ].map(([id, label]) => (
-            <button
-              key={id}
-              onClick={() => {
-                const sp = new URLSearchParams(location.search);
-                sp.set("tab", id);
-                setSearchParams(sp, { replace: true });
-              }}
-              aria-current={activeTab === id ? "page" : undefined}
-              className={`whitespace-nowrap border-b-[3px] px-3 py-2.5 text-xs font-bold uppercase tracking-[0.08em] transition-colors ${activeTab === id ? "border-[#D62828] text-[#1A1A2E]" : "border-transparent text-[#6B7280] hover:text-blue-900"}`}
-            >
-              {label}
-            </button>
-          ))}
-          <div className="ml-auto hidden sm:flex items-center gap-2 py-1">
+          <div className="ml-auto hidden sm:block">
             <div className="relative">
               <Search
-                size={12}
-                className="absolute left-2 top-1/2 -translate-y-1/2 text-[#9CA3AF]"
+                size={13}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
               />
               <input
                 value={scopeQuery}
                 onChange={(e) => setScopeQuery(e.target.value)}
-                placeholder="Search within this case…"
-                className="w-56 border border-[#DDE3EC] bg-white py-1 pl-7 pr-7 text-xs placeholder:text-[#9CA3AF] focus:border-[#1A1A2E] focus:outline-none"
+                placeholder={t("workspace.header.searchPlaceholder")}
+                className="w-52 rounded-md border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-7 text-xs placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:outline-none lg:w-64"
               />
               {scopeQuery && (
                 <button
                   onClick={() => setScopeQuery("")}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   <X size={12} />
                 </button>
@@ -411,18 +389,57 @@ export default function InvestigationWorkspace() {
             </div>
           </div>
         </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pb-2 pt-1 sm:px-5">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            {t("workspace.header.crimeNo")} {caseData.CrimeNo || `#${caseData.CaseMasterID}`}
+          </h1>
+          {priority === "critical" ? (
+            <span className="rounded-sm border border-[#D62828] bg-[#D62828] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+              {t("workspace.header.priorityCritical", "Critical")}
+            </span>
+          ) : priority === "high" ? (
+            <span className="rounded-sm border border-[#F97316] bg-[#F97316] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+              {t("workspace.header.priorityHigh", "High")}
+            </span>
+          ) : (
+            <span className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-600">
+              {caseData.CaseStatusName || t("workspace.header.open")}
+            </span>
+          )}
+          <span className="w-full text-xs text-slate-500 sm:w-auto">
+            {t("workspace.header.io", { name: caseData.FirstName || "—" })}
+            {" · "}
+            {caseData.CaseStatusName || t("workspace.header.open")}
+            {" · "}
+            {t("workspace.side.registered")} {formatDate(caseData.CrimeRegisteredDate)}
+            {(caseData.DistrictName || caseData.UnitName) &&
+              ` · ${[caseData.DistrictName, caseData.UnitName].filter(Boolean).join(" · ")}`}
+          </span>
+        </div>
+        <div className="flex gap-1 overflow-x-auto px-4 sm:px-5">
+          {TABS.map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              aria-current={activeTab === id ? "page" : undefined}
+              className={`whitespace-nowrap border-b-2 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${activeTab === id ? "border-red-700 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-900"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-[1160px] px-6 py-6 pb-20">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div ref={scrollRef} className="min-w-0 flex-1 overflow-auto">
+          <div className="w-full px-4 py-4 sm:px-5 xl:px-6 2xl:px-8">
           {showDySPGate ? (
-            <div className="border border-[#DDE3EC] bg-white p-8 text-center">
-              <p className="text-sm font-semibold text-[#1A1A2E]">
-                No escalation for this case
+            <div className="border border-slate-200 bg-white p-8 text-center">
+              <p className="text-sm font-semibold text-slate-900">
+                {t("workspace.gate.noEscalation")}
               </p>
-              <p className="mt-1 text-xs text-[#6B7280]">
-                Heinous / high-profile / deadline breach — none detected.
-                Routine supervision not required.
+              <p className="mt-1 text-xs text-slate-500">
+                {t("workspace.gate.sub")}
               </p>
               <button
                 onClick={() => {
@@ -430,9 +447,9 @@ export default function InvestigationWorkspace() {
                   sp.set("tab", "overview");
                   setSearchParams(sp, { replace: true });
                 }}
-                className="mt-4 border border-[#1A1A2E] bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-[#1A1A2E] hover:bg-[#F4F6F9]"
+                className="mt-4 border border-slate-900 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-900 hover:bg-slate-50"
               >
-                View full file anyway
+                {t("workspace.gate.viewFull")}
               </button>
             </div>
           ) : (
@@ -444,7 +461,6 @@ export default function InvestigationWorkspace() {
                   mock={mock}
                   chargesheet={chargesheet}
                   actSectionDetails={actSectionDetails}
-                  similarCases={similarCases}
                   rank={rank}
                   inspectorHealth={inspectorHealth}
                   matchesScope={matchesScope}
@@ -454,11 +470,6 @@ export default function InvestigationWorkspace() {
                     setSearchParams(sp, { replace: true });
                   }}
                   onAsk={(q) => handleChatSend(q)}
-                  onOpenIntel={() => {
-                    const sp = new URLSearchParams(location.search);
-                    sp.set("tab", "intel");
-                    setSearchParams(sp, { replace: true });
-                  }}
                 />
               )}
               {activeTab === "people" && (
@@ -498,53 +509,59 @@ export default function InvestigationWorkspace() {
               )}
             </>
           )}
+          </div>
         </div>
+
+        {/* Right column (35%) — Case Copilot on top, Live Activity pinned below */}
+        <aside className="hidden w-[340px] shrink-0 flex-col border-l border-slate-200 bg-white lg:flex xl:w-[380px] 2xl:w-[400px]">
+          <CopilotPanel
+            caseData={caseData}
+            caseIntel={caseIntel}
+            similarCases={similarCases}
+            mock={mock}
+            chatMessages={chatMessages}
+            chatSending={chatSending}
+            chatInput={chatInput}
+            setChatInput={setChatInput}
+            onSend={handleChatSend}
+            onClear={() => {
+              setChatMessages([]);
+              localStorage.removeItem(chatKey);
+            }}
+            placeholder={copilotPlaceholder}
+            starterPrompts={starterPrompts}
+            variant="docked"
+          />
+        </aside>
       </div>
 
-      {/* Persistent copilot bar — floating compact pill (not full-width dock) */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-2 z-20 flex justify-center px-4 sm:bottom-3">
-        <div className="relative w-full max-w-[480px]">
-          <button
-            onClick={() => setCopilotOpen(true)}
-            className="pointer-events-auto group flex w-full cursor-pointer items-center gap-2.5 rounded-full border border-[#DDE3EC] bg-white px-3 py-2 text-left shadow-[0_8px_24px_rgba(26,26,46,0.16),0_2px_8px_rgba(26,26,46,0.08)] transition hover:border-[#1A1A2E] hover:shadow-[0_12px_32px_rgba(26,26,46,0.2)] sm:gap-3 sm:px-4 sm:py-2.5"
-          >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white">
-              <Sparkles size={12} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-xs font-semibold leading-none text-[#1A1A2E]">Ask CrimeLens about this case</span>
-              <span className="hidden truncate text-[11px] leading-tight text-[#6B7280] sm:block">{copilotPlaceholder}</span>
-              <span className="block truncate text-[11px] leading-tight text-[#6B7280] sm:hidden">Tap to ask — evidence, next steps, MO</span>
-            </span>
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F4F6F9] text-[#1A1A2E] transition group-hover:bg-[#1A1A2E] group-hover:text-white">
-              <ArrowRight size={14} />
-            </span>
-          </button>
+      </div>
+
+      {/* Mobile copilot entry — compact FAB, no text-covering pill */}
+      <div className="absolute bottom-4 right-4 z-20 lg:hidden">
+        <button
+          onClick={() => setCopilotOpen(true)}
+          className="relative flex h-12 w-12 items-center justify-center rounded-full bg-blue-900/90 text-white shadow-[0_8px_24px_rgba(30,58,138,0.35)] transition hover:bg-blue-900"
+          aria-label={t("workspace.copilot.askCrimeLens")}
+        >
+          <Sparkles size={18} />
           {chatMessages.length > 0 && (
-            <span className="pointer-events-none absolute -right-2 -top-2 hidden h-5 min-w-[20px] items-center justify-center rounded-full bg-[#D62828] px-1.5 text-[10px] font-bold leading-none text-white shadow sm:flex">
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold leading-none text-white shadow">
               {chatMessages.length}
             </span>
           )}
-        </div>
+        </button>
       </div>
 
-      {/* Copilot Drawer */}
+      {/* Copilot drawer — mobile / tablet only (desktop uses docked panel) */}
       {copilotOpen && (
-        <div className="absolute inset-0 z-30 flex justify-end">
+        <div className="absolute inset-0 z-30 flex justify-end lg:hidden">
           <div
-            className="absolute inset-0 bg-[#1A1A2E]/20 backdrop-blur-[1px]"
+            className="absolute inset-0 bg-slate-900/20 backdrop-blur-[1px]"
             onClick={() => setCopilotOpen(false)}
           />
-          <div className="relative flex h-full w-full max-w-[480px] flex-col border-l border-[#DDE3EC] bg-white shadow-2xl animate-[slideIn_0.2s_ease]">
-            <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#1A1A2E]">
-                  Case Copilot
-                </p>
-                <p className="ksp-mono text-[11px] text-[#6B7280]">
-                  {caseData.CrimeNo}
-                </p>
-              </div>
+          <div className="relative flex h-full w-full max-w-[480px] flex-col border-l border-slate-200 bg-white shadow-2xl animate-[slideIn_0.2s_ease]">
+            <div className="flex items-center justify-end border-b border-slate-200 bg-white px-4 py-2">
               <button
                 onClick={() => setCopilotOpen(false)}
                 className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition cursor-pointer"
@@ -552,130 +569,25 @@ export default function InvestigationWorkspace() {
                 <X size={14} />
               </button>
             </div>
-            {chatMessages.length === 0 && (
-              <div className="px-4 py-4 border-b border-slate-200 bg-white">
-                <p className="text-xs font-semibold text-slate-800 mb-2.5">
-                  What can I help investigate?
-                </p>
-                <div className="flex flex-col gap-2">
-                  {starterPrompts.map((q, idx) => (
-                    <button
-                      key={q}
-                      onClick={() => handleChatSend(q)}
-                      style={{ animationDelay: `${idx * 60}ms` }}
-                      className="group flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-[13.5px] font-medium leading-5 text-slate-800 shadow-sm transition-all hover:border-red-200 hover:bg-red-50/40 hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
-                    >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white shadow-sm transition-colors group-hover:bg-red-600">
-                        <ArrowRight size={12} />
-                      </span>
-                      <span className="flex-1">{q}</span>
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-3 text-[10px] leading-relaxed text-slate-400">
-                  Context: {caseData.CrimeGroupName} ·{" "}
-                  {caseIntel?.accused?.length || 0} accused ·{" "}
-                  {similarCases.length} related · {mock?.fsl.status} FSL
-                </p>
-              </div>
-            )}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-white">
-              {chatMessages.length === 0 && (
-                <p className="text-[13px] leading-6 text-slate-500">
-                  Ask about evidence gaps, next steps, similar MO, or trace the
-                  accused. CrimeLens has the full case graph — timeline, people,
-                  evidence, and {similarCases.length} related FIRs.
-                </p>
-              )}
-              {chatMessages.map((m, i) =>
-                m.role === "user" ? (
-                  <div key={i} className="flex justify-end">
-                    <div className="max-w-[85%] rounded-2xl bg-red-50 px-4 py-2.5 text-[14px] leading-6 text-slate-900 shadow-sm">
-                      {m.content}
-                    </div>
-                  </div>
-                ) : (
-                  <div key={i} className="flex justify-start">
-                    <div className="max-w-[90%] rounded-2xl bg-slate-100 px-4 py-2.5 text-[14px] leading-6 text-slate-800 shadow-sm">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          p: ({ children }) => (
-                            <p className="mb-1.5 leading-6 last:mb-0">
-                              {children}
-                            </p>
-                          ),
-                          strong: ({ children }) => (
-                            <strong className="font-semibold text-slate-900">
-                              {children}
-                            </strong>
-                          ),
-                          ul: ({ children }) => (
-                            <ul className="list-disc pl-6 mb-1.5 space-y-0.5">
-                              {children}
-                            </ul>
-                          ),
-                          ol: ({ children }) => (
-                            <ol className="list-decimal pl-6 mb-1.5 space-y-0.5">
-                              {children}
-                            </ol>
-                          ),
-                          li: ({ children }) => (
-                            <li className="leading-6">{children}</li>
-                          ),
-                        }}
-                      >
-                        {m.content}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                ),
-              )}
-              {chatSending && (
-                <div className="flex justify-start">
-                  <div className="rounded-2xl bg-slate-100 px-4 py-3 shadow-sm">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" />
-                      <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: ".15s" }} />
-                      <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: ".3s" }} />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="sticky bottom-0 border-t border-slate-200 bg-white px-4 py-4">
-              <div className="flex items-end gap-2 rounded-[28px] border border-slate-300 bg-white px-3 py-2 shadow-sm focus-within:border-slate-400 transition">
-                <input
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleChatSend()}
-                  placeholder={copilotPlaceholder}
-                  className="flex-1 bg-transparent px-2 py-2 text-sm placeholder:text-slate-400 focus:outline-none"
-                />
-                <button
-                  onClick={() => handleChatSend()}
-                  disabled={chatSending || !chatInput.trim()}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-white shadow-sm transition hover:bg-black disabled:opacity-40 cursor-pointer"
-                >
-                  <Send size={14} />
-                </button>
-              </div>
-              <div className="mt-2 flex items-center justify-between px-1">
-                <span className="text-[10px] text-slate-400">
-                  Auditable — answers reference case facts, timeline & intel
-                </span>
-                {chatMessages.length > 0 && (
-                  <button
-                    onClick={() => {
-                      setChatMessages([]);
-                      localStorage.removeItem(chatKey);
-                    }}
-                    className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-[#D62828] transition cursor-pointer"
-                  >
-                    <Trash2 size={11} /> Clear
-                  </button>
-                )}
-              </div>
+            <div className="flex min-h-0 flex-1 flex-col">
+              <CopilotPanel
+                caseData={caseData}
+                caseIntel={caseIntel}
+                similarCases={similarCases}
+                mock={mock}
+                chatMessages={chatMessages}
+                chatSending={chatSending}
+                chatInput={chatInput}
+                setChatInput={setChatInput}
+                onSend={handleChatSend}
+                onClear={() => {
+                  setChatMessages([]);
+                  localStorage.removeItem(chatKey);
+                }}
+                placeholder={copilotPlaceholder}
+                starterPrompts={starterPrompts}
+                variant="drawer"
+              />
             </div>
           </div>
         </div>
@@ -684,17 +596,194 @@ export default function InvestigationWorkspace() {
   );
 }
 
+function CopilotPanel({
+  caseData,
+  caseIntel,
+  similarCases,
+  mock,
+  chatMessages,
+  chatSending,
+  chatInput,
+  setChatInput,
+  onSend,
+  onClear,
+  placeholder,
+  starterPrompts,
+  variant = "docked",
+}) {
+  const { t } = useTranslation();
+  const isDocked = variant === "docked";
+  const handleTranscript = useCallback(
+    (text) => setChatInput(text),
+    [setChatInput],
+  );
+  const { supported, isListening, startListening, stopListening } =
+    useSpeechRecognition(handleTranscript);
+  return (
+    <div className={`flex min-h-0 flex-col bg-white ${isDocked ? "min-h-0 flex-1" : "flex-1"}`}>
+      <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5 text-sm font-bold text-slate-900">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            CrimeLens
+          </p>
+          <p className="ksp-mono truncate text-[10.5px] text-slate-500">
+            {caseData?.CrimeNo}
+          </p>
+        </div>
+        {chatMessages.length > 0 && (
+          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-700">
+            {chatMessages.length}
+          </span>
+        )}
+      </div>
+      {chatMessages.length === 0 && (
+        <div className="border-b border-slate-200 bg-white px-3 py-3">
+          <div className="mb-2 flex items-center gap-2">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              <Sparkles size={11} className="text-amber-500" />
+              {t("workspace.copilot.whatHelp")}
+            </span>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+          </div>
+          <div className="flex flex-col gap-2">
+            {starterPrompts.map((q, idx) => (
+              <button
+                key={q}
+                onClick={() => onSend && onSend(q)}
+                style={{ animationDelay: `${idx * 60}ms` }}
+                className="group flex w-full items-start gap-2.5 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left text-[12.5px] font-medium leading-5 text-slate-800 shadow-sm transition-all hover:border-red-200 hover:bg-red-50/30 hover:shadow-md cursor-pointer"
+              >
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white transition-colors group-hover:bg-red-600">
+                  <ArrowUpRight size={12} strokeWidth={2.4} />
+                </span>
+                <span className="flex-1">{q}</span>
+                <ChevronRight size={14} className="mt-1 shrink-0 text-slate-300 group-hover:text-red-400" />
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 px-1 text-[10px] leading-relaxed text-slate-400">
+            {t("workspace.copilot.contextLine", {
+              group: caseData?.CrimeGroupName,
+              accusedCount: caseIntel?.accused?.length || 0,
+              relatedCount: similarCases?.length || 0,
+              fsl: mock?.fsl.status,
+            })}
+          </p>
+        </div>
+      )}
+      <div className={`space-y-2.5 overflow-y-auto bg-white px-3 py-3 ${isDocked ? "min-h-[160px] flex-1" : "flex-1"}`}>
+        {chatMessages.length === 0 && (
+          <p className="px-1 text-[12.5px] leading-6 text-slate-500">
+            {t("workspace.copilot.emptyHint", { count: similarCases?.length || 0 })}
+          </p>
+        )}
+        {chatMessages.map((m, i) =>
+          m.role === "user" ? (
+            <div key={i} className="flex justify-end">
+              <div className="max-w-[92%] rounded-2xl border border-red-100 bg-red-50 px-3.5 py-2.5 text-[13px] leading-5 text-slate-900 shadow-sm">
+                {m.content}
+              </div>
+            </div>
+          ) : (
+            <div key={i} className="flex justify-start">
+              <div className="max-w-[95%] rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] leading-5 text-slate-800 shadow-sm">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: ({ children }) => (
+                      <p className="mb-1.5 leading-5 last:mb-0">{children}</p>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className="font-semibold text-slate-900">{children}</strong>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className="list-disc pl-5 mb-1.5 space-y-0.5">{children}</ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="list-decimal pl-5 mb-1.5 space-y-0.5">{children}</ol>
+                    ),
+                    li: ({ children }) => <li className="leading-5">{children}</li>,
+                  }}
+                >
+                  {m.content}
+                </ReactMarkdown>
+              </div>
+            </div>
+          ),
+        )}
+        {chatSending && (
+          <div className="flex justify-start">
+            <div className="rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce" />
+                <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce" style={{ animationDelay: ".15s" }} />
+                <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce" style={{ animationDelay: ".3s" }} />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="border-t border-slate-200 bg-white px-3 py-3">
+        <div className="flex items-end gap-1.5 rounded-[22px] border border-slate-300 bg-white px-2 py-1.5 shadow-sm transition focus-within:border-slate-400">
+          {supported && (
+            <button
+              onClick={() => (isListening ? stopListening() : startListening())}
+              title={t("workspace.copilot.voice", "Voice input")}
+              aria-label={t("workspace.copilot.voice", "Voice input")}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition cursor-pointer ${isListening ? "bg-red-100 text-red-600 animate-pulse" : "text-slate-500 hover:bg-slate-100"}`}
+            >
+              {isListening ? <MicOff size={14} /> : <Mic size={14} />}
+            </button>
+          )}
+          <input
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && onSend && onSend()}
+            placeholder={placeholder}
+            className="flex-1 bg-transparent px-2 py-1.5 text-[13px] placeholder:text-slate-400 focus:outline-none"
+          />
+          <button
+            onClick={() => onSend && onSend()}
+            disabled={chatSending || !chatInput.trim()}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-900 text-white transition hover:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <ArrowUp size={15} strokeWidth={2.2} />
+          </button>
+        </div>
+        {isListening && (
+          <p className="mt-1.5 px-1 text-[11px] font-medium text-red-500">
+            {t("workspace.copilot.listening", "Listening…")}
+          </p>
+        )}
+        <div className="mt-1.5 flex items-center justify-between px-1">
+          <span className="text-[10px] text-slate-400">{t("workspace.copilot.auditable")}</span>
+          {chatMessages.length > 0 && (
+            <button
+              onClick={onClear}
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] text-slate-500 hover:bg-slate-100 hover:text-red-700 transition cursor-pointer"
+            >
+              <Trash2 size={11} /> {t("workspace.copilot.clear")}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Section({ title, badge, children, action }) {
   return (
-    <div className="h-full rounded-xl border border-[#E5E7EB] bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-[#F3F4F6] bg-[#FAFBFC] px-4 py-2.5 rounded-t-xl">
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <h3 className="text-[12.5px] font-bold uppercase tracking-[0.07em] text-[#1A1A2E]">
+          <h3 className="text-xs font-bold uppercase tracking-wide text-slate-900">
             {title}
           </h3>
           {badge && (
             <span
-              className={`px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide border rounded-full ${badge.tone === "intel" ? "bg-[#EEF2FF] border-[#C7D2FE] text-[#3730A3]" : badge.tone === "ai" ? "bg-[#FFFBEB] border-[#FDE68A] text-[#92400E]" : "bg-white border-[#E5E7EB] text-[#6B7280]"}`}
+              className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badge.tone === "intel" ? "border-indigo-200 bg-indigo-50 text-indigo-700" : badge.tone === "ai" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-slate-200 bg-slate-50 text-slate-500"}`}
             >
               {badge.label}
             </span>
@@ -702,7 +791,7 @@ function Section({ title, badge, children, action }) {
         </div>
         {action}
       </div>
-      <div className="p-4">{children}</div>
+      <div className="px-4 py-3">{children}</div>
     </div>
   );
 }
@@ -711,19 +800,118 @@ function DossierSection({ eyebrow, title, children }) {
   return (
     <section className="px-5 py-4">
       {eyebrow && (
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#6B7280]">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
           {eyebrow}
         </p>
       )}
       {title && (
-        <h3 className="mt-1 text-[15px] font-bold text-[#1A1A2E]">{title}</h3>
+        <h3 className="mt-1 text-[15px] font-bold text-slate-900">{title}</h3>
       )}
       <div className="mt-2.5">{children}</div>
     </section>
   );
 }
 
+function CaseSummary({ caseData, actSectionDetails }) {
+  const { t, i18n } = useTranslation();
+  const { token } = useAuth();
+  const lang = String(i18n.language || "en").startsWith("kn") ? "kn" : "en";
+  const cacheKey = `ksp_case_summary_${caseData?.CaseMasterID || caseData?.CrimeNo}_${lang}`;
+  const [summary, setSummary] = useState(() => {
+    try {
+      const v = localStorage.getItem(cacheKey);
+      return v ? JSON.parse(v)?.text || "" : "";
+    } catch {
+      return "";
+    }
+  });
+  const [loading, setLoading] = useState(false);
+
+  const fetchSummary = useCallback(async () => {
+    if (!caseData) return;
+    setLoading(true);
+    try {
+      const res = await getCaseBrief(
+        token,
+        caseData.CaseMasterID || caseData.CrimeNo,
+        { language: lang },
+      );
+      const text = String(res?.data?.brief || "").trim();
+      if (text) {
+        setSummary(text);
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ text, at: new Date().toISOString() }));
+        } catch {
+          setSummary(text);
+        }
+      } else {
+        setSummary("");
+      }
+    } catch {
+      setSummary("");
+      /* falls back to the templated synopsis below */
+    } finally {
+      setLoading(false);
+    }
+  }, [token, lang, cacheKey, caseData]);
+
+  useEffect(() => {
+    if (!summary) fetchSummary();
+  }, [cacheKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading && !summary) {
+    return (
+      <div className="animate-pulse space-y-2" aria-label={t("workspace.loading")}>
+        <div className="h-3.5 w-full rounded bg-slate-100" />
+        <div className="h-3.5 w-11/12 rounded bg-slate-100" />
+        <div className="h-3.5 w-4/6 rounded bg-slate-100" />
+      </div>
+    );
+  }
+  if (summary) {
+    return (
+      <div>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-sm bg-blue-900/90 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            <Sparkles size={10} /> CrimeLens
+          </span>
+          <button
+            onClick={fetchSummary}
+            disabled={loading}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-blue-900 disabled:opacity-50"
+          >
+            <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
+            {t("workspace.dossier.regenerate", "Regenerate")}
+          </button>
+        </div>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            p: ({ children }) => (
+              <p className="mb-2 text-sm leading-7 text-slate-700 last:mb-0">{children}</p>
+            ),
+            strong: ({ children }) => (
+              <strong className="font-semibold text-slate-900">{children}</strong>
+            ),
+            ul: ({ children }) => (
+              <ul className="mb-2 list-disc space-y-1 pl-5 marker:text-blue-900">{children}</ul>
+            ),
+            ol: ({ children }) => (
+              <ol className="mb-2 list-decimal space-y-1 pl-5 marker:text-blue-900">{children}</ol>
+            ),
+            li: ({ children }) => <li className="text-sm leading-7 text-slate-700">{children}</li>,
+          }}
+        >
+          {summary}
+        </ReactMarkdown>
+      </div>
+    );
+  }
+  return <Synopsis caseData={caseData} actSectionDetails={actSectionDetails} />;
+}
+
 function Synopsis({ caseData, actSectionDetails }) {
+  const { t } = useTranslation();
   const secs = actSectionDetails;
   let charges;
   if (secs.length) {
@@ -737,188 +925,40 @@ function Synopsis({ caseData, actSectionDetails }) {
         : `${names.slice(0, -1).join(", ")} and ${names.slice(-1)[0]}`;
   }
   return (
-    <div className="space-y-2 text-[14px] leading-7 text-[#374151]">
+    <div className="space-y-2 text-sm leading-7 text-slate-600">
       <p>
-        Reported on{" "}
-        <span className="font-bold text-[#1A1A2E]">
+        {t("workspace.synopsis.reportedOn")}{" "}
+        <span className="font-bold text-slate-900">
           {formatDate(caseData.CrimeRegisteredDate)}
         </span>{" "}
-        at{" "}
-        <span className="font-bold text-[#1A1A2E]">
+        {t("workspace.synopsis.at")}{" "}
+        <span className="font-bold text-slate-900">
           {caseData.UnitName || "—"}
         </span>
-        {caseData.DistrictName ? `, ${caseData.DistrictName} district` : ""} and
-        registered as{" "}
-        <span className="ksp-mono font-semibold text-[#1A1A2E]">
+        {caseData.DistrictName ? t("workspace.synopsis.districtSuffix", { district: caseData.DistrictName }) : ""} {t("workspace.synopsis.andRegistered")}{" "}
+        <span className="ksp-mono font-semibold text-slate-900">
           {caseData.CrimeNo}
         </span>
         .
       </p>
       <p>
-        Classified{" "}
-        <span className="font-bold text-[#1A1A2E]">
+        {t("workspace.synopsis.classified")}{" "}
+        <span className="font-bold text-slate-900">
           {caseData.Gravity || "—"}
         </span>
         .{" "}
         {charges ? (
           <>
-            Charged under{" "}
-            <span className="font-bold text-[#1A1A2E]">{charges}</span>.
+            {t("workspace.synopsis.chargedUnder")}{" "}
+            <span className="font-bold text-slate-900">{charges}</span>.
           </>
         ) : (
-          "No acts recorded on this FIR yet."
+          t("workspace.synopsis.noActs")
         )}
       </p>
-      <p className="text-[13px] text-[#6B7280]">
-        The FIR's own account of the incident is reproduced below — cross-check
-        the scenario before filing the chargesheet.
+      <p className="text-[13px] text-slate-500">
+        {t("workspace.synopsis.note")}
       </p>
-    </div>
-  );
-}
-
-function PeopleNarrative({ caseIntel, mock }) {
-  const rows = (caseIntel?.accused || []).map((a, idx) => ({
-    a,
-    m: mock?.mockAccused[idx] || {},
-  }));
-  const absconding = rows.filter(
-    ({ m }) => m.arrestStatus === "Absconding",
-  ).length;
-  const arrested = rows.filter(({ m }) => m.arrestStatus === "Arrested").length;
-  const victims = caseIntel?.victims || [];
-  const witnesses = mock?.witnesses || [];
-  const examined = witnesses.filter((w) => w.examined).length;
-  if (!rows.length) return null;
-  return (
-    <div>
-      <p className="text-[14px] leading-7 text-[#374151]">
-        <span className="font-bold text-[#1A1A2E]">{rows.length} accused</span>{" "}
-        identified
-        {arrested ? ` — ${arrested} arrested` : " — none arrested yet"}
-        {absconding ? `, ${absconding} still at large` : ""}.
-      </p>
-      <div className="mt-3 divide-y divide-[#F3F4F6] overflow-hidden rounded-lg border border-[#E5E7EB]">
-        {rows.map(({ a, m }) => (
-          <div
-            key={a.AccusedMasterID}
-            className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5"
-          >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A2E] text-[11px] font-black text-white">
-              {String(a.AccusedName || "?")
-                .charAt(0)
-                .toUpperCase()}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold text-[#1A1A2E]">
-                {a.AccusedName}
-              </p>
-              <p className="text-[11px] text-[#6B7280]">
-                {a.AgeYear}y · {a.GenderID}
-                {m.priorCases ? ` · ${m.priorCases} prior cases` : ""}
-              </p>
-            </div>
-            {m.arrestStatus === "Absconding" ? (
-              <span className="inline-flex items-center gap-1.5 rounded-sm bg-[#D62828]/10 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#D62828]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#D62828]" />
-                Absconding
-              </span>
-            ) : m.arrestStatus === "Arrested" ? (
-              <span className="rounded-sm bg-[#2D6A4F]/10 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#2D6A4F]">
-                Arrested {formatDate(m.arrestDate)}
-              </span>
-            ) : (
-              <span className="rounded-sm bg-[#F3F4F6] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#6B7280]">
-                {m.bailStatus || "On record"}
-              </span>
-            )}
-            {m.warrantIssued && (
-              <span className="rounded-sm border border-amber-300 bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase text-[#92400E]">
-                Warrant
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-      <p className="mt-3 text-xs text-[#6B7280]">
-        {victims.length} {victims.length === 1 ? "victim" : "victims"} ·{" "}
-        {examined}/{witnesses.length} witnesses examined
-      </p>
-    </div>
-  );
-}
-
-function ChargesNarrative({ actSectionDetails }) {
-  if (!actSectionDetails.length)
-    return (
-      <p className="text-sm text-[#6B7280]">
-        No acts recorded on this FIR — verify against the registration details.
-      </p>
-    );
-  return (
-    <div className="space-y-2.5">
-      {actSectionDetails.map((item, i) => (
-        <div
-          key={i}
-          className="rounded-lg border border-[#E5E7EB] bg-[#FCFDFE] p-3"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[13px] font-semibold text-[#1A1A2E]">
-              {item.actMeta?.fullName || item.actId} — Section{" "}
-              <span className="font-black">{item.sectionId}</span>
-              {item.sectionMeta?.title && (
-                <span className="ml-1 font-medium text-[#4B5563]">
-                  · {item.sectionMeta.title}
-                </span>
-              )}
-            </p>
-            {item.sectionMeta?.bailable !== undefined && (
-              <span
-                className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${item.sectionMeta.bailable ? "border border-[#2D6A4F] text-[#2D6A4F]" : "bg-[#D62828] text-white"}`}
-              >
-                {item.sectionMeta.bailable ? "Bailable" : "Non-bailable"}
-              </span>
-            )}
-          </div>
-          {item.sectionMeta?.plain_language && (
-            <p className="mt-1 text-[12.5px] leading-relaxed text-[#374151]">
-              “{item.sectionMeta.plain_language}”
-            </p>
-          )}
-          <div className="mt-2 flex flex-wrap gap-3 text-[11px] font-medium">
-            {(item.sectionMeta?.indiacode_url ||
-              item.actMeta?.indiacode_url) && (
-              <a
-                href={
-                  item.sectionMeta?.indiacode_url || item.actMeta?.indiacode_url
-                }
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-[#1A1A2E] underline"
-              >
-                <ExternalLink size={10} />
-                IndiaCode
-              </a>
-            )}
-            {(item.sectionMeta?.kanoon_url || item.actMeta?.kanoon_url) && (
-              <a
-                href={item.sectionMeta?.kanoon_url || item.actMeta?.kanoon_url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-[#1A1A2E] underline"
-              >
-                <ExternalLink size={10} />
-                Indian Kanoon
-              </a>
-            )}
-            {item.sectionMeta?.punishment && (
-              <span className="text-[#6B7280]">
-                {item.sectionMeta.punishment}
-              </span>
-            )}
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
@@ -929,21 +969,19 @@ function CaseBriefTab({
   mock,
   chargesheet,
   actSectionDetails,
-  similarCases,
   rank,
   inspectorHealth,
   matchesScope,
   onNavigate,
   onAsk,
-  onOpenIntel,
 }) {
+  const { t } = useTranslation();
   const isField = rank === "ASI" || rank === "HC";
   if (isField) {
     return (
       <div className="space-y-4">
-        <div className="rounded-xl border border-amber-200 bg-[#FFFBEB] px-4 py-3 text-xs leading-relaxed text-[#92400E]">
-          You're seeing a focused task view — arrests, seizures and locations
-          only. Switch to SI/Inspector for the full file.
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800">
+          {t("workspace.field.focusedTask")}
         </div>
         <PeopleTab
           caseIntel={caseIntel}
@@ -952,25 +990,25 @@ function CaseBriefTab({
           matchesScope={matchesScope}
           taskOnly
         />
-        <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-            Where to go / What to seize
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            {t("workspace.field.whereToGo")}
           </p>
-          <p className="mt-1 text-sm text-[#1A1A2E]">
+          <p className="mt-1 text-sm text-slate-900">
             {mock.property.items}{" "}
-            <span className="ml-1 text-[10px] text-[#9CA3AF]">· mock</span>
+            <span className="ml-1 text-[10px] text-slate-400">{t("workspace.field.mockBadge")}</span>
           </p>
-          <p className="mt-1 text-xs text-[#374151]">
-            Station: {caseData.UnitName} · District: {caseData.DistrictName}
+          <p className="mt-1 text-xs text-slate-700">
+            {t("workspace.field.station")} {caseData.UnitName} · {t("workspace.field.district")} {caseData.DistrictName}
           </p>
           {caseData.latitude && caseData.longitude && (
             <a
               href={`https://www.google.com/maps?q=${caseData.latitude},${caseData.longitude}`}
               target="_blank"
               rel="noreferrer"
-              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#1A1A2E] underline"
+              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-slate-900 underline"
             >
-              View on map <ExternalLink size={12} />
+              {t("workspace.field.viewOnMap")} <ExternalLink size={12} />
             </a>
           )}
         </div>
@@ -994,7 +1032,9 @@ function CaseBriefTab({
     ? `https://www.google.com/maps?q=${coords}`
     : `https://www.google.com/maps/search/${placeQuery}`;
   return (
-    <div className="space-y-5">
+    <div className="max-w-[880px] space-y-4">
+      <KeyFactsStrip caseData={caseData} ageDays={ageDays} />
+
       <CriticalBanner
         caseData={caseData}
         mock={mock}
@@ -1004,101 +1044,74 @@ function CaseBriefTab({
         onAsk={onAsk}
       />
 
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_330px] lg:items-start lg:gap-6">
-        <div className="min-w-0">
-          <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-sm">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#E5E7EB] bg-[#FAFBFC] px-5 py-3">
-              <span className="flex h-7 w-7 items-center justify-center rounded bg-[#1A1A2E] text-white">
-                <FileClock size={13} />
-              </span>
-              <div className="min-w-0">
-                <h2 className="text-[12.5px] font-black uppercase tracking-[0.1em] text-[#1A1A2E]">
-                  Investigation dossier
-                </h2>
-                <p className="ksp-mono text-[10.5px] text-[#6B7280]">
-                  {caseData.CrimeGroupName || caseData.CrimeHeadName || "—"}
-                  {caseData.Gravity ? ` · ${caseData.Gravity}` : ""}
-                </p>
-              </div>
-              <span className="ml-auto rounded-sm bg-blue-900/90 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
-                {ageDays} days since FIR
-              </span>
-            </div>
-            <div className="divide-y divide-[#E5E7EB]">
-              <DossierSection title="Summary of the offense">
-                <Synopsis
-                  caseData={caseData}
-                  actSectionDetails={actSectionDetails}
-                />
-              </DossierSection>
-              <DossierSection
-                eyebrow="People in the file"
-                title="Accused, victims & witnesses"
-              >
-                <PeopleNarrative caseIntel={caseIntel} mock={mock} />
-              </DossierSection>
-              <DossierSection
-                eyebrow="Legal charges"
-                title="Acts & sections on this FIR"
-              >
-                <ChargesNarrative actSectionDetails={actSectionDetails} />
-              </DossierSection>
-              {caseData.BriefFacts && (
-                <DossierSection
-                  eyebrow={`FIR transcript · ${caseData.BriefFacts.length} characters`}
-                  title="What happened, in the FIR's own words"
-                >
-                  <p className="whitespace-pre-line text-[14px] leading-7 text-[#1A1A2E]">
-                    {caseData.BriefFacts}
-                  </p>
-                </DossierSection>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[#E5E7EB] bg-[#FAFBFC] px-5 py-2.5">
-              <button
-                onClick={() => onNavigate("people")}
-                className="text-[11px] font-bold text-[#1A1A2E] hover:underline"
-              >
-                People →
-              </button>
-              <span className="text-[#DDE3EC]">·</span>
-              <button
-                onClick={() => onNavigate("evidence")}
-                className="text-[11px] font-bold text-[#1A1A2E] hover:underline"
-              >
-                Evidence & FSL →
-              </button>
-              <span className="text-[#DDE3EC]">·</span>
-              <button
-                onClick={() => onNavigate("timeline")}
-                className="text-[11px] font-bold text-[#1A1A2E] hover:underline"
-              >
-                Timeline →
-              </button>
-              <span className="ml-auto text-[10px] text-[#9CA3AF]">
-                Details live in the tabs above
-              </span>
-            </div>
+      <DeadlinesStrip mock={mock} chargesheet={chargesheet} />
+
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white [&_p]:max-w-[70ch]">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-3">
+          <div className="min-w-0">
+            <h2 className="text-xs font-bold uppercase tracking-wide text-slate-900">
+              {t("workspace.dossier.title")}
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {caseData.CrimeGroupName || caseData.CrimeHeadName || "—"}
+              {caseData.Gravity ? ` · ${caseData.Gravity}` : ""}
+            </p>
           </div>
-
-          <IntelDrawer
-            similarCases={similarCases}
-            onAsk={onAsk}
-            onOpenIntel={onOpenIntel}
-          />
+          <span className="shrink-0 rounded-sm bg-blue-900/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+            {t("workspace.dossier.daysSinceFIR", { count: ageDays })}
+          </span>
         </div>
-
-        <aside className="min-w-0 space-y-4">
-          <KeyFactsPanel caseData={caseData} coords={coords} />
-          <DeadlinesPanel mock={mock} chargesheet={chargesheet} />
-          <SideMap
-            caseData={caseData}
-            coords={coords}
-            mapEmbedSrc={mapEmbedSrc}
-            mapsHref={mapsHref}
-          />
-        </aside>
+        <div className="divide-y divide-slate-200">
+          <DossierSection title={t("workspace.dossier.summaryTitle")}>
+            <CaseSummary
+              caseData={caseData}
+              actSectionDetails={actSectionDetails}
+            />
+          </DossierSection>
+          {caseData.BriefFacts && (
+            <DossierSection
+              eyebrow={t("workspace.dossier.firTranscript", { count: caseData.BriefFacts.length })}
+              title={t("workspace.dossier.firOwnWords")}
+            >
+              <p className="whitespace-pre-line text-sm leading-7 text-slate-900">
+                {caseData.BriefFacts}
+              </p>
+            </DossierSection>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-200 px-5 py-2.5">
+          <button
+            onClick={() => onNavigate("people")}
+            className="text-xs font-semibold text-slate-900 hover:underline"
+          >
+            {t("workspace.dossier.peopleLink")}
+          </button>
+          <span className="text-slate-300">·</span>
+          <button
+            onClick={() => onNavigate("evidence")}
+            className="text-xs font-semibold text-slate-900 hover:underline"
+          >
+            {t("workspace.dossier.evidenceLink")}
+          </button>
+          <span className="text-slate-300">·</span>
+          <button
+            onClick={() => onNavigate("timeline")}
+            className="text-xs font-semibold text-slate-900 hover:underline"
+          >
+            {t("workspace.dossier.timelineLink")}
+          </button>
+          <span className="ml-auto text-[11px] text-slate-400">
+            {t("workspace.dossier.detailsInTabs")}
+          </span>
+        </div>
       </div>
+
+      <LocationStrip
+        caseData={caseData}
+        coords={coords}
+        mapEmbedSrc={mapEmbedSrc}
+        mapsHref={mapsHref}
+      />
     </div>
   );
 }
@@ -1111,6 +1124,7 @@ function CriticalBanner({
   rank,
   onAsk,
 }) {
+  const { t } = useTranslation();
   const accused = mock?.mockAccused || [];
   const absconders = accused.filter((a) => a.arrestStatus === "Absconding");
   const abscond = absconders.length;
@@ -1123,120 +1137,109 @@ function CriticalBanner({
     (w) => !w.examined,
   ).length;
   const hearingDate = formatDate(mock?.court.nextHearingDate);
+  const courtPurpose = mock?.court.purpose;
 
   let state;
   if (abscond > 0) {
     state = {
       tone: "critical",
-      kicker: "Requires immediate action",
-      title: `${abscond} accused still absconding`,
-      body: `The hearing on ${hearingDate} (${mock?.court.purpose}) cannot move forward until ${abscond === accused.length ? "they are" : absconders.map((a) => a.AccusedName).join(", ")} located — ${ageMo} months since the FIR.`,
-      action: "Issue arrest warrants",
-      ask: "What steps are needed to issue arrest warrants for the absconding accused?",
+      kicker: t("workspace.banner.abscondKicker"),
+      title: t("workspace.banner.abscondTitle", { count: abscond }),
+      body: abscond === accused.length ? t("workspace.banner.abscondBodyAll", { hearingDate, purpose: courtPurpose, months: ageMo }) : t("workspace.banner.abscondBodyNamed", { hearingDate, purpose: courtPurpose, names: absconders.map((a) => a.AccusedName).join(", "), months: ageMo }),
+      action: t("workspace.banner.abscondAction"),
+      ask: t("workspace.banner.abscondAsk"),
     };
   } else if (chargesheet?.tone === "overdue") {
     state = {
       tone: "critical",
-      kicker: "Deadline breached",
-      title: `Chargesheet is ${Math.abs(chargesheet.diff)} days past its ${chargesheet.limitDays}-day deadline`,
-      body: `Filing the chargesheet is the single action that moves this file to court.${fslOverdue ? " The FSL report is also stuck — chase it before filing." : " Confirm witness statements are recorded, then file."}`,
-      action: "Prep chargesheet",
-      ask: "Help me prepare the chargesheet — what is needed to file it now?",
+      kicker: t("workspace.banner.overdueKicker"),
+      title: t("workspace.banner.overdueTitle", { count: Math.abs(chargesheet.diff), limit: chargesheet.limitDays }),
+      body: t("workspace.banner.overdueBody", { fslFrag: fslOverdue ? t("workspace.banner.overdueBodyFsl") : t("workspace.banner.overdueBodyConfirm") }),
+      action: t("workspace.banner.overdueAction"),
+      ask: t("workspace.banner.overdueAsk"),
     };
   } else if (fslOverdue) {
     state = {
       tone: "critical",
-      kicker: "Evidence blocked",
-      title: "FSL report overdue",
-      body: `Forensic evidence was sent ${formatDate(mock.fsl.sentDate)} with no report yet — the chargesheet cannot be filed without it.`,
-      action: "Chase FSL",
-      ask: "How do I chase the overdue FSL report for this case?",
+      kicker: t("workspace.banner.fslKicker"),
+      title: t("workspace.banner.fslTitle"),
+      body: t("workspace.banner.fslBody", { sentDate: formatDate(mock.fsl.sentDate) }),
+      action: t("workspace.banner.fslAction"),
+      ask: t("workspace.banner.fslAsk"),
     };
   } else if (chargesheet?.tone === "critical") {
     state = {
       tone: "warning",
-      kicker: "Deadline approaching",
-      title: `Chargesheet due in ${chargesheet.diff} days`,
-      body: `The ${chargesheet.limitDays}-day window (${chargesheet.isArrestBased ? "from first arrest" : "from FIR registration"}) closes soon — line up statements and FSL now to file on time.`,
-      action: "Prep chargesheet",
-      ask: "Draft the chargesheet for this case.",
+      kicker: t("workspace.banner.criticalKicker"),
+      title: t("workspace.banner.criticalTitle", { count: chargesheet.diff }),
+      body: t("workspace.banner.criticalBody", { limit: chargesheet.limitDays, base: chargesheet.isArrestBased ? t("workspace.banner.criticalBaseArrest") : t("workspace.banner.criticalBaseFIR") }),
+      action: t("workspace.banner.criticalAction"),
+      ask: t("workspace.banner.criticalAsk"),
     };
   } else if (witnessesPending) {
     state = {
       tone: "warning",
-      kicker: "Next steps",
-      title: `${witnessesPending} witness statements pending`,
-      body: `Record them before the ${hearingDate} hearing (${mock?.court.purpose}) — examined statements strengthen the chargesheet.`,
-      action: "Plan questioning",
-      ask: "List the pending witness statements and the best order to record them.",
+      kicker: t("workspace.banner.witnessKicker"),
+      title: t("workspace.banner.witnessTitle", { count: witnessesPending }),
+      body: t("workspace.banner.witnessBody", { hearingDate, purpose: courtPurpose }),
+      action: t("workspace.banner.witnessAction"),
+      ask: t("workspace.banner.witnessAsk"),
     };
   } else {
     state = {
       tone: "ok",
-      kicker: "On track",
-      title: "No critical blockers right now",
+      kicker: t("workspace.banner.okKicker"),
+      title: t("workspace.banner.okTitle"),
       body:
         (inspectorHealth ? `${inspectorHealth}. ` : "") +
-        `Next hearing ${hearingDate} (${mock?.court.purpose}). Keep gathering statements and FSL documents.`,
-      action: "Review next steps",
-      ask: "Summarize what remains to be done on this case.",
+        t("workspace.banner.okBody", { hearingDate, purpose: courtPurpose }),
+      action: t("workspace.banner.okAction"),
+      ask: t("workspace.banner.okAsk"),
     };
   }
 
   const styles = {
     critical: {
-      border: "border-[#FECACA]",
-      stroke: "border-l-[#D62828]",
-      iconBg: "bg-[#D62828]",
-      label: "text-[#D62828]",
-      icon: <Siren size={16} />,
-      btn: "bg-[#D62828] text-white hover:bg-[#B01E1E]",
+      panel: "border-red-200 bg-red-50",
+      label: "text-red-700",
+      icon: <Siren size={15} />,
+      btn: "bg-[#D62828] text-white hover:bg-red-700",
     },
     warning: {
-      border: "border-[#FDE68A]",
-      stroke: "border-l-[#C85A00]",
-      iconBg: "bg-[#C85A00]",
-      label: "text-[#C85A00]",
-      icon: <Clock3 size={16} />,
-      btn: "bg-[#C85A00] text-white hover:bg-[#A34D00]",
+      panel: "border-orange-200 bg-orange-50",
+      label: "text-orange-700",
+      icon: <Clock3 size={15} />,
+      btn: "bg-[#F97316] text-white hover:bg-orange-600",
     },
     ok: {
-      border: "border-[#CDE5D8]",
-      stroke: "border-l-[#2D6A4F]",
-      iconBg: "bg-[#2D6A4F]",
-      label: "text-[#2D6A4F]",
-      icon: <CheckCircle2 size={16} />,
-      btn: "border border-[#2D6A4F] bg-white text-[#2D6A4F] hover:bg-[#F0FDF4]",
+      panel: "border-green-200 bg-green-50",
+      label: "text-green-700",
+      icon: <CheckCircle2 size={15} />,
+      btn: "border border-green-700 bg-white text-green-800 hover:bg-green-100",
     },
   }[state.tone];
 
   return (
-    <div
-      className={`rounded-xl border ${styles.border} bg-white px-5 py-4 shadow-sm`}
-    >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-        <span
-          className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-full text-white lg:flex ${styles.iconBg}`}
-        >
+    <div className={`rounded-lg border px-4 py-3.5 ${styles.panel}`}>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <span className={`hidden shrink-0 lg:block ${styles.label}`}>
           {styles.icon}
         </span>
         <div className="min-w-0 flex-1">
-          <p
-            className={`text-[10.5px] font-black uppercase tracking-[0.16em] ${styles.label}`}
-          >
+          <p className={`text-[11px] font-bold uppercase tracking-wide ${styles.label}`}>
             {state.kicker}
           </p>
-          <h3 className="mt-0.5 text-[15.5px] font-black leading-tight text-[#1A1A2E]">
+          <h3 className="mt-0.5 text-[15px] font-bold leading-snug text-slate-900">
             {state.title}
           </h3>
-          <p className="mt-1 text-[13px] leading-relaxed text-[#4B5563]">
+          <p className="mt-1 max-w-[70ch] text-[13px] leading-relaxed text-slate-600">
             {state.body}
           </p>
         </div>
         {state.action && (
           <button
             onClick={() => onAsk && onAsk(state.ask)}
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-black uppercase tracking-[0.06em] ${styles.btn}`}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-bold uppercase tracking-wide ${styles.btn}`}
           >
             {state.action} <ArrowRight size={13} />
           </button>
@@ -1246,140 +1249,56 @@ function CriticalBanner({
   );
 }
 
-function IntelDrawer({ similarCases, onAsk, onOpenIntel }) {
-  const [open, setOpen] = useState(false);
-  if (!similarCases.length) return null;
-  const shared = similarCases.filter((s) => s.shared_accused_count > 0).length;
-  const districts = new Set(similarCases.map((s) => s.DistrictName)).size;
+function StripItem({ label, value, tone }) {
   return (
-    <div className="mt-5 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-sm">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-[#FAFBFC]"
-      >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-900/90 text-white">
-          <Sparkles size={15} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[13.5px] font-bold text-[#1A1A2E]">
-            Intelligence — {similarCases.length} related FIRs
-          </p>
-          <p className="text-[11.5px] text-[#6B7280]">
-            {shared ? `${shared} share the same people` : "Similar MO"} ·{" "}
-            {districts} {districts === 1 ? "district" : "districts"} · surfaced
-            by CrimeLens
-          </p>
-        </div>
-        <ChevronDown
-          size={16}
-          className={`shrink-0 text-[#6B7280] transition-transform ${open ? "rotate-180" : ""}`}
-          aria-hidden
-        />
-      </button>
-      {open && (
-        <div className="border-t border-[#E5E7EB]">
-          {similarCases.slice(0, 5).map((s) => (
-            <div
-              key={s.CaseMasterID}
-              className="flex flex-wrap items-center justify-between gap-2 border-b border-[#F3F4F6] px-5 py-3 last:border-0"
-            >
-              <div className="min-w-0">
-                <p className="ksp-mono text-xs font-bold text-[#1A1A2E]">
-                  {s.CrimeNo}{" "}
-                  <span className="ml-1 font-sans font-medium text-[#6B7280]">
-                    · {s.DistrictName || s.UnitName}
-                  </span>
-                </p>
-                <p className="mt-0.5 truncate text-xs text-[#6B7280]">
-                  {s.reasons?.slice(0, 2).join(" · ") ||
-                    [s.CrimeGroupName, s.Gravity].filter(Boolean).join(" · ")}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {s.shared_accused_count > 0 && (
-                  <span className="rounded-sm bg-[#EEF2FF] px-1.5 py-1 text-[10px] font-bold uppercase text-[#3730A3]">
-                    {s.shared_accused_count} shared accused
-                  </span>
-                )}
-                <button
-                  onClick={() => onAsk && onAsk(`Tell me about ${s.CrimeNo}`)}
-                  className="border border-[#1A1A2E] bg-white px-2 py-1 text-[11px] font-semibold text-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white"
-                >
-                  Ask
-                </button>
-              </div>
-            </div>
-          ))}
-          <div className="px-5 py-3">
-            <button
-              onClick={onOpenIntel}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#3730A3] hover:underline"
-            >
-              Open Intelligence tab — full network <ArrowRight size={12} />
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SidebarPanel({ title, icon, children }) {
-  return (
-    <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-sm">
-      <div className="flex items-center gap-2 border-b border-[#F3F4F6] bg-[#FAFBFC] px-4 py-2.5">
-        <span className="text-[#6B7280]">{icon}</span>
-        <h3 className="text-[11px] font-black uppercase tracking-[0.1em] text-[#1A1A2E]">
-          {title}
-        </h3>
-      </div>
-      <div className="px-4 py-1.5">{children}</div>
-    </div>
-  );
-}
-
-function MetaRow({ label, value, tone }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#F3F4F6] py-2.5 last:border-0">
-      <span className="shrink-0 pt-px text-[10px] font-bold uppercase tracking-[0.12em] text-[#6B7280]">
+    <div className="min-w-0 border-b border-slate-100 px-4 py-2.5">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
         {label}
-      </span>
-      <span
-        className={`text-right text-[12.5px] font-semibold leading-snug ${tone === "danger" ? "text-[#D62828]" : tone === "warn" ? "text-[#C85A00]" : tone === "ok" ? "text-[#2D6A4F]" : "text-[#1A1A2E]"}`}
+      </p>
+      <p
+        className={`mt-0.5 truncate text-[13px] font-semibold leading-snug ${tone === "danger" ? "text-red-700" : tone === "warn" ? "text-amber-700" : tone === "ok" ? "text-green-700" : "text-slate-900"}`}
+        title={typeof value === "string" ? value : undefined}
       >
         {value}
-      </span>
+      </p>
     </div>
   );
 }
 
-function KeyFactsPanel({ caseData, coords }) {
+function KeyFactsStrip({ caseData, ageDays }) {
+  const { t } = useTranslation();
+  const items = [
+    { label: t("workspace.side.station"), value: caseData.UnitName || "—" },
+    { label: t("workspace.side.district"), value: caseData.DistrictName || "—" },
+    {
+      label: t("workspace.side.crimeGroup"),
+      value: caseData.CrimeGroupName || caseData.CrimeHeadName || "—",
+    },
+    { label: t("workspace.side.status"), value: caseData.CaseStatusName || t("workspace.header.open") },
+    { label: t("workspace.side.io"), value: caseData.FirstName || "—" },
+    {
+      label: t("workspace.side.registered"),
+      value: `${formatDate(caseData.CrimeRegisteredDate)} · ${t("workspace.dossier.daysSinceFIR", { count: ageDays })}`,
+    },
+  ];
   return (
-    <SidebarPanel title="Key facts" icon={<Users size={13} />}>
-      <MetaRow label="Station" value={caseData.UnitName || "—"} />
-      <MetaRow label="District" value={caseData.DistrictName || "—"} />
-      <MetaRow
-        label="Crime group"
-        value={caseData.CrimeGroupName || caseData.CrimeHeadName || "—"}
-      />
-      <MetaRow label="Status" value={caseData.CaseStatusName || "Open"} />
-      <MetaRow label="IO" value={caseData.FirstName || "—"} />
-      <MetaRow
-        label="Registered"
-        value={formatDate(caseData.CrimeRegisteredDate)}
-      />
-      {coords && (
-        <MetaRow
-          label="Coordinates"
-          value={<span className="ksp-mono">{coords}</span>}
-        />
-      )}
-    </SidebarPanel>
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="border-b border-slate-200 bg-slate-50 px-4 py-2">
+        <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-900">
+          {t("workspace.side.keyFacts")}
+        </h3>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3">
+        {items.map((it) => (
+          <StripItem key={it.label} {...it} />
+        ))}
+      </div>
+    </div>
   );
 }
 
-function DeadlinesPanel({ mock, chargesheet }) {
+function DeadlinesStrip({ mock, chargesheet }) {
+  const { t } = useTranslation();
   const csTone =
     chargesheet?.tone === "critical"
       ? "warn"
@@ -1388,78 +1307,74 @@ function DeadlinesPanel({ mock, chargesheet }) {
         : "ok";
   const csValue = chargesheet
     ? chargesheet.diff < 0
-      ? `${Math.abs(chargesheet.diff)}d late`
-      : `${chargesheet.diff}d left`
+      ? t("workspace.side.dLate", { count: Math.abs(chargesheet.diff) })
+      : t("workspace.side.dLeft", { count: chargesheet.diff })
     : "—";
-  const csSub = chargesheet
-    ? `${chargesheet.limitDays}-day limit · ${chargesheet.isArrestBased ? "from arrest" : "from FIR"}`
-    : null;
   const fslVal = mock?.fsl.reportReceived
-    ? `Reported ${formatDate(mock.fsl.reportDate)}`
+    ? t("workspace.side.fslReported", { date: formatDate(mock.fsl.reportDate) })
     : mock?.fsl.status === "overdue"
-      ? "Overdue"
+      ? t("workspace.side.fslOverdue")
       : mock?.fsl.sent
-        ? "Awaiting report"
-        : "Not sent";
+        ? t("workspace.side.fslAwaiting")
+        : t("workspace.side.fslNotSent");
   return (
-    <SidebarPanel title="Court & deadlines" icon={<FileClock size={13} />}>
-      <MetaRow
-        label="Next hearing"
-        value={formatDate(mock?.court.nextHearingDate)}
-      />
-      <MetaRow label="Purpose" value={mock?.court.purpose} />
-      <MetaRow
-        label="Court"
-        value={`${mock?.court.courtType} · by ${mock?.court.bailGrantableBy}`}
-      />
-      <MetaRow label="Chargesheet" value={csValue} tone={csTone} />
-      {csSub && <MetaRow label="Limit" value={csSub} />}
-      <MetaRow
-        label="FSL"
-        value={fslVal}
-        tone={mock?.fsl.status === "overdue" ? "danger" : "ok"}
-      />
-      <MetaRow label="Property" value={mock?.property.items} />
-    </SidebarPanel>
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="border-b border-slate-200 bg-slate-50 px-4 py-2">
+        <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-900">
+          {t("workspace.side.deadlines")}
+        </h3>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4">
+        <StripItem
+          label={t("workspace.side.nextHearing")}
+          value={`${formatDate(mock?.court.nextHearingDate)}${mock?.court.purpose ? ` · ${mock.court.purpose}` : ""}`}
+        />
+        <StripItem
+          label={t("workspace.side.court")}
+          value={t("workspace.side.courtValue", { court: mock?.court.courtType, by: mock?.court.bailGrantableBy })}
+        />
+        <StripItem label={t("workspace.side.chargesheet")} value={csValue} tone={csTone} />
+        <StripItem
+          label={t("workspace.side.fsl")}
+          value={fslVal}
+          tone={mock?.fsl.status === "overdue" ? "danger" : "ok"}
+        />
+      </div>
+    </div>
   );
 }
 
-function SideMap({ caseData, coords, mapEmbedSrc, mapsHref }) {
+function LocationStrip({ caseData, coords, mapEmbedSrc, mapsHref }) {
+  const { t } = useTranslation();
   return (
-    <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-sm">
-      <div className="relative h-40 bg-[#F4F6F9]">
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="relative h-28 bg-slate-100">
         <iframe
-          title="Map of incident location"
+          title={t("workspace.side.mapTitle")}
           src={mapEmbedSrc}
           className="absolute inset-0 h-full w-full border-0"
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
         />
-        <span className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
-          <MapPin size={20} className="text-[#D62828]" aria-hidden />
-          <span className="rounded-sm bg-[#1A1A2E] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-            Incident
-          </span>
-        </span>
       </div>
-      <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+      <div className="flex items-center justify-between gap-3 px-4 py-2">
         <div className="min-w-0">
-          <p className="truncate text-[12.5px] font-bold text-[#1A1A2E]">
+          <p className="truncate text-[13px] font-semibold text-slate-900">
             {caseData.UnitName || "—"}
           </p>
-          <p className="ksp-mono text-[10px] text-[#6B7280]">
+          <p className="ksp-mono text-[11px] text-slate-500">
             {coords
               ? `${Number(caseData.latitude).toFixed(4)}, ${Number(caseData.longitude).toFixed(4)}`
-              : "Search by station name"}
+              : t("workspace.side.searchByStation")}
           </p>
         </div>
         <a
           href={mapsHref}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#1A1A2E] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-black"
+          className="inline-flex shrink-0 items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
         >
-          Open Maps <ExternalLink size={11} />
+          {t("workspace.side.openMaps")} <ExternalLink size={11} />
         </a>
       </div>
     </div>
@@ -1475,6 +1390,7 @@ function PeopleTab({
   onAsk,
   caseId,
 }) {
+  const { t } = useTranslation();
   const showAll = !taskOnly && rank !== "ASI" && rank !== "HC";
   const rows = (caseIntel?.accused || [])
     .map((a, idx) => ({ a, m: mock?.mockAccused[idx] || {} }))
@@ -1485,66 +1401,66 @@ function PeopleTab({
   return (
     <div className="space-y-4">
       <Section
-        title={`Accused (${filteredRows.length}${taskOnly ? " — task-relevant" : ""})`}
-        badge={{ label: "Fact", tone: "fact" }}
+        title={t("workspace.peopleTab.accusedTitle", { count: filteredRows.length, suffix: taskOnly ? t("workspace.peopleTab.taskRelevant") : "" })}
+        badge={{ label: t("workspace.peopleTab.fact"), tone: "fact" }}
       >
         <div className="overflow-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[#DDE3EC]">
-                <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                  Name
+              <tr className="border-b border-slate-200">
+                <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                  {t("workspace.peopleTab.thName")}
                 </th>
-                <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                  Age
+                <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                  {t("workspace.peopleTab.thAge")}
                 </th>
-                <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                  Arrest
+                <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                  {t("workspace.peopleTab.thArrest")}
                 </th>
-                <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                  Bail
+                <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                  {t("workspace.peopleTab.thBail")}
                 </th>
-                <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                  Prior cases
+                <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                  {t("workspace.peopleTab.thPrior")}
                 </th>
-                <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                  Actions
+                <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                  {t("workspace.peopleTab.thActions")}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E5E7EB]">
+            <tbody className="divide-y divide-slate-200">
               {filteredRows.map(({ a, m }) => (
                 <tr
                   key={a.AccusedMasterID}
                   className={
-                    m.arrestStatus === "Absconding" ? "bg-[#FFFBEB]" : ""
+                    m.arrestStatus === "Absconding" ? "bg-amber-50" : ""
                   }
                 >
-                  <td className="px-2 py-1.5 font-medium text-[#1A1A2E]">
+                  <td className="px-2 py-1.5 font-medium text-slate-900">
                     {a.AccusedName}{" "}
                     {m.arrestStatus === "Absconding" && (
-                      <span className="ml-1 text-[11px] font-bold text-[#92400E]">
-                        ⚠ ABSCONDING
+                      <span className="ml-1 text-[11px] font-bold text-amber-800">
+                        {t("workspace.people.abscondingBadge")}
                       </span>
                     )}{" "}
                     {m.warrantIssued && (
-                      <span className="ml-1 border border-amber-300 bg-amber-100 px-1 text-[10px] font-bold uppercase text-[#92400E]">
-                        Warrant
+                      <span className="ml-1 border border-amber-300 bg-amber-100 px-1 text-[10px] font-bold uppercase text-amber-800">
+                        {t("workspace.people.warrant")}
                       </span>
                     )}
                   </td>
-                  <td className="px-2 py-1.5 text-[#374151]">
+                  <td className="px-2 py-1.5 text-slate-700">
                     {a.AgeYear}y · {a.GenderID}
                   </td>
-                  <td className="px-2 py-1.5 text-[#374151]">
+                  <td className="px-2 py-1.5 text-slate-700">
                     {m.arrestStatus === "Absconding"
                       ? "—"
                       : `${m.arrestStatus} · ${formatDate(m.arrestDate)}`}
                   </td>
-                  <td className="px-2 py-1.5 text-[#374151]">{m.bailStatus}</td>
-                  <td className="px-2 py-1.5 text-[#374151]">
-                    {m.priorCases} cases
-                    {m.convictions ? ` (${m.convictions} conviction)` : ""}
+                  <td className="px-2 py-1.5 text-slate-700">{m.bailStatus}</td>
+                  <td className="px-2 py-1.5 text-slate-700">
+                    {t("workspace.peopleTab.priorCasesCell", { count: m.priorCases })}
+                    {m.convictions ? t("workspace.peopleTab.convictionFrag", { count: m.convictions }) : ""}
                   </td>
                   <td className="px-2 py-1.5">
                     <button
@@ -1552,9 +1468,9 @@ function PeopleTab({
                         onAsk &&
                         onAsk(`What other FIRs involve ${a.AccusedName}?`)
                       }
-                      className="text-[11px] font-semibold text-[#1A1A2E] underline"
+                      className="text-[11px] font-semibold text-slate-900 underline"
                     >
-                      Trace
+                      {t("workspace.peopleTab.trace")}
                     </button>
                   </td>
                 </tr>
@@ -1563,59 +1479,58 @@ function PeopleTab({
                 <tr>
                   <td
                     colSpan={6}
-                    className="py-6 text-center text-xs text-[#9CA3AF]"
+                    className="py-6 text-center text-xs text-slate-400"
                   >
-                    No accused match filter.
+                    {t("workspace.peopleTab.noAccused")}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-[10px] text-[#9CA3AF]">
-          Arrest/bail/warrant/prior — mocked in frontend (isMock) until
-          ArrestSurrender/conviction tables land.
+        <p className="mt-2 text-[10px] text-slate-400">
+          {t("workspace.peopleTab.mockNote")}
         </p>
       </Section>
       {showAll && (
         <>
           <Section
-            title={`Victims (${(caseIntel?.victims || []).filter((v) => matchesScope(v.VictimName)).length})`}
+            title={t("workspace.peopleTab.victimsTitle", { count: (caseIntel?.victims || []).filter((v) => matchesScope(v.VictimName)).length })}
           >
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-[#DDE3EC]">
-                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                    Name
+                <tr className="border-b border-slate-200">
+                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    {t("workspace.peopleTab.thName")}
                   </th>
-                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                    Age
+                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    {t("workspace.peopleTab.thAge")}
                   </th>
-                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                    Statement recorded
+                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    {t("workspace.peopleTab.thStatementRecorded")}
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E5E7EB]">
+              <tbody className="divide-y divide-slate-200">
                 {(caseIntel?.victims || [])
                   .filter((v) => matchesScope(v.VictimName))
                   .map((v, idx) => (
                     <tr key={v.VictimMasterID}>
-                      <td className="px-2 py-1.5 font-medium text-[#1A1A2E]">
+                      <td className="px-2 py-1.5 font-medium text-slate-900">
                         {v.VictimName}
                         {v.VictimPolice && (
-                          <span className="ml-1 border border-[#DDE3EC] bg-white px-1 text-[10px] font-bold uppercase text-[#374151]">
-                            Police
+                          <span className="ml-1 border border-slate-200 bg-white px-1 text-[10px] font-bold uppercase text-slate-700">
+                            {t("workspace.peopleTab.police")}
                           </span>
                         )}
                       </td>
-                      <td className="px-2 py-1.5 text-[#374151]">
+                      <td className="px-2 py-1.5 text-slate-700">
                         {v.AgeYear}y · {v.GenderID}
                       </td>
-                      <td className="px-2 py-1.5 text-[#374151]">
-                        {(mock?.victimStatements[idx] ?? true) ? "Yes" : "No"}{" "}
-                        <span className="text-[10px] text-[#9CA3AF]">
-                          · mock
+                      <td className="px-2 py-1.5 text-slate-700">
+                        {(mock?.victimStatements[idx] ?? true) ? t("workspace.peopleTab.yes") : t("workspace.peopleTab.no")}{" "}
+                        <span className="text-[10px] text-slate-400">
+                          {t("workspace.peopleTab.mockInline")}
                         </span>
                       </td>
                     </tr>
@@ -1624,48 +1539,48 @@ function PeopleTab({
             </table>
           </Section>
           <Section
-            title={`Witnesses (${(mock?.witnesses || []).filter((w) => matchesScope(w.name)).length})`}
+            title={t("workspace.peopleTab.witnessesTitle", { count: (mock?.witnesses || []).filter((w) => matchesScope(w.name)).length })}
           >
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-[#DDE3EC]">
-                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                    Name
+                <tr className="border-b border-slate-200">
+                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    {t("workspace.peopleTab.thName")}
                   </th>
-                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                    Summons sent
+                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    {t("workspace.peopleTab.thSummons")}
                   </th>
-                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                    Examined
+                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    {t("workspace.peopleTab.thExamined")}
                   </th>
-                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                    Statement
+                  <th className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    {t("workspace.peopleTab.thStatement")}
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E5E7EB]">
+              <tbody className="divide-y divide-slate-200">
                 {(mock?.witnesses || [])
                   .filter((w) => matchesScope(w.name))
                   .map((w, i) => (
                     <tr key={i}>
-                      <td className="px-2 py-1.5 font-medium text-[#1A1A2E]">
+                      <td className="px-2 py-1.5 font-medium text-slate-900">
                         {w.name}
                       </td>
-                      <td className="px-2 py-1.5 text-[#374151]">
-                        {w.summonsSent ? "Yes" : "No"}
+                      <td className="px-2 py-1.5 text-slate-700">
+                        {w.summonsSent ? t("workspace.peopleTab.yes") : t("workspace.peopleTab.no")}
                       </td>
-                      <td className="px-2 py-1.5 text-[#374151]">
-                        {w.examined ? "Yes" : "No"}
+                      <td className="px-2 py-1.5 text-slate-700">
+                        {w.examined ? t("workspace.peopleTab.yes") : t("workspace.peopleTab.no")}
                       </td>
-                      <td className="px-2 py-1.5 text-[#374151]">
-                        {w.statementRecorded ? "Yes" : "No"}
+                      <td className="px-2 py-1.5 text-slate-700">
+                        {w.statementRecorded ? t("workspace.peopleTab.yes") : t("workspace.peopleTab.no")}
                       </td>
                     </tr>
                   ))}
               </tbody>
             </table>
-            <p className="mt-2 text-[10px] text-[#9CA3AF]">
-              Witness data is mock — wire to Witness table when available.
+            <p className="mt-2 text-[10px] text-slate-400">
+              {t("workspace.peopleTab.witnessNote")}
             </p>
           </Section>
         </>
@@ -1675,34 +1590,35 @@ function PeopleTab({
 }
 
 function EvidenceTab({ actSectionDetails, mock, caseData, matchesScope }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-4">
       <Section
-        title="Acts & Sections — authoritative"
-        badge={{ label: "Fact", tone: "fact" }}
+        title={t("workspace.evidence.actsTitle")}
+        badge={{ label: t("workspace.peopleTab.fact"), tone: "fact" }}
       >
         <div className="space-y-3">
           {actSectionDetails
             .filter((x) => matchesScope(x.actId) || matchesScope(x.sectionId))
             .map((item, i) => (
-              <div key={i} className="border border-[#DDE3EC] bg-white p-3">
+              <div key={i} className="border border-slate-200 bg-white p-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#1A1A2E]">
+                  <span className="text-xs font-bold text-slate-900">
                     {item.actMeta?.fullName || item.actId} /{" "}
                     {item.sectionMeta?.title
-                      ? `Section ${item.sectionId} — ${item.sectionMeta.title}`
-                      : `Section ${item.sectionId}`}
+                      ? `${t("workspace.evidence.sectionWord")} ${item.sectionId} — ${item.sectionMeta.title}`
+                      : `${t("workspace.evidence.sectionWord")} ${item.sectionId}`}
                   </span>
                   {item.sectionMeta?.bailable !== undefined && (
                     <span
-                      className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${item.sectionMeta.bailable ? "border border-[#2D6A4F] text-[#2D6A4F]" : "bg-[#D62828] text-white"}`}
+                      className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${item.sectionMeta.bailable ? "border border-green-700 text-green-700" : "bg-red-600 text-white"}`}
                     >
-                      {item.sectionMeta.bailable ? "Bailable" : "Non-Bailable"}
+                      {item.sectionMeta.bailable ? t("workspace.evidence.bailable") : t("workspace.evidence.nonBailable")}
                     </span>
                   )}
                 </div>
                 {item.sectionMeta?.plain_language && (
-                  <p className="mt-1 text-xs leading-relaxed text-[#374151]">
+                  <p className="mt-1 text-xs leading-relaxed text-slate-700">
                     {item.sectionMeta.plain_language}
                   </p>
                 )}
@@ -1716,10 +1632,10 @@ function EvidenceTab({ actSectionDetails, mock, caseData, matchesScope }) {
                       }
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-[#1A1A2E] underline"
+                      className="inline-flex items-center gap-1 text-slate-900 underline"
                     >
                       <ExternalLink size={10} />
-                      IndiaCode
+                      {t("workspace.dossier.indiaCode")}
                     </a>
                   )}
                   {(item.sectionMeta?.kanoon_url ||
@@ -1730,14 +1646,14 @@ function EvidenceTab({ actSectionDetails, mock, caseData, matchesScope }) {
                       }
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-[#1A1A2E] underline"
+                      className="inline-flex items-center gap-1 text-slate-900 underline"
                     >
                       <ExternalLink size={10} />
-                      Indian Kanoon
+                      {t("workspace.dossier.indianKanoon")}
                     </a>
                   )}
                   {item.sectionMeta?.punishment && (
-                    <span className="text-[#6B7280]">
+                    <span className="text-slate-500">
                       {item.sectionMeta.punishment}
                     </span>
                   )}
@@ -1745,76 +1661,74 @@ function EvidenceTab({ actSectionDetails, mock, caseData, matchesScope }) {
               </div>
             ))}
           {actSectionDetails.length === 0 && (
-            <p className="text-xs text-[#6B7280]">No acts recorded.</p>
+            <p className="text-xs text-slate-500">{t("workspace.evidence.noActs")}</p>
           )}
         </div>
         {actSectionDetails.some((x) => x.actId === "IPC") && (
-          <div className="mt-4 border border-amber-200 bg-[#FFFBEB] p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#92400E]">
-              Replaced by Bharatiya Nyaya Sanhita (BNS) from 1 July 2024
+          <div className="mt-4 border border-amber-200 bg-amber-50 p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+              {t("workspace.evidence.bnsTitle")}
             </p>
-            <p className="mt-1 text-xs text-[#78350F]">
-              Cases before 1 July 2024 continue under IPC. New FIRs use BNS
-              sections — verify mapping before chargesheet.
+            <p className="mt-1 text-xs text-amber-900">
+              {t("workspace.evidence.bnsBody")}
             </p>
           </div>
         )}
       </Section>
       <Section
-        title="Court, proof & FSL — single source"
-        badge={{ label: "Fact", tone: "fact" }}
+        title={t("workspace.evidence.courtProofTitle")}
+        badge={{ label: t("workspace.peopleTab.fact"), tone: "fact" }}
       >
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">
-              Applicable court
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              {t("workspace.evidence.applicableCourt")}
             </p>
-            <p className="font-medium text-[#1A1A2E]">
+            <p className="font-medium text-slate-900">
               {mock?.court.courtType}{" "}
-              <span className="text-[10px] font-normal text-[#9CA3AF]">
-                · mock
+              <span className="text-[10px] font-normal text-slate-400">
+                {t("workspace.evidence.mockBadge")}
               </span>
             </p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">
-              Bail
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              {t("workspace.evidence.bail")}
             </p>
-            <p className="font-medium text-[#1A1A2E]">
+            <p className="font-medium text-slate-900">
               {mock?.court.bailGrantableBy}{" "}
-              <span className="text-[10px] font-normal text-[#9CA3AF]">
-                · mock
+              <span className="text-[10px] font-normal text-slate-400">
+                {t("workspace.evidence.mockBadge")}
               </span>
             </p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">
-              Property
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              {t("workspace.evidence.property")}
             </p>
-            <p className="text-xs text-[#1A1A2E]">
+            <p className="text-xs text-slate-900">
               {mock?.property.items}{" "}
-              <span className="text-[10px] text-[#9CA3AF]">· mock</span>
+              <span className="text-[10px] text-slate-400">{t("workspace.evidence.mockBadge")}</span>
             </p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">
-              FSL
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              {t("workspace.evidence.fsl")}
             </p>
-            <p className="text-xs text-[#1A1A2E]">
+            <p className="text-xs text-slate-900">
               {mock?.fsl.status}{" "}
-              {mock?.fsl.sentDate && `· sent ${formatDate(mock.fsl.sentDate)}`}{" "}
+              {mock?.fsl.sentDate && t("workspace.evidence.sentFrag", { date: formatDate(mock.fsl.sentDate) })}{" "}
               {mock?.fsl.reportReceived &&
-                `· report ${formatDate(mock.fsl.reportDate)}`}{" "}
-              <span className="text-[10px] text-[#9CA3AF]">· mock</span>
+                t("workspace.evidence.reportFrag", { date: formatDate(mock.fsl.reportDate) })}{" "}
+              <span className="text-[10px] text-slate-400">{t("workspace.evidence.mockBadge")}</span>
             </p>
           </div>
           <div className="col-span-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">
-              Standard proof for chargesheet
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              {t("workspace.evidence.standardProof")}
             </p>
-            <p className="text-xs text-[#374151]">
-              FIR + arrest memo + seizure panchanama + witness statements + FSL
-              report + medical report + CDR/location where relevant.
+            <p className="text-xs text-slate-700">
+              {t("workspace.evidence.standardProofBody")}
             </p>
           </div>
         </div>
@@ -1824,73 +1738,74 @@ function EvidenceTab({ actSectionDetails, mock, caseData, matchesScope }) {
 }
 
 function InvestigationProgress({ caseData, caseIntel, mock, chargesheet }) {
+  const { t } = useTranslation();
   const rawItems = [
     {
-      label: "FIR registered",
+      label: t("workspace.progress.firRegistered"),
       done: true,
       detail: formatDate(caseData.CrimeRegisteredDate),
     },
     {
-      label: "Accused arrested",
+      label: t("workspace.progress.accusedArrested"),
       done:
         (mock?.mockAccused.filter((a) => a.arrestStatus === "Arrested")
           .length || 0) > 0,
       detail:
-        `${mock?.mockAccused.filter((a) => a.arrestStatus === "Arrested").length || 0}/${mock?.mockAccused.length || 0} arrested` +
+        t("workspace.progress.arrestedDetail", { arrested: mock?.mockAccused.filter((a) => a.arrestStatus === "Arrested").length || 0, total: mock?.mockAccused.length || 0 }) +
         (mock?.mockAccused.filter((a) => a.arrestStatus === "Absconding")
           .length || 0
-          ? ` · ${mock.mockAccused.filter((a) => a.arrestStatus === "Absconding").length} absconding`
+          ? t("workspace.progress.abscondFrag", { count: mock.mockAccused.filter((a) => a.arrestStatus === "Absconding").length })
           : ""),
     },
     {
-      label: "Remand obtained",
+      label: t("workspace.progress.remandObtained"),
       done: mock?.mockAccused.some((a) => a.bailStatus === "Remand"),
       detail: mock?.mockAccused.some((a) => a.bailStatus === "Remand")
-        ? "Remand recorded"
-        : "Pending",
+        ? t("workspace.progress.remandRecorded")
+        : t("workspace.progress.pending"),
     },
     {
-      label: "Property seized",
+      label: t("workspace.progress.propertySeized"),
       done: mock?.property.seized,
       detail: mock?.property.items,
     },
     {
-      label: "FSL sent",
+      label: t("workspace.progress.fslSent"),
       done: mock?.fsl.sent,
       detail: mock?.fsl.sent
-        ? `Sent ${formatDate(mock.fsl.sentDate)}`
-        : "Pending",
+        ? t("workspace.progress.sentDetail", { date: formatDate(mock.fsl.sentDate) })
+        : t("workspace.progress.pending"),
       overdue: mock?.fsl.status === "overdue",
     },
     {
-      label: "FSL report received",
+      label: t("workspace.progress.fslReceived"),
       done: mock?.fsl.reportReceived,
       detail: mock?.fsl.reportReceived
         ? formatDate(mock.fsl.reportDate)
-        : "Overdue",
+        : t("workspace.progress.overdueWord"),
       overdue: !mock?.fsl.reportReceived && mock?.fsl.status === "overdue",
     },
     {
-      label: "Witnesses examined",
+      label: t("workspace.progress.witnessesExamined"),
       done:
         (mock?.witnesses.filter((w) => w.examined).length || 0) ===
         (mock?.witnesses.length || 0),
-      detail: `${mock?.witnesses.filter((w) => w.examined).length || 0}/${mock?.witnesses.length || 0} examined`,
+      detail: t("workspace.progress.examinedDetail", { done: mock?.witnesses.filter((w) => w.examined).length || 0, total: mock?.witnesses.length || 0 }),
     },
     {
-      label: "Statements recorded",
+      label: t("workspace.progress.statementsRecorded"),
       done:
         (mock?.victimStatements.filter(Boolean).length || 0) >=
         (caseIntel?.victims?.length || 0) / 2,
-      detail: `${mock?.victimStatements.filter(Boolean).length || 0}/${caseIntel?.victims?.length || 0} victims`,
+      detail: t("workspace.progress.victimsDetail", { done: mock?.victimStatements.filter(Boolean).length || 0, total: caseIntel?.victims?.length || 0 }),
     },
     {
-      label: `Chargesheet filed (${chargesheet?.limitDays || 60}d limit)`,
+      label: t("workspace.progress.chargesheetFiled", { limit: chargesheet?.limitDays || 60 }),
       done: false,
       detail: chargesheet
         ? chargesheet.diff < 0
-          ? `Overdue by ${Math.abs(chargesheet.diff)}d`
-          : `Due in ${chargesheet.diff}d`
+          ? t("workspace.progress.chargesheetOverdue", { count: Math.abs(chargesheet.diff) })
+          : t("workspace.progress.chargesheetDue", { count: chargesheet.diff })
         : "—",
       overdue:
         chargesheet?.tone === "overdue" || chargesheet?.tone === "critical",
@@ -1899,7 +1814,8 @@ function InvestigationProgress({ caseData, caseIntel, mock, chargesheet }) {
   const items = rawItems.map((it) => {
     const isDone = it.done;
     const isOverdue = !isDone && it.overdue;
-    const isPending = !isDone && !isOverdue && it.detail === "Pending";
+    const isPending =
+      !isDone && !isOverdue && it.detail === t("workspace.progress.pending");
     const isInProgress = !isDone && !isOverdue && !isPending;
     const hasProgress =
       !isDone &&
@@ -1914,27 +1830,27 @@ function InvestigationProgress({ caseData, caseIntel, mock, chargesheet }) {
   });
   return (
     <Section
-      title="Investigation Progress"
-      badge={{ label: "Fact", tone: "fact" }}
+      title={t("workspace.progress.title")}
+      badge={{ label: t("workspace.peopleTab.fact"), tone: "fact" }}
     >
       <div className="space-y-1.5">
         {items.map((it, i) => (
           <div
             key={i}
-            className={`flex items-center justify-between border px-3 py-2 text-sm ${it.tone === "done" ? "border-[#2D6A4F]/30 bg-[#F0FDF4]" : it.tone === "overdue" ? "border-[#D62828]/30 bg-[#FEF2F2]" : "border-[#DDE3EC] bg-white"}`}
+            className={`flex items-center justify-between border px-3 py-2 text-sm ${it.tone === "done" ? "border-green-700/30 bg-green-50" : it.tone === "overdue" ? "border-red-600/30 bg-red-50" : "border-slate-200 bg-white"}`}
           >
             <span
-              className={`flex items-center gap-2 font-medium ${it.tone === "done" ? "text-[#2D6A4F]" : it.tone === "overdue" ? "text-[#D62828]" : "text-[#1A1A2E]"}`}
+              className={`flex items-center gap-2 font-medium ${it.tone === "done" ? "text-green-700" : it.tone === "overdue" ? "text-red-700" : "text-slate-900"}`}
             >
               <span
-                className={`flex h-4 w-4 items-center justify-center border text-[10px] ${it.tone === "done" ? "border-[#2D6A4F] bg-[#2D6A4F] text-white" : it.tone === "overdue" ? "border-[#D62828] text-[#D62828]" : it.tone === "progress" ? "border-[#C85A00] text-[#C85A00]" : "border-[#DDE3EC] text-[#6B7280]"}`}
+                className={`flex h-4 w-4 items-center justify-center border text-[10px] ${it.tone === "done" ? "border-green-700 bg-green-700 text-white" : it.tone === "overdue" ? "border-red-600 text-red-700" : it.tone === "progress" ? "border-amber-600 text-amber-700" : "border-slate-200 text-slate-500"}`}
               >
                 {it.tone === "done" ? "✓" : it.tone === "overdue" ? "!" : "○"}
               </span>
               {it.label}
             </span>
             <span
-              className={`text-xs ${it.tone === "overdue" ? "font-semibold text-[#D62828]" : "text-[#6B7280]"}`}
+              className={`text-xs ${it.tone === "overdue" ? "font-semibold text-red-700" : "text-slate-500"}`}
             >
               {it.detail}
             </span>
@@ -1946,6 +1862,7 @@ function InvestigationProgress({ caseData, caseIntel, mock, chargesheet }) {
 }
 
 function TimelineTab({ caseData, mock, caseIntel, chargesheet }) {
+  const { t } = useTranslation();
   const events = mock?.timeline || [];
   return (
     <div className="space-y-4">
@@ -1955,50 +1872,48 @@ function TimelineTab({ caseData, mock, caseIntel, chargesheet }) {
         mock={mock}
         chargesheet={chargesheet}
       />
-      <Section title="Case progression" badge={{ label: "Fact", tone: "fact" }}>
-        <div className="relative border-l border-[#DDE3EC] pl-6">
+      <Section title={t("workspace.timeline.progression")} badge={{ label: t("workspace.peopleTab.fact"), tone: "fact" }}>
+        <div className="relative border-l border-slate-200 pl-6">
           {events.map((ev, i) => (
             <div key={i} className="relative mb-6">
-              <span className="absolute -left-[25px] top-1 h-2 w-2 bg-[#1A1A2E]" />
-              <p className="ksp-mono text-xs font-semibold text-[#1A1A2E]">
+              <span className="absolute -left-[25px] top-1 h-2 w-2 bg-slate-900" />
+              <p className="ksp-mono text-xs font-semibold text-slate-900">
                 {formatMonoDate(ev.date)}
               </p>
-              <p className="text-sm font-semibold text-[#1A1A2E]">{ev.title}</p>
-              <p className="text-xs text-[#6B7280]">{ev.detail}</p>
+              <p className="text-sm font-semibold text-slate-900">{ev.title}</p>
+              <p className="text-xs text-slate-500">{ev.detail}</p>
             </div>
           ))}
           <div className="relative mb-2">
-            <span className="absolute -left-[25px] top-1 h-2 w-2 border border-[#1A1A2E] bg-white" />
-            <p className="ksp-mono text-xs font-semibold text-[#374151]">
-              Registered {formatMonoDate(caseData.CrimeRegisteredDate)} · FIR
+            <span className="absolute -left-[25px] top-1 h-2 w-2 border border-slate-900 bg-white" />
+            <p className="ksp-mono text-xs font-semibold text-slate-700">
+              {t("workspace.timeline.registeredFIR", { date: formatMonoDate(caseData.CrimeRegisteredDate) })}
             </p>
-            <p className="text-xs text-[#6B7280]">
-              Incident {formatDate(caseData.IncidentFromDate)} at{" "}
-              {caseData.UnitName}
+            <p className="text-xs text-slate-500">
+              {t("workspace.timeline.incidentAt", { date: formatDate(caseData.IncidentFromDate), station: caseData.UnitName })}
             </p>
           </div>
           {mock?.fsl.status === "overdue" && (
             <div className="relative mb-2">
-              <span className="absolute -left-[25px] top-1 h-2 w-2 bg-[#D62828]" />
-              <p className="ksp-mono text-xs font-semibold text-[#D62828]">
-                TODAY — FSL report pending
+              <span className="absolute -left-[25px] top-1 h-2 w-2 bg-red-600" />
+              <p className="ksp-mono text-xs font-semibold text-red-700">
+                {t("workspace.timeline.todayFSL")}
               </p>
-              <p className="text-xs text-[#6B7280]">
-                Sent {formatDate(mock.fsl.sentDate)} · overdue
+              <p className="text-xs text-slate-500">
+                {t("workspace.timeline.sentOverdue", { date: formatDate(mock.fsl.sentDate) })}
               </p>
             </div>
           )}
           <div className="relative">
-            <span className="absolute -left-[25px] top-1 h-2 w-2 bg-[#D62828]" />
-            <p className="ksp-mono text-xs font-bold text-[#D62828]">
-              {formatMonoDate(mock?.court.nextHearingDate)} — COURT HEARING
+            <span className="absolute -left-[25px] top-1 h-2 w-2 bg-red-600" />
+            <p className="ksp-mono text-xs font-bold text-red-700">
+              {t("workspace.timeline.courtHearing", { date: formatMonoDate(mock?.court.nextHearingDate) })}
             </p>
-            <p className="text-xs text-[#6B7280]">{mock?.court.purpose}</p>
+            <p className="text-xs text-slate-500">{mock?.court.purpose}</p>
           </div>
         </div>
-        <p className="mt-3 text-[10px] text-[#9CA3AF]">
-          Timeline is mock-seeded per caseId (deterministic). Wire to
-          ArrestSurrender / CourtHearings / FSL tables when available.
+        <p className="mt-3 text-[10px] text-slate-400">
+          {t("workspace.timeline.note")}
         </p>
       </Section>
     </div>
@@ -2006,6 +1921,7 @@ function TimelineTab({ caseData, mock, caseIntel, chargesheet }) {
 }
 
 function IntelTab({ similarCases, caseData, mock, matchesScope, onAsk }) {
+  const { t } = useTranslation();
   const filtered = similarCases.filter(
     (s) => matchesScope(s.CrimeNo) || matchesScope(s.CrimeGroupName),
   );
@@ -2017,22 +1933,21 @@ function IntelTab({ similarCases, caseData, mock, matchesScope, onAsk }) {
   return (
     <div className="space-y-4">
       <Section
-        title="Co-accused links"
-        badge={{ label: "System-derived", tone: "intel" }}
+        title={t("workspace.intel.coAccused")}
+        badge={{ label: t("workspace.intel.systemDerived"), tone: "intel" }}
       >
-        <p className="text-sm text-[#1A1A2E]">
+        <p className="text-sm text-slate-900">
           {filtered.filter((s) => s.shared_accused_count > 0).length > 0
-            ? `${filtered.filter((s) => s.shared_accused_count > 0).length} cases share accused with this FIR`
-            : "No co-accused links detected."}
+            ? t("workspace.intel.shareCases", { count: filtered.filter((s) => s.shared_accused_count > 0).length })
+            : t("workspace.intel.noLinks")}
         </p>
         <div className="mt-3 space-y-2">
           {Object.entries(byStation)
             .slice(0, 3)
             .map(([station, arr]) => (
-              <p key={station} className="text-xs text-[#374151]">
-                {arr.length} accused appear in {arr.length} other FIRs at{" "}
-                {station}{" "}
-                <span className="text-[#6B7280]">
+              <p key={station} className="text-xs text-slate-700">
+                {t("workspace.intel.accusedAppear", { count: arr.length, total: arr.length, station })}{" "}
+                <span className="text-slate-500">
                   —{" "}
                   {arr
                     .slice(0, 2)
@@ -2045,46 +1960,46 @@ function IntelTab({ similarCases, caseData, mock, matchesScope, onAsk }) {
         {filtered.filter((s) => s.shared_accused_count > 0).length > 0 && (
           <button
             onClick={() =>
-              onAsk && onAsk("Are these accused connected to other burglaries?")
+              onAsk && onAsk(t("workspace.intel.askLinksPrompt"))
             }
-            className="mt-3 border border-[#1A1A2E] bg-white px-3 py-1.5 text-xs font-semibold text-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white"
+            className="mt-3 border border-slate-900 bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 hover:bg-slate-900 hover:text-white"
           >
-            Ask CrimeLens about links →
+            {t("workspace.intel.askLinks")}
           </button>
         )}
       </Section>
       <Section
-        title={`Similar MO — ${filtered.length} cases`}
-        badge={{ label: "System-derived", tone: "intel" }}
+        title={t("workspace.intel.similarMO", { count: filtered.length })}
+        badge={{ label: t("workspace.intel.systemDerived"), tone: "intel" }}
       >
         <div className="space-y-2">
           {filtered.map((s) => (
             <div
               key={s.CaseMasterID}
-              className="border border-[#DDE3EC] bg-white p-3"
+              className="border border-slate-200 bg-white p-3"
             >
               <div className="flex items-center justify-between">
-                <span className="ksp-mono text-xs font-bold text-[#1A1A2E]">
+                <span className="ksp-mono text-xs font-bold text-slate-900">
                   {s.CrimeNo} · {s.DistrictName || s.UnitName}
                 </span>
-                <span className="border border-[#DDE3EC] bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#374151]">
-                  {s.similarity || "Similar"}
+                <span className="border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700">
+                  {s.similarity || t("workspace.intelDrawer.similarDefault")}
                 </span>
               </div>
-              <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">
-                Why similar
+              <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                {t("workspace.intel.whySimilar")}
               </p>
-              <p className="text-xs text-[#374151]">
+              <p className="text-xs text-slate-700">
                 {s.reasons?.slice(0, 3).join(" · ") ||
                   [s.CrimeGroupName, s.Gravity].filter(Boolean).join(" · ")}
               </p>
               {(s.shared_accused_count > 0 || s.shared_act_count > 0) && (
-                <p className="mt-1 text-[11px] font-medium text-[#1A1A2E]">
+                <p className="mt-1 text-[11px] font-medium text-slate-900">
                   {s.shared_accused_count > 0 &&
-                    `${s.shared_accused_count} shared accused`}{" "}
+                    t("workspace.intel.sharedAccusedFrag", { count: s.shared_accused_count })}{" "}
                   {s.shared_accused_count > 0 && s.shared_act_count > 0 && "·"}{" "}
                   {s.shared_act_count > 0 &&
-                    `${s.shared_act_count} shared acts`}
+                    t("workspace.intel.sharedActsFrag", { count: s.shared_act_count })}
                 </p>
               )}
               <div className="mt-2 flex gap-1.5">
@@ -2092,22 +2007,22 @@ function IntelTab({ similarCases, caseData, mock, matchesScope, onAsk }) {
                   onClick={() =>
                     onAsk && onAsk(`Compare this case with ${s.CrimeNo}`)
                   }
-                  className="border border-[#DDE3EC] bg-white px-2 py-1 text-[11px] font-medium text-[#1A1A2E] hover:border-[#1A1A2E]"
+                  className="border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-900 hover:border-slate-900"
                 >
-                  Compare
+                  {t("workspace.intel.compare")}
                 </button>
                 <button
                   onClick={() => onAsk && onAsk(`Tell me about ${s.CrimeNo}`)}
-                  className="border border-[#1A1A2E] bg-[#1A1A2E] px-2 py-1 text-[11px] font-medium text-white"
+                  className="rounded-sm bg-blue-900/90 px-2 py-1 text-[11px] font-medium text-white hover:bg-blue-900"
                 >
-                  Ask about this
+                  {t("workspace.intel.askAbout")}
                 </button>
               </div>
             </div>
           ))}
           {filtered.length === 0 && (
-            <p className="text-xs text-[#6B7280]">
-              No matches for scoped query.
+            <p className="text-xs text-slate-500">
+              {t("workspace.intel.noMatches")}
             </p>
           )}
         </div>

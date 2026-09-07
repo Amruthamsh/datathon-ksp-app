@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Save, Download } from "lucide-react";
+import { Save, Download, Copy, Check } from "lucide-react";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx";
@@ -195,7 +195,21 @@ export default function AnalysisPanel({ analysis }) {
   const rowCount = rows.length;
 
   const [savingIdx, setSavingIdx] = useState(null);
+  const [copiedSql, setCopiedSql] = useState(false);
   const { token, officer } = useAuth();
+
+  async function handleCopySql() {
+    const sql = analysis?.sql_query;
+    if (!sql) return;
+    try {
+      await navigator.clipboard.writeText(sql);
+      setCopiedSql(true);
+      setTimeout(() => setCopiedSql(false), 2000);
+    } catch (err) {
+      console.error(err);
+      alert(t("analysis.copyFailed"));
+    }
+  }
 
   async function handleSaveChart(chartIdx) {
     try {
@@ -323,7 +337,7 @@ export default function AnalysisPanel({ analysis }) {
                   onClick={() => exportAnalysis("pdf")}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 cursor-pointer"
                 >
-                  PDF
+                  {t("analysis.pdf")}
                 </button>
                 <button
                   onClick={() => exportAnalysis("docx")}
@@ -338,7 +352,7 @@ export default function AnalysisPanel({ analysis }) {
       </div>
 
       {/* Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-5 bg-slate-100">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 bg-slate-100">
         <section className="space-y-4">
           {hasCharts &&
             charts.map((chartConfig, idx) => {
@@ -408,8 +422,27 @@ export default function AnalysisPanel({ analysis }) {
             className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
             open
           >
-            <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900">
-              {t("analysis.sqlQuery")}
+            <summary className="flex items-center justify-between cursor-pointer list-none text-sm font-semibold text-slate-900">
+              <span>{t("analysis.sqlQuery")}</span>
+              <button
+                onClick={handleCopySql}
+                disabled={!analysis?.sql_query}
+                className="flex shrink-0 items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {copiedSql ? (
+                  <>
+                    <Check size={13} className="text-emerald-600" />
+                    <span className="text-emerald-700">
+                      {t("analysis.copied")}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={13} />
+                    <span>{t("analysis.copy")}</span>
+                  </>
+                )}
+              </button>
             </summary>
             <div className="mt-4">
               <pre className="overflow-x-hidden whitespace-pre-wrap wrap-break-word rounded-lg border border-slate-200 bg-slate-950 px-4 py-4 text-xs leading-6 text-slate-100 shadow-inner">

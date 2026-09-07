@@ -239,3 +239,52 @@ async def get_similar_cases(
             status_code=500,
             detail="Failed to fetch similar cases."
         )
+
+
+# ---------------------------------------------------------------------
+# AI Case Brief (standalone, like crime-map patrol endpoints)
+# ---------------------------------------------------------------------
+@router.get("/{case_id}/brief", status_code=status.HTTP_200_OK)
+async def get_case_brief(
+    case_id: int,
+    language: str | None = Query(None),
+    current_user: dict = Depends(get_current_user),
+    repo: SQLiteInvestigationRepository = Depends(
+        get_investigation_repository
+    ),
+):
+    try:
+
+        details = repo.get_case_details(case_id)
+
+        if not details:
+            raise HTTPException(
+                status_code=404,
+                detail="Case not found."
+            )
+
+        intel = repo.get_case_intelligence(case_id)
+
+        # Lazy import — keeps cold starts light (same pattern as chat graph)
+        from services.case_brief_service import generate_case_brief
+
+        result = generate_case_brief(
+            details, intel or {}, (language or "en")[:2]
+        )
+
+        return {
+            "status": "success",
+            "data": result or {"brief": None, "generated_at": None},
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate case brief."
+        )
