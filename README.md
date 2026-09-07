@@ -4,6 +4,11 @@
 
 Officers ask questions in natural language — in English or Kannada — and get instant answers backed by SQL analytics, interactive maps, criminal network graphs, and automated case prioritisation. The platform goes beyond simple data retrieval to surface hidden relationships between crimes, offenders, locations, and time patterns, enabling data-driven policing at scale.
 
+## Demo Login Details
+
+KGID: ```KGID00000001```
+Password: ```Demo12345```
+
 ---
 
 ## Problem
