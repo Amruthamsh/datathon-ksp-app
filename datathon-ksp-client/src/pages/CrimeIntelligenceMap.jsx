@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import DeckGL from "@deck.gl/react";
 import { Map } from "react-map-gl/maplibre";
 import { ScatterplotLayer, GeoJsonLayer, LineLayer } from "@deck.gl/layers";
+import { buffer, point, booleanPointInPolygon } from "@turf/turf";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
   AlertTriangle,
@@ -31,6 +32,11 @@ import {
   EyeOff,
   Layers,
   MessageSquare,
+  Pencil,
+  Trash2,
+  Check,
+  CircleDot,
+  Siren,
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useAuth } from "../auth/AuthContext";
@@ -207,6 +213,10 @@ export default function CrimeIntelligenceMap() {
   const [rightTab, setRightTab] = useState("details");
   const [mapChatPrefill, setMapChatPrefill] = useState(null);
   const [mapChatKey, setMapChatKey] = useState(0);
+  // Station coverage rings (isochrone proxy) — resource allocation lens
+  const [showCoverage, setShowCoverage] = useState(false);
+  const [coverageRings, setCoverageRings] = useState({ 5: true, 10: true, 15: false });
+  const [coverageStats, setCoverageStats] = useState(null);
 
   const activeSubType = useMemo(() => {
     if (selectedHeads && selectedHeads.size === 1) {
@@ -427,6 +437,7 @@ export default function CrimeIntelligenceMap() {
       hotspotDetail,
       summary,
       enhancedRisk,
+      coverage: coverageStats,
     }),
     [
       viewMode,
@@ -443,6 +454,7 @@ export default function CrimeIntelligenceMap() {
       hotspotDetail,
       summary,
       enhancedRisk,
+      coverageStats,
     ],
   );
 
@@ -634,6 +646,9 @@ export default function CrimeIntelligenceMap() {
                 poiFilters={poiFilters}
                 enhancedRisk={enhancedRisk}
                 showSocioOverlay={showSocioOverlay}
+                showCoverage={showCoverage}
+                coverageRings={coverageRings}
+                onCoverageStats={setCoverageStats}
               />
 
               {viewMode === "Heatmap" &&
@@ -682,6 +697,13 @@ export default function CrimeIntelligenceMap() {
                   onToggleSocio={() => setShowSocioOverlay((v) => !v)}
                   intelligenceStatus={intelligenceStatus}
                   onHide={() => setShowLayerPanel(false)}
+                  showCoverage={showCoverage}
+                  onToggleCoverage={() => setShowCoverage((v) => !v)}
+                  coverageRings={coverageRings}
+                  onToggleRing={(mins) =>
+                    setCoverageRings((r) => ({ ...r, [mins]: !r[mins] }))
+                  }
+                  coverageStats={coverageStats}
                 />
               ) : (
                 <button
@@ -791,6 +813,11 @@ function LayerSwitcher({
   onToggleSocio,
   intelligenceStatus,
   onHide,
+  showCoverage,
+  onToggleCoverage,
+  coverageRings,
+  onToggleRing,
+  coverageStats,
 }) {
   const { t } = useTranslation();
   const modes = [
@@ -969,6 +996,54 @@ function LayerSwitcher({
           </span>
         </label>
       </div>
+      <div className="h-px bg-[#E2E8F0] my-1" />
+      <div>
+        <label className="flex items-center gap-2 px-2.5 py-1 rounded-[6px] hover:bg-[#F8FAFC] cursor-pointer">
+          <input
+            type="checkbox"
+            checked={!!showCoverage}
+            onChange={onToggleCoverage}
+            className="rounded border-slate-300 text-[#17233C] w-3 h-3 accent-[#17233C] cursor-pointer"
+          />
+          <Siren className="h-3 w-3 text-[#334155]" />
+          <span className="text-[12px] font-medium text-[#334155] flex-1">
+            Station coverage
+          </span>
+        </label>
+        {showCoverage && (
+          <div className="px-2.5 pb-1 pt-0.5">
+            <div className="flex gap-1.5">
+              {[5, 10, 15].map((mins) => (
+                <button
+                  key={mins}
+                  onClick={() => onToggleRing && onToggleRing(mins)}
+                  className={`flex-1 rounded-md border px-1 py-1 text-[10px] font-bold tabular-nums transition-colors cursor-pointer ${
+                    coverageRings?.[mins]
+                      ? "border-[#17233C] bg-[#17233C] text-white"
+                      : "border-[#E2E8F0] bg-white text-[#94A3B8] hover:text-[#475569]"
+                  }`}
+                  title={`${mins}-min response ring (~${mins * 0.5} km)`}
+                >
+                  {mins}m
+                </button>
+              ))}
+            </div>
+            {coverageStats && (
+              <p className="mt-1.5 text-[10px] leading-snug text-[#475569]">
+                <span
+                  className={`font-bold ${coverageStats.uncovered > 0 ? "text-[#D92D20]" : "text-emerald-700"}`}
+                >
+                  {coverageStats.uncovered}/{coverageStats.total}
+                </span>{" "}
+                hotspots beyond 10-min response
+              </p>
+            )}
+            <p className="mt-1 text-[9px] leading-snug text-[#94A3B8]">
+              Rings ≈ drive time @ 30 km/h urban avg (2.5 / 5 / 7.5 km).
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -984,6 +1059,11 @@ LayerSwitcher.propTypes = {
   onToggleSocio: PropTypes.func,
   intelligenceStatus: PropTypes.object,
   onHide: PropTypes.func,
+  showCoverage: PropTypes.bool,
+  onToggleCoverage: PropTypes.func,
+  coverageRings: PropTypes.object,
+  onToggleRing: PropTypes.func,
+  coverageStats: PropTypes.object,
 };
 
 /* ── Crime Category Legend ─────────────────────────────────────── */
@@ -1290,12 +1370,39 @@ function MapView({
   poiFilters,
   enhancedRisk,
   showSocioOverlay,
+  showCoverage,
+  coverageRings,
+  onCoverageStats,
 }) {
   const [clusterData, setClusterData] = useState([]);
   const [districtRisk, setDistrictRisk] = useState([]);
   const [networkOverlay, setNetworkOverlay] = useState([]);
   const [poiData, setPoiData] = useState([]);
   const [karnatakaGeo, setKarnatakaGeo] = useState(null);
+  // Station coverage (response rings)
+  const [stations, setStations] = useState([]);
+  // Map annotations — active planning surface, per-session (sessionStorage)
+  const [annotateMode, setAnnotateMode] = useState("off"); // off|pin|watch|corridor
+  const [annotations, setAnnotations] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("ksp-map-annotations") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [corridorDraft, setCorridorDraft] = useState([]);
+  const [watchRadiusKm, setWatchRadiusKm] = useState(1);
+  const [showAnnotateList, setShowAnnotateList] = useState(false);
+  const annotating = annotateMode !== "off";
+  const pick = !annotating;
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("ksp-map-annotations", JSON.stringify(annotations));
+    } catch {
+      /* storage unavailable — annotations stay in-memory */
+    }
+  }, [annotations]);
 
   useEffect(() => {
     if (!token) return;
@@ -1359,6 +1466,18 @@ function MapView({
       })
       .catch(() => {});
   }, [token, poiFilters]);
+
+  // Police-station centroids for coverage rings (scoped to current date range)
+  useEffect(() => {
+    if (!token || !showCoverage) return;
+    const params = {};
+    if (dateFrom) params.date_from = dateFrom;
+    if (dateTo) params.date_to = dateTo;
+    crimeMapApi
+      .getStations(token, params)
+      .then((r) => setStations(r.data || []))
+      .catch(() => {});
+  }, [token, showCoverage, dateFrom, dateTo]);
 
   const crimePointsData = useMemo(
     () =>
@@ -1466,6 +1585,200 @@ function MapView({
     };
   }, [karnatakaGeo]);
 
+  // ── Station coverage rings (isochrone proxy via Turf buffer) ──
+  // Drive-time proxy at ~30 km/h urban average: 5m→2.5km, 10m→5km, 15m→7.5km.
+  const coverageRingsGeo = useMemo(() => {
+    if (!showCoverage || !stations.length)
+      return { 5: null, 10: null, 15: null };
+    const out = {};
+    [5, 10, 15].forEach((mins) => {
+      if (!coverageRings?.[mins]) {
+        out[mins] = null;
+        return;
+      }
+      const radiusKm = mins * 0.5;
+      out[mins] = {
+        type: "FeatureCollection",
+        features: stations
+          .filter((s) => s.lat && s.lng)
+          .map((s) => {
+            const f = buffer(point([s.lng, s.lat]), radiusKm, {
+              units: "kilometers",
+              steps: 32,
+            });
+            f.properties = {
+              station: s.station,
+              district: s.district,
+              mins,
+              crimes: s.crime_count,
+            };
+            return f;
+          }),
+      };
+    });
+    return out;
+  }, [showCoverage, stations, coverageRings]);
+
+  // Hotspots falling outside the 10-min ring = resource allocation argument
+  const coverageGap = useMemo(() => {
+    if (!showCoverage || !stations.length || !coverageRingsGeo[10]) return null;
+    const ring10 = coverageRingsGeo[10];
+    const covered = (lng, lat) => {
+      const pt = point([lng, lat]);
+      return ring10.features.some((f) => {
+        try {
+          return booleanPointInPolygon(pt, f);
+        } catch {
+          return false;
+        }
+      });
+    };
+    const uncovered = clusterLayerData.filter(
+      (c) => !covered(c.coordinates[0], c.coordinates[1]),
+    );
+    return { total: clusterLayerData.length, uncovered };
+  }, [showCoverage, stations, coverageRingsGeo, clusterLayerData]);
+
+  useEffect(() => {
+    if (!onCoverageStats) return;
+    if (!coverageGap) {
+      onCoverageStats(null);
+      return;
+    }
+    onCoverageStats({
+      total: coverageGap.total,
+      uncovered: coverageGap.uncovered.length,
+      stations: stations.length,
+      uncoveredHotspots: coverageGap.uncovered.map((c) => ({
+        lat: c.lat,
+        lng: c.lng,
+        crime_count: c.crime_count,
+        dominant_crime: c.dominant_crime,
+      })),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coverageGap, stations.length]);
+
+  // ── Map annotations (officer planning marks, per-session) ──
+  const handleAnnotateClick = useCallback(
+    (info) => {
+      if (annotateMode === "off" || !info?.coordinate) return false;
+      const [lng, lat] = info.coordinate;
+      if (annotateMode === "pin") {
+        const id = `ann-${Date.now()}`;
+        setAnnotations((prev) => [
+          ...prev,
+          {
+            id,
+            kind: "pin",
+            label: `Pin ${prev.filter((a) => a.kind === "pin").length + 1}`,
+            note: "",
+            lng,
+            lat,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+        setShowAnnotateList(true);
+      } else if (annotateMode === "watch") {
+        const id = `ann-${Date.now()}`;
+        setAnnotations((prev) => [
+          ...prev,
+          {
+            id,
+            kind: "watch",
+            label: `Watch zone ${prev.filter((a) => a.kind === "watch").length + 1}`,
+            note: "",
+            lng,
+            lat,
+            radiusKm: watchRadiusKm,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+        setShowAnnotateList(true);
+      } else if (annotateMode === "corridor") {
+        setCorridorDraft((prev) => [...prev, [lng, lat]]);
+      }
+      return true;
+    },
+    [annotateMode, watchRadiusKm],
+  );
+
+  const finishCorridor = useCallback(() => {
+    if (corridorDraft.length < 2) return;
+    setAnnotations((prev) => [
+      ...prev,
+      {
+        id: `ann-${Date.now()}`,
+        kind: "corridor",
+        label: `Corridor ${prev.filter((a) => a.kind === "corridor").length + 1}`,
+        note: "",
+        path: corridorDraft,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    setCorridorDraft([]);
+    setAnnotateMode("off");
+    setShowAnnotateList(true);
+  }, [corridorDraft]);
+
+  const updateAnnotationNote = useCallback((id, note) => {
+    setAnnotations((prev) => prev.map((a) => (a.id === id ? { ...a, note } : a)));
+  }, []);
+
+  const deleteAnnotation = useCallback((id) => {
+    setAnnotations((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  const clearAnnotations = useCallback(() => {
+    setAnnotations([]);
+    setCorridorDraft([]);
+  }, []);
+
+  const watchZonesGeo = useMemo(
+    () => ({
+      type: "FeatureCollection",
+      features: annotations
+        .filter((a) => a.kind === "watch")
+        .map((a) => {
+          const f = buffer(point([a.lng, a.lat]), a.radiusKm || 1, {
+            units: "kilometers",
+            steps: 32,
+          });
+          f.properties = { id: a.id, label: a.label };
+          return f;
+        }),
+    }),
+    [annotations],
+  );
+
+  const corridorSegments = useMemo(() => {
+    const segs = [];
+    const pushPath = (path, id) => {
+      for (let i = 0; i + 1 < path.length; i += 1) {
+        segs.push({ id: `${id}-${i}`, source: path[i], target: path[i + 1] });
+      }
+    };
+    annotations
+      .filter((a) => a.kind === "corridor" && a.path?.length >= 2)
+      .forEach((a) => pushPath(a.path, a.id));
+    if (corridorDraft.length >= 2) pushPath(corridorDraft, "draft");
+    return segs;
+  }, [annotations, corridorDraft]);
+
+  const corridorVertices = useMemo(
+    () =>
+      (corridorDraft || []).map((p, i) => ({
+        id: `draft-v-${i}`,
+        coordinates: p,
+      })),
+    [corridorDraft],
+  );
+
+  const pinData = useMemo(
+    () => annotations.filter((a) => a.kind === "pin"),
+    [annotations],
+  );
+
   const layers = useMemo(() => {
     const activeLayers = [];
 
@@ -1501,7 +1814,7 @@ function MapView({
             },
             strokeWidth: 1,
             getLineColor: [255, 255, 255, 120],
-            pickable: true,
+            pickable: pick,
             autoHighlight: true,
             highlightColor: [255, 255, 0, 120],
             onClick: (info) => {
@@ -1651,7 +1964,7 @@ function MapView({
           getPosition: (d) => d.coordinates,
           getRadius: (d) => Math.min(d.crime_count * 500, 5000),
           getFillColor: [220, 38, 38, 200],
-          pickable: true,
+          pickable: pick,
           onClick: (info) => {
             if (info.object) {
               const d = info.object;
@@ -1698,7 +2011,7 @@ function MapView({
             if (d.risk === "Medium") return [239, 68, 68, 100];
             return [239, 68, 68, 60];
           },
-          pickable: true,
+          pickable: pick,
           onClick: (info) => {
             if (info.object) {
               onSelectSpot({
@@ -1739,7 +2052,7 @@ function MapView({
             getLineColor: [255, 255, 255, 220],
             stroked: true,
             lineWidthMinPixels: 1,
-            pickable: true,
+            pickable: pick,
             autoHighlight: true,
             onClick: (info) => {
               if (info.object) {
@@ -1759,6 +2072,164 @@ function MapView({
           }),
         );
       });
+    }
+
+    // ── Station coverage: 5/10/15-min response rings + station markers ──
+    if (showCoverage && stations.length) {
+      const tierStyle = {
+        5: { fill: [22, 163, 74, 38], line: [22, 163, 74, 200] },
+        15: { fill: [220, 38, 38, 26], line: [220, 38, 38, 185] },
+        10: { fill: [245, 158, 11, 34], line: [217, 119, 6, 200] },
+      };
+      // draw largest first so smaller rings stay visible
+      [15, 10, 5].forEach((mins) => {
+        const geo = coverageRingsGeo[mins];
+        if (!geo) return;
+        activeLayers.push(
+          new GeoJsonLayer({
+            id: `coverage-ring-${mins}`,
+            data: geo,
+            pickable: false,
+            stroked: true,
+            filled: true,
+            getFillColor: tierStyle[mins].fill,
+            getLineColor: tierStyle[mins].line,
+            getLineWidth: 1,
+            lineWidthMinPixels: 1,
+          }),
+        );
+      });
+
+      activeLayers.push(
+        new ScatterplotLayer({
+          id: "coverage-stations",
+          data: stations.filter((s) => s.lat && s.lng),
+          getPosition: (d) => [d.lng, d.lat],
+          getRadius: 7,
+          radiusMinPixels: 6,
+          radiusMaxPixels: 11,
+          getFillColor: [30, 58, 138, 235],
+          getLineColor: [255, 255, 255, 255],
+          stroked: true,
+          lineWidthMinPixels: 1.5,
+          pickable: pick,
+          autoHighlight: true,
+          onClick: (info) => {
+            if (info.object) {
+              const d = info.object;
+              onSelectSpot({
+                id: `STN-${d.station}`,
+                name: d.station,
+                type: "Station",
+                station: d.station,
+                district: d.district,
+                crime_count: d.crime_count,
+                lat: d.lat,
+                lng: d.lng,
+              });
+            }
+          },
+        }),
+      );
+
+      // Gap halos — hotspots outside the 10-min ring
+      if (coverageGap?.uncovered?.length) {
+        activeLayers.push(
+          new ScatterplotLayer({
+            id: "coverage-gaps",
+            data: coverageGap.uncovered,
+            getPosition: (d) => d.coordinates,
+            getRadius: 16,
+            radiusMinPixels: 14,
+            radiusMaxPixels: 26,
+            getFillColor: [220, 38, 38, 28],
+            getLineColor: [220, 38, 38, 230],
+            stroked: true,
+            lineWidthMinPixels: 2,
+            pickable: pick,
+            autoHighlight: true,
+            onClick: (info) => {
+              if (info.object) {
+                const d = info.object;
+                onSelectSpot({
+                  id: `CLS-${d.lat.toFixed(2)}-${d.lng.toFixed(2)}`,
+                  name: `${d.dominant_crime} Cluster (gap)`,
+                  type: "Cluster",
+                  totalCrimes: d.crime_count,
+                  dominant_crime: d.dominant_crime,
+                  lat: d.lat,
+                  lng: d.lng,
+                });
+                onClusterClick(d.lat, d.lng);
+              }
+            },
+          }),
+        );
+      }
+    }
+
+    // ── Annotations: pins, watch zones, patrol corridors ──
+    if (pinData.length) {
+      activeLayers.push(
+        new ScatterplotLayer({
+          id: "annotation-pins",
+          data: pinData,
+          getPosition: (d) => [d.lng, d.lat],
+          getRadius: 8,
+          radiusMinPixels: 9,
+          radiusMaxPixels: 13,
+          getFillColor: [217, 119, 6, 235],
+          getLineColor: [255, 255, 255, 255],
+          stroked: true,
+          lineWidthMinPixels: 2,
+          pickable: false,
+        }),
+      );
+    }
+    if (watchZonesGeo.features.length) {
+      activeLayers.push(
+        new GeoJsonLayer({
+          id: "annotation-watch",
+          data: watchZonesGeo,
+          pickable: false,
+          stroked: true,
+          filled: true,
+          getFillColor: [217, 119, 6, 36],
+          getLineColor: [180, 83, 9, 230],
+          getLineWidth: 2,
+          lineWidthMinPixels: 2,
+        }),
+      );
+    }
+    if (corridorSegments.length) {
+      activeLayers.push(
+        new LineLayer({
+          id: "annotation-corridors",
+          data: corridorSegments,
+          getSourcePosition: (d) => d.source,
+          getTargetPosition: (d) => d.target,
+          getColor: [79, 70, 229, 235],
+          getWidth: 4,
+          widthMinPixels: 3,
+        }),
+      );
+    }
+    if (corridorVertices.length) {
+      activeLayers.push(
+        new ScatterplotLayer({
+          id: "annotation-draft-vertices",
+          data: corridorVertices,
+          getPosition: (d) => d.coordinates,
+          getRadius: 5,
+          radiusMinPixels: 5,
+          radiusMaxPixels: 8,
+          getFillColor: [79, 70, 229, 235],
+          getLineColor: [255, 255, 255, 255],
+          stroked: true,
+          lineWidthMinPixels: 1.5,
+          pickable: false,
+        }),
+      );
     }
 
     // Karnataka state outline — always on top
@@ -1793,23 +2264,227 @@ function MapView({
     showSocioOverlay,
     karnatakaGeo,
     karnatakaMask,
+    pick,
+    showCoverage,
+    stations,
+    coverageRingsGeo,
+    coverageGap,
+    pinData,
+    watchZonesGeo,
+    corridorSegments,
+    corridorVertices,
   ]);
 
-  return (
-    <DeckGL
-      viewState={viewState}
-      onViewStateChange={(e) => onViewStateChange(e.viewState)}
-      controller={true}
-      layers={layers}
-      getCursor={({ isHovering }) => (isHovering ? "pointer" : "default")}
+  const annotateBtn = (mode, Icon, label, title) => (
+    <button
+      key={mode}
+      onClick={() => {
+        setAnnotateMode((m) => (m === mode ? "off" : mode));
+        if (mode !== "corridor") setCorridorDraft([]);
+      }}
+      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${
+        annotateMode === mode
+          ? "bg-[#17233C] text-white"
+          : "text-[#475569] hover:bg-[#F1F5F9]"
+      }`}
+      title={title}
     >
-      <Map
-        reuseMaps
-        mapLib={import("maplibre-gl")}
-        mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-        preventStyleDiffing={true}
-      />
-    </DeckGL>
+      <Icon className="h-3.5 w-3.5" />
+      <span className="hidden sm:inline">{label}</span>
+    </button>
+  );
+
+  return (
+    <>
+      <DeckGL
+        viewState={viewState}
+        onViewStateChange={(e) => onViewStateChange(e.viewState)}
+        controller={true}
+        layers={layers}
+        onClick={(info) => handleAnnotateClick(info)}
+        getCursor={({ isHovering }) =>
+          annotating ? "crosshair" : isHovering ? "pointer" : "default"
+        }
+      >
+        <Map
+          reuseMaps
+          mapLib={import("maplibre-gl")}
+          mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+          preventStyleDiffing={true}
+        />
+      </DeckGL>
+
+      {/* ── Annotation toolbar: turns the map into a planning surface ── */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-white/95 backdrop-blur-md rounded-full border border-[#E2E8F0] px-1.5 py-1 max-w-[calc(100%-2rem)] flex-wrap justify-center"
+        style={{ boxShadow: "0 4px 16px rgba(15,23,42,0.10)" }}
+      >
+        <span
+          className={`flex items-center gap-1 pl-1.5 pr-1 text-[10px] font-bold uppercase tracking-[0.08em] ${
+            annotating ? "text-[#D92D20]" : "text-[#94A3B8]"
+          }`}
+          title="Officer planning marks — stored for this session only"
+        >
+          <Pencil className="h-3 w-3" />
+          <span className="hidden md:inline">Plan</span>
+        </span>
+        {annotateBtn("pin", MapPin, "Pin", "Drop a pin with a note")}
+        {annotateBtn("watch", CircleDot, "Watch", "Mark a zone as under watch")}
+        {annotateBtn("corridor", Route, "Corridor", "Draw a patrol corridor")}
+        {annotateMode === "watch" && (
+          <span className="flex items-center gap-1 pl-1">
+            {[0.5, 1, 2].map((r) => (
+              <button
+                key={r}
+                onClick={() => setWatchRadiusKm(r)}
+                className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums cursor-pointer ${
+                  watchRadiusKm === r
+                    ? "bg-amber-500 text-white"
+                    : "text-[#94A3B8] hover:text-[#475569]"
+                }`}
+              >
+                {r}k
+              </button>
+            ))}
+          </span>
+        )}
+        {annotateMode === "corridor" && (
+          <span className="flex items-center gap-1 pl-1">
+            <span className="text-[10px] font-semibold text-[#64748B] tabular-nums">
+              {corridorDraft.length} pts
+            </span>
+            <button
+              onClick={finishCorridor}
+              disabled={corridorDraft.length < 2}
+              className="flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white disabled:opacity-40 cursor-pointer"
+            >
+              <Check className="h-3 w-3" /> Finish
+            </button>
+            <button
+              onClick={() => {
+                setCorridorDraft([]);
+                setAnnotateMode("off");
+              }}
+              className="rounded-full px-1.5 py-0.5 text-[10px] font-bold text-[#94A3B8] hover:text-[#475569] cursor-pointer"
+            >
+              Cancel
+            </button>
+          </span>
+        )}
+        {annotations.length > 0 && (
+          <>
+            <button
+              onClick={() => setShowAnnotateList((v) => !v)}
+              className="rounded-full bg-[#F1F5F9] border border-[#E2E8F0] px-2 py-0.5 text-[10px] font-bold text-[#334155] tabular-nums cursor-pointer"
+              title="Show planning marks"
+            >
+              {annotations.length}
+            </button>
+            <button
+              onClick={clearAnnotations}
+              className="flex h-6 w-6 items-center justify-center rounded-full text-[#94A3B8] hover:text-[#D92D20] hover:bg-red-50 transition-colors cursor-pointer"
+              title="Clear all planning marks (this session)"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </>
+        )}
+      </div>
+      {annotating && (
+        <p className="absolute top-[4.25rem] left-1/2 -translate-x-1/2 z-20 bg-[#17233C]/90 text-white text-[11px] font-medium rounded-full px-3 py-1 pointer-events-none whitespace-nowrap">
+          {annotateMode === "pin" && "Click anywhere on the map to drop a pin"}
+          {annotateMode === "watch" &&
+            `Click to mark a ${watchRadiusKm} km watch zone`}
+          {annotateMode === "corridor" &&
+            "Click to trace the corridor, then Finish"}
+        </p>
+      )}
+
+      {/* ── Annotation list: notes editable inline, per-session ── */}
+      {showAnnotateList && annotations.length > 0 && (
+        <div
+          className="absolute top-[6.5rem] left-1/2 -translate-x-1/2 z-20 w-[300px] max-w-[calc(100%-2rem)] max-h-[220px] overflow-y-auto bg-white/95 backdrop-blur-md rounded-[10px] border border-[#E2E8F0] p-2 space-y-1.5"
+          style={{ boxShadow: "0 4px 16px rgba(15,23,42,0.10)" }}
+        >
+          {annotations.map((a) => (
+            <div
+              key={a.id}
+              className="rounded-[8px] border border-[#E2E8F0] bg-white px-2 py-1.5"
+            >
+              <div className="flex items-center gap-1.5">
+                {a.kind === "pin" && (
+                  <MapPin className="h-3 w-3 text-amber-600 shrink-0" />
+                )}
+                {a.kind === "watch" && (
+                  <CircleDot className="h-3 w-3 text-amber-600 shrink-0" />
+                )}
+                {a.kind === "corridor" && (
+                  <Route className="h-3 w-3 text-indigo-600 shrink-0" />
+                )}
+                <span className="text-[11px] font-bold text-[#17233C] flex-1 truncate">
+                  {a.label}
+                </span>
+                {a.kind === "watch" && (
+                  <span className="text-[9px] font-semibold text-[#94A3B8] tabular-nums">
+                    {a.radiusKm} km
+                  </span>
+                )}
+                <button
+                  onClick={() => deleteAnnotation(a.id)}
+                  className="flex h-5 w-5 items-center justify-center rounded-full text-[#94A3B8] hover:text-[#D92D20] hover:bg-red-50 cursor-pointer"
+                  title="Delete mark"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+              <input
+                value={a.note || ""}
+                onChange={(e) => updateAnnotationNote(a.id, e.target.value)}
+                placeholder="Add a note…"
+                className="mt-1 w-full rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1 text-[11px] text-[#334155] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-blue-900"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Coverage gap chip: the resource-allocation argument ── */}
+      {showCoverage && coverageGap && (
+        <div
+          className={`absolute bottom-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border px-3.5 py-1.5 backdrop-blur-md whitespace-nowrap ${
+            coverageGap.uncovered.length > 0
+              ? "bg-red-50/95 border-red-200"
+              : "bg-emerald-50/95 border-emerald-200"
+          }`}
+          style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
+        >
+          <Siren
+            className={`h-3.5 w-3.5 ${coverageGap.uncovered.length > 0 ? "text-[#D92D20]" : "text-emerald-700"}`}
+          />
+          <span className="text-[11px] font-semibold text-[#17233C]">
+            {coverageGap.uncovered.length > 0 ? (
+              <>
+                <span className="font-black text-[#D92D20] tabular-nums">
+                  {coverageGap.uncovered.length}/{coverageGap.total}
+                </span>{" "}
+                hotspots beyond 10-min response
+                <span className="text-[#94A3B8] font-normal">
+                  {" "}
+                  · {stations.length} stations
+                </span>
+              </>
+            ) : (
+              <>
+                All {coverageGap.total} hotspots within 10-min response
+                <span className="text-[#94A3B8] font-normal">
+                  {" "}
+                  · {stations.length} stations
+                </span>
+              </>
+            )}
+          </span>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -1828,6 +2503,9 @@ MapView.propTypes = {
   poiFilters: PropTypes.object,
   enhancedRisk: PropTypes.array,
   showSocioOverlay: PropTypes.bool,
+  showCoverage: PropTypes.bool,
+  coverageRings: PropTypes.object,
+  onCoverageStats: PropTypes.func,
 };
 
 /* ── Right Panel (Contextual) ───────────────────────────────────── */
@@ -1873,6 +2551,17 @@ function RightPanel({
           onClose={onClose}
           onOpenPatrol={onOpenPatrol}
           onAskInMapChat={onAskInMapChat}
+        />
+      );
+    }
+    if (selectedSpot.type === "Station") {
+      return (
+        <StationPanel
+          spot={selectedSpot}
+          onClose={onClose}
+          onOpenPatrol={onOpenPatrol}
+          onAskInMapChat={onAskInMapChat}
+          coverage={mapContext?.coverage}
         />
       );
     }
@@ -3410,6 +4099,116 @@ POIPanel.propTypes = {
   onClose: PropTypes.func.isRequired,
   onOpenPatrol: PropTypes.func,
   onAskInMapChat: PropTypes.func,
+};
+
+/* ── Station Panel (coverage anchor) ───────────────────────────── */
+
+function StationPanel({ spot, onClose, onOpenPatrol, onAskInMapChat, coverage }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  return (
+    <>
+      <PanelHeader
+        id="STATION"
+        name={spot.name || spot.station}
+        type="Police Station"
+        typeColor="bg-blue-900/90 text-white border-blue-900/90"
+        typeIcon={<Shield size={10} />}
+        onClose={onClose}
+        subtitle={`${spot.district || ""} · response-ring anchor`.trim()}
+      />
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
+            <p className="text-[10px] font-medium text-slate-500">
+              {t("crimeMap.district.crimeCount")}
+            </p>
+            <p className="text-lg font-black text-slate-900">
+              {formatNumber(spot.crime_count)}
+            </p>
+            <p className="text-[10px] text-slate-400">in selected range</p>
+          </div>
+          <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
+            <p className="text-[10px] font-medium text-slate-500">Coordinates</p>
+            <p className="text-xs font-bold text-slate-900 mt-1.5">
+              {Number(spot.lat).toFixed?.(4)}, {Number(spot.lng).toFixed?.(4)}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              jurisdiction centroid
+            </p>
+          </div>
+        </div>
+        <div className="bg-[#F8FAFC] border border-[#E5E7EB] rounded-xl p-3">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <Siren className="h-3 w-3" /> Response coverage
+          </p>
+          <div className="flex gap-1.5 text-[10px] font-bold">
+            <span className="rounded-md bg-emerald-100 text-emerald-700 border border-emerald-200 px-1.5 py-0.5">
+              5m · 2.5km
+            </span>
+            <span className="rounded-md bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5">
+              10m · 5km
+            </span>
+            <span className="rounded-md bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5">
+              15m · 7.5km
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-1.5 leading-snug">
+            Rings ≈ drive time @ 30 km/h urban avg. Hotspots outside the
+            10-min ring
+            {coverage?.uncovered != null ? (
+              <>
+                {" "}
+                — currently{" "}
+                <span className="font-bold text-[#D92D20] tabular-nums">
+                  {coverage.uncovered}/{coverage.total}
+                </span>{" "}
+                statewide — are the case for added units or a new outpost.
+              </>
+            ) : (
+              " are the case for added units or a new outpost."
+            )}
+          </p>
+        </div>
+        <button
+          onClick={() =>
+            onOpenPatrol &&
+            onOpenPatrol({
+              area: spot.district || "",
+              timeRange: "night",
+              title: `Station coverage · ${spot.station}`,
+            })
+          }
+          className="w-full flex items-center justify-between rounded-[8px] border border-blue-900/15 bg-white hover:bg-blue-50/50 px-3.5 py-2.5 text-xs font-semibold text-blue-900 transition-colors cursor-pointer"
+        >
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20] shrink-0" />
+            Plan patrols from {spot.station}
+          </span>
+          <span className="text-[#94A3B8]">→</span>
+        </button>
+        <button
+          onClick={() => {
+            const msg = `Assess response coverage for ${spot.station} police station (${spot.district || "Karnataka"}), centroid ${spot.lat},${spot.lng}, ${spot.crime_count ?? "N/A"} crimes in range. Rings: 5-min/2.5km, 10-min/5km, 15-min/7.5km. Recommend beat placement and whether nearby hotspots justify added units.`;
+            if (onAskInMapChat) onAskInMapChat(msg);
+            else navigate("/", { state: { initialMessage: msg } });
+          }}
+          className="w-full flex items-center justify-center gap-2 rounded-[8px] bg-[#17233C] hover:bg-[#0f1a2e] text-white text-xs font-semibold py-2.5 transition-colors cursor-pointer"
+        >
+          <MessageSquare className="h-3.5 w-3.5 opacity-90" />
+          {t("crimeMap.actions.askMapAware")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+StationPanel.propTypes = {
+  spot: PropTypes.object.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onOpenPatrol: PropTypes.func,
+  onAskInMapChat: PropTypes.func,
+  coverage: PropTypes.object,
 };
 
 /* ── Cluster / Hotspot Panel ────────────────────────────────────── */

@@ -197,6 +197,14 @@ export async function getNetworkOverlayEnhanced(token) {
   return handleResponse(res);
 }
 
+export async function getStations(token, params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/crime-map/stations${qs}`, {
+    headers: { "X-Auth-Token": token },
+  });
+  return handleResponse(res);
+}
+
 export async function getPOIs(token, params = {}) {
   const qs = buildQueryString(params);
   const res = await fetch(`${BASE}/crime-map/intelligence/pois${qs}`, {

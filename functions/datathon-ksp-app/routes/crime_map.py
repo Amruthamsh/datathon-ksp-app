@@ -464,6 +464,22 @@ async def get_prevention_plan(
         raise HTTPException(status_code=500, detail="Failed to generate prevention plan.")
 
 
+@router.get("/stations", status_code=status.HTTP_200_OK)
+async def get_stations(
+    date_from: str = Query(None),
+    date_to: str = Query(None),
+    current_user: dict = Depends(get_current_user),
+    repo: CrimeMapRepository = Depends(get_crime_map_repository),
+):
+    try:
+        data = repo.get_station_coverage(date_from=date_from, date_to=date_to)
+        return {"status": "success", "data": data}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch station coverage.")
+
+
 @router.get("/network-overlay-enhanced", status_code=status.HTTP_200_OK)
 async def get_network_overlay_enhanced(
     current_user: dict = Depends(get_current_user),
