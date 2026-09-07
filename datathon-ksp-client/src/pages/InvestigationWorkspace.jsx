@@ -38,6 +38,7 @@ import { useAuth } from "../auth/AuthContext";
 import { getOfficerRank } from "../utils/role";
 import { getMockExtensions } from "../data/mockCaseExtensions";
 import actSectionMeta from "../data/actSectionMetadata.json";
+import DocOcrPanel from "../components/DocOcrPanel";
 
 function formatDate(d) {
   if (!d) return "—";
@@ -488,6 +489,7 @@ export default function InvestigationWorkspace() {
                   mock={mock}
                   caseData={caseData}
                   matchesScope={matchesScope}
+                  onAsk={handleChatSend}
                 />
               )}
               {activeTab === "timeline" && (
@@ -1589,10 +1591,11 @@ function PeopleTab({
   );
 }
 
-function EvidenceTab({ actSectionDetails, mock, caseData, matchesScope }) {
+function EvidenceTab({ actSectionDetails, mock, caseData, matchesScope, onAsk }) {
   const { t } = useTranslation();
   return (
     <div className="space-y-4">
+      <DocOcrPanel caseData={caseData} onAsk={onAsk} />
       <Section
         title={t("workspace.evidence.actsTitle")}
         badge={{ label: t("workspace.peopleTab.fact"), tone: "fact" }}
