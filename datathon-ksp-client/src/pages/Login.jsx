@@ -4,8 +4,11 @@ import { useAuth } from "../auth/AuthContext";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import logo from "../assets/Seal_of_Karnataka.svg";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, ExternalLink } from "lucide-react";
 import { API_BASE } from "../api/config";
+
+export const DEMO_DETAILS_URL =
+  "https://github.com/Amruthamsh/datathon-ksp-app/blob/feat/ocr-analysis/README.md#demo-login-details";
 
 async function getErrorMessage(response, fallbackMessage) {
   try {
@@ -188,6 +191,18 @@ export default function Login() {
             >
               {t("auth.createOne")}
             </Link>
+          </p>
+
+          <p className="mt-3 text-center text-sm">
+            <a
+              href={DEMO_DETAILS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 font-medium text-slate-500 hover:text-red-700 transition"
+            >
+              <ExternalLink size={14} />
+              {t("auth.viewDemoDetails")}
+            </a>
           </p>
         </div>
       </div>

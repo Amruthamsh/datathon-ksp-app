@@ -60,3 +60,16 @@ class CatalystUserRepository:
         # [{'EmployeeAccounts': {'ROWID': ..., 'kgid': ...}}]
         first_row_wrapper = results[0]
         return first_row_wrapper.get(self.table_name)
+
+    def update_password(self, kgid: str, new_password_plain: str) -> bool:
+        user = self.get_user(kgid)
+        if not user or not user.get("ROWID"):
+            return False
+        try:
+            self.table.update_row(
+                {"ROWID": user["ROWID"], "password_hash": hash_password(new_password_plain)}
+            )
+            return True
+        except Exception as err:
+            print(f"Failed to update password for KGID {kgid}: {err}")
+            return False

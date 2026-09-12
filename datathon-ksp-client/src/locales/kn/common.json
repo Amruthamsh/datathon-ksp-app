@@ -30,7 +30,21 @@
     "unableToVerify": "ಅಧಿಕಾರಿಯನ್ನು ಪರಿಶೀಲಿಸಲು ಸಾಧ್ಯವಾಗಿಲ್ಲ",
     "accountCreatedSignInFailed": "ಖಾತೆ ರಚಿಸಲಾಗಿದೆ, ಆದರೆ ಸೈನ್ ಇನ್ ವಿಫಲವಾಗಿದೆ",
     "unableToCreate": "ಖಾತೆಯನ್ನು ರಚಿಸಲು ಸಾಧ್ಯವಾಗಿಲ್ಲ",
-    "unableToSignIn": "ಈಗ ಸೈನ್ ಇನ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ"
+    "unableToSignIn": "ಈಗ ಸೈನ್ ಇನ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ",
+    "changePassword": "ಪಾಸ್‌ವರ್ಡ್ ಬದಲಾಯಿಸಿ",
+    "currentPassword": "ಪ್ರಸ್ತುತ ಪಾಸ್‌ವರ್ಡ್",
+    "newPassword": "ಹೊಸ ಪಾಸ್‌ವರ್ಡ್",
+    "confirmPassword": "ಹೊಸ ಪಾಸ್‌ವರ್ಡ್ ಖಚಿತಪಡಿಸಿ",
+    "updatePassword": "ಪಾಸ್‌ವರ್ಡ್ ನವೀಕರಿಸಿ",
+    "updating": "ನವೀಕರಿಸಲಾಗುತ್ತಿದೆ...",
+    "cancel": "ರದ್ದುಮಾಡಿ",
+    "close": "ಮುಚ್ಚಿ",
+    "passwordUpdated": "ಪಾಸ್‌ವರ್ಡ್ ಯಶಸ್ವಿಯಾಗಿ ನವೀಕರಿಸಲಾಗಿದೆ.",
+    "unableToUpdatePassword": "ಪಾಸ್‌ವರ್ಡ್ ನವೀಕರಿಸಲು ಸಾಧ್ಯವಾಗಿಲ್ಲ",
+    "passwordsDoNotMatch": "ಹೊಸ ಪಾಸ್‌ವರ್ಡ್‌ಗಳು ಹೊಂದಿಕೆಯಾಗುತ್ತಿಲ್ಲ.",
+    "passwordTooShort": "ಹೊಸ ಪಾಸ್‌ವರ್ಡ್ ಕನಿಷ್ಠ 8 ಅಕ್ಷರಗಳಿರಬೇಕು.",
+    "passwordMustDiffer": "ಹೊಸ ಪಾಸ್‌ವರ್ಡ್ ಪ್ರಸ್ತುತ ಪಾಸ್‌ವರ್ಡ್‌ಗಿಂತ ಭಿನ್ನವಾಗಿರಬೇಕು.",
+    "viewDemoDetails": "ಡೆಮೊ ಲಾಗಿನ್ ವಿವರಗಳನ್ನು ವೀಕ್ಷಿಸಿ"
   },
   "nav": {
     "newChat": "ಹೊಸ ಚಾಟ್",

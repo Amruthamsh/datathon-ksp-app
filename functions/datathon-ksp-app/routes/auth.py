@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from schemas.auth import SignUpRequest, SignInRequest, AuthResponse
+from schemas.auth import SignUpRequest, SignInRequest, AuthResponse, ChangePasswordRequest
 from db.dependencies import get_officer_repository, get_catalyst_user_repository
 from db.sqlite.officer_repository import SQLiteOfficerRepository
 from db.catalyst.user_repository import CatalystUserRepository
@@ -156,3 +156,67 @@ def me(
             "district": user["district"],
         }
     }
+
+
+def _get_authenticated_user(
+    request: Request, user_repository: CatalystUserRepository
+) -> dict:
+    token = _extract_bearer_token(request)
+
+    try:
+        payload = decode_token(token)
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or invalid.",
+        ) from err
+
+    kgid = payload.get("sub")
+    if not kgid:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or invalid.",
+        )
+
+    user = user_repository.get_user(kgid) if user_repository else None
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or invalid.",
+        )
+    return user
+
+
+@router.post("/change-password")
+def change_password(
+    req: ChangePasswordRequest,
+    request: Request,
+    user_repository: CatalystUserRepository = Depends(get_catalyst_user_repository),
+):
+    if user_repository is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Account service is unavailable. Try again later.",
+        )
+
+    user = _get_authenticated_user(request, user_repository)
+
+    if not verify_password(req.current_password, user["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect.",
+        )
+
+    if verify_password(req.new_password, user["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from the current password.",
+        )
+
+    if not user_repository.update_password(user["kgid"], req.new_password):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update the password.",
+        )
+
+    return {"message": "Password updated successfully."}

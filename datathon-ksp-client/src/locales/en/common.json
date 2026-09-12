@@ -30,7 +30,21 @@
     "unableToVerify": "Unable to verify officer",
     "accountCreatedSignInFailed": "Account created, but sign in failed",
     "unableToCreate": "Unable to create account",
-    "unableToSignIn": "Unable to sign in right now"
+    "unableToSignIn": "Unable to sign in right now",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "updatePassword": "Update password",
+    "updating": "Updating...",
+    "cancel": "Cancel",
+    "close": "Close",
+    "passwordUpdated": "Password updated successfully.",
+    "unableToUpdatePassword": "Unable to update password",
+    "passwordsDoNotMatch": "New passwords do not match.",
+    "passwordTooShort": "New password must be at least 8 characters.",
+    "passwordMustDiffer": "New password must be different from the current password.",
+    "viewDemoDetails": "View demo login details"
   },
   "nav": {
     "newChat": "New Chat",

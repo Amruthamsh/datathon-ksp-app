@@ -4,8 +4,9 @@ import { useAuth } from "../auth/AuthContext";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import logo from "../assets/Seal_of_Karnataka.svg";
-import { UserPlus, CheckCircle2 } from "lucide-react";
+import { UserPlus, CheckCircle2, ExternalLink } from "lucide-react";
 import { API_BASE } from "../api/config";
+import { DEMO_DETAILS_URL } from "./Login";
 
 function formatErrorDetail(detail) {
   if (!detail) {
@@ -387,6 +388,18 @@ export default function Signup() {
               </div>
             )}
           </div>
+
+          <p className="mt-6 text-center text-sm">
+            <a
+              href={DEMO_DETAILS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 font-medium text-slate-500 hover:text-red-700 transition"
+            >
+              <ExternalLink size={14} />
+              {t("auth.viewDemoDetails")}
+            </a>
+          </p>
         </div>
       </div>
     </div>
