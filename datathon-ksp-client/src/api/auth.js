@@ -39,6 +39,14 @@ async function handleResponse(res) {
   return res.json();
 }
 
+export async function getMe(token) {
+  const res = await fetch(`${BASE}/auth/me`, {
+    headers: { "X-Auth-Token": token },
+  });
+  const data = await handleResponse(res);
+  return data?.officer || null;
+}
+
 export async function changePassword(token, currentPassword, newPassword) {
   const res = await fetch(`${BASE}/auth/change-password`, {
     method: "POST",

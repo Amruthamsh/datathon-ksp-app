@@ -54,14 +54,23 @@ export async function getFilters(token) {
 export async function getInvestigations(token, params = {}) {
   const queryParams = {
     page: params.page ?? 1,
-    page_size: params.pageSize ?? params.page_size ?? 25,
+    page_size: params.pageSize ?? params.page_size ?? 100,
     status_filter: params.statusFilter ?? params.status_filter,
     gravity: params.gravity,
     station: params.station,
     district: params.district,
     crime_head: params.crimeHead ?? params.crime_head,
+    officer: params.officer,
     search: params.search,
     sort: params.sort ?? "priority",
+    sort_dir: params.sortDir ?? params.sort_dir ?? "desc",
+    only_overdue: params.onlyOverdue ?? params.only_overdue ? true : undefined,
+    only_chargesheet_pending:
+      params.onlyChargesheetPending ?? params.only_chargesheet_pending
+        ? true
+        : undefined,
+    only_arrest_pending:
+      params.onlyArrestPending ?? params.only_arrest_pending ? true : undefined,
   };
 
   const queryString = buildQueryString(queryParams);

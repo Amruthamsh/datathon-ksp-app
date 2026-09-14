@@ -35,6 +35,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import * as networkApi from "../api/network";
+import ScopeBanner from "../components/ScopeBanner";
 
 // ── Cytoscape styles — refined for hierarchy & edge clarity
 const cyStylesheet = [
@@ -259,7 +260,7 @@ function getRiskBadge(firs, stations, districts, t) {
 export default function CriminalNetworks() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, officer } = useAuth();
   const outlet = useOutletContext() || {};
   const setNavExpanded = outlet.setNavExpanded;
 
@@ -274,6 +275,8 @@ export default function CriminalNetworks() {
   const [summary, setSummary] = useState(null);
   const [communities, setCommunities] = useState([]);
   const [bridgeIndividuals, setBridgeIndividuals] = useState([]);
+  // Step 2: true when bulk intel endpoints returned 403 for this tier.
+  const [bulkRestricted, setBulkRestricted] = useState(false);
 
   const [personName, setPersonName] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -360,17 +363,24 @@ export default function CriminalNetworks() {
   useEffect(() => {
     if (!token) return;
     (async () => {
-      try {
-        const [sRes, cRes, bRes] = await Promise.all([
-          networkApi.getNetworkSummary(token),
-          networkApi.getCommunities(token),
-          networkApi.getBridgeIndividuals(token, 12),
-        ]);
-        setSummary(sRes.data);
-        setCommunities(cRes.data || []);
-        setBridgeIndividuals(bRes.data || []);
-      } catch (e) {
-        console.error("Failed to load network data", e);
+      // Step 2: fetch independently — field_force gets 403 on bulk endpoints
+      // (communities / bridge-individuals) but must still see scoped summary.
+      const [sRes, cRes, bRes] = await Promise.allSettled([
+        networkApi.getNetworkSummary(token),
+        networkApi.getCommunities(token),
+        networkApi.getBridgeIndividuals(token, 12),
+      ]);
+      if (sRes.status === "fulfilled") setSummary(sRes.value.data);
+      else console.error("Failed to load network summary", sRes.reason);
+      if (cRes.status === "fulfilled") setCommunities(cRes.value.data || []);
+      else {
+        setCommunities([]);
+        setBulkRestricted(true);
+      }
+      if (bRes.status === "fulfilled") setBridgeIndividuals(bRes.value.data || []);
+      else {
+        setBridgeIndividuals([]);
+        setBulkRestricted(true);
       }
     })();
   }, [token]);
@@ -645,6 +655,16 @@ export default function CriminalNetworks() {
                   {t("networks.subtitle")}
                   {t("networks.landing.subtitleSuffix")}
                 </p>
+                <div className="mt-2 max-w-[560px]">
+                  <ScopeBanner officer={officer} count={summary?.repeat_offenders} />
+                </div>
+                {bulkRestricted && (
+                  <p className="mt-2 max-w-[560px] rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+                    Bulk network intelligence (communities &amp; bridge individuals) is
+                    restricted to Station Command and above — use search to look up
+                    persons linked to your cases.
+                  </p>
+                )}
               </div>
 
               {/* Global Search — top right (Image 2) */}

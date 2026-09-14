@@ -3,7 +3,8 @@ import traceback
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from auth.dependencies import get_current_user
+from auth.dependencies import require_tier
+from auth.roles import DISTRICT_COMMAND, STATE_COMMAND
 from db.dependencies import get_crime_map_repository
 from db.sqlite.crime_map_repository import CrimeMapRepository
 
@@ -14,6 +15,9 @@ router = APIRouter(
     tags=["Crime Map"],
 )
 
+# Whole-feature gate: only command tiers may view the Crime Intelligence Map.
+require_crime_map_access = require_tier(STATE_COMMAND, DISTRICT_COMMAND)
+
 
 @router.get("/summary", status_code=status.HTTP_200_OK)
 async def get_summary(
@@ -22,7 +26,7 @@ async def get_summary(
     crime_head: int = Query(None),
     crime_sub_head_name: str = Query(None),
     district: str = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -39,7 +43,7 @@ async def get_summary(
 
 @router.get("/filters", status_code=status.HTTP_200_OK)
 async def get_filters(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -60,7 +64,7 @@ async def get_heatmap(
     date_from: str = Query(None),
     date_to: str = Query(None),
     month: str = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -84,7 +88,7 @@ async def get_clusters(
     date_from: str = Query(None),
     date_to: str = Query(None),
     month: str = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -101,7 +105,7 @@ async def get_clusters(
 
 @router.get("/district-summary", status_code=status.HTTP_200_OK)
 async def get_district_summary(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -115,7 +119,7 @@ async def get_district_summary(
 
 @router.get("/timeline", status_code=status.HTTP_200_OK)
 async def get_timeline(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -131,7 +135,7 @@ async def get_timeline(
 async def get_hotspot_detail(
     lat: float = Query(...),
     lng: float = Query(...),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -145,7 +149,7 @@ async def get_hotspot_detail(
 
 @router.get("/repeat-offenders", status_code=status.HTTP_200_OK)
 async def get_repeat_offenders(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -159,7 +163,7 @@ async def get_repeat_offenders(
 
 @router.get("/emerging-hotspots", status_code=status.HTTP_200_OK)
 async def get_emerging_hotspots(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -180,7 +184,7 @@ async def get_distribution(
     gravity: int = Query(None),
     date_from: str = Query(None),
     date_to: str = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -202,7 +206,7 @@ async def get_distribution(
 
 @router.get("/emerging", status_code=status.HTTP_200_OK)
 async def get_emerging(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -216,7 +220,7 @@ async def get_emerging(
 
 @router.get("/repeat-offender-zones", status_code=status.HTTP_200_OK)
 async def get_repeat_offender_zones(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -230,7 +234,7 @@ async def get_repeat_offender_zones(
 
 @router.get("/patrol-recommendations", status_code=status.HTTP_200_OK)
 async def get_patrol_recommendations(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -244,7 +248,7 @@ async def get_patrol_recommendations(
 
 @router.get("/network-overlay", status_code=status.HTTP_200_OK)
 async def get_network_overlay(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -268,7 +272,7 @@ async def get_heatmap_trends(
     station: int = Query(None),
     crime_head: int = Query(None),
     gravity: int = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -288,7 +292,7 @@ async def get_heatmap_trends(
 async def get_timeline_range(
     date_from: str = Query(None),
     date_to: str = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -309,7 +313,7 @@ async def get_crimes(
     crime_head: int = Query(None),
     crime_sub_head: int = Query(None),
     gravity: int = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -332,7 +336,7 @@ async def get_crimes_light(
     district: int = Query(None),
     crime_head: int = Query(None),
     crime_sub_head: int = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -350,7 +354,7 @@ async def get_crimes_light(
 @router.get("/crime/{case_id}", status_code=status.HTTP_200_OK)
 async def get_crime_detail(
     case_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -368,7 +372,7 @@ async def get_crime_detail(
 
 @router.get("/district-risk", status_code=status.HTTP_200_OK)
 async def get_district_risk(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -386,7 +390,7 @@ async def get_cluster_intel(
     lng: float = Query(...),
     date_from: str = Query(None),
     date_to: str = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -404,7 +408,7 @@ async def get_patrol_plan(
     units: int = Query(6),
     crime_focus: int = Query(None),
     area: str = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -425,7 +429,7 @@ async def get_prevention_plan(
     area: str = Query(None),
     time_range: str = Query("night"),
     units: int = Query(6),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -468,7 +472,7 @@ async def get_prevention_plan(
 async def get_stations(
     date_from: str = Query(None),
     date_to: str = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -482,7 +486,7 @@ async def get_stations(
 
 @router.get("/network-overlay-enhanced", status_code=status.HTTP_200_OK)
 async def get_network_overlay_enhanced(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -502,8 +506,8 @@ async def get_network_overlay_enhanced(
 async def get_intelligence_pois(
     district: str = Query(None),
     poi_type: str = Query(None),
-    limit: int = Query(500),
-    current_user: dict = Depends(get_current_user),
+    limit: int = Query(20000),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -516,7 +520,7 @@ async def get_intelligence_pois(
 
 @router.get("/intelligence/poi-stats", status_code=status.HTTP_200_OK)
 async def get_intelligence_poi_stats(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -531,7 +535,7 @@ async def get_intelligence_poi_stats(
 async def get_intelligence_socio(
     district: str = Query(None),
     year: int = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -546,7 +550,7 @@ async def get_intelligence_socio(
 async def get_intelligence_weather(
     district: str = Query(None),
     days: int = Query(14),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -559,7 +563,7 @@ async def get_intelligence_weather(
 
 @router.get("/intelligence/district-risk-enhanced", status_code=status.HTTP_200_OK)
 async def get_intelligence_risk_enhanced(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
@@ -572,7 +576,7 @@ async def get_intelligence_risk_enhanced(
 
 @router.get("/intelligence/status", status_code=status.HTTP_200_OK)
 async def get_intelligence_status(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
 ):
     try:
         from services.intelligence_etl_service import get_status
@@ -587,9 +591,9 @@ async def get_intelligence_status(
 @router.post("/intelligence/refresh", status_code=status.HTTP_200_OK)
 async def post_intelligence_refresh(
     district: str = Query(None),
-    poi_radius_m: int = Query(20000),
+    poi_radius_m: int = Query(35000),
     weather_days: int = Query(30),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_crime_map_access),
 ):
     try:
         # restrict to admin roles optionally — for now any authenticated user can trigger but it is rate-limited by ETL delay

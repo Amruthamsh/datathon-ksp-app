@@ -13,6 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { menuItems } from "../data/leftNavMenu.js";
+import { useAuth } from "../auth/AuthContext";
+import { canViewCrimeMap } from "../utils/role";
 
 const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
   const { t } = useTranslation();
@@ -169,6 +171,8 @@ const LeftNav = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+  const { officer } = useAuth();
+  const showCrimeMap = canViewCrimeMap(officer);
 
   const menuKeys = [
     "investigations",
@@ -183,10 +187,14 @@ const LeftNav = ({
     [t("nav.reports")]: "/reports",
   };
 
-  const translatedMenuItems = menuItems.map((item, i) => ({
-    ...item,
-    title: t(`nav.${menuKeys[i]}`),
-  }));
+  const translatedMenuItems = menuItems
+    .map((item, i) => ({
+      ...item,
+      title: t(`nav.${menuKeys[i]}`),
+      key: menuKeys[i],
+    }))
+    // Step 3: Crime Intelligence Map is a command-tier feature
+    .filter((item) => item.key !== "crimeIntelligenceMap" || showCrimeMap);
 
   return (
     <aside

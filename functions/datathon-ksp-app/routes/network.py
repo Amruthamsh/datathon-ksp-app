@@ -3,7 +3,8 @@ import traceback
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from auth.dependencies import get_current_user
+from auth.dependencies import get_current_user, require_tier
+from auth.roles import DISTRICT_COMMAND, STATE_COMMAND, STATION_COMMAND
 from db.dependencies import get_network_repository
 from db.sqlite.network_repository import NetworkRepository
 
@@ -14,6 +15,10 @@ router = APIRouter(
     tags=["Network"],
 )
 
+# Bulk intel (statewide aggregates) is command + station only — field force
+# uses search + person endpoints scoped to their own cases.
+require_networks_bulk = require_tier(STATE_COMMAND, DISTRICT_COMMAND, STATION_COMMAND)
+
 
 @router.get("/summary", status_code=status.HTTP_200_OK)
 async def get_summary(
@@ -21,7 +26,7 @@ async def get_summary(
     repo: NetworkRepository = Depends(get_network_repository),
 ):
     try:
-        data = repo.get_summary()
+        data = repo.get_summary(scope=current_user.get("scope"))
         return {"status": "success", "data": data}
     except Exception as e:
         logger.error(e)
@@ -36,7 +41,7 @@ async def search(
     repo: NetworkRepository = Depends(get_network_repository),
 ):
     try:
-        data = repo.search(q)
+        data = repo.search(q, scope=current_user.get("scope"))
         return {"status": "success", "data": data}
     except Exception as e:
         logger.error(e)
@@ -51,7 +56,7 @@ async def get_person_profile(
     repo: NetworkRepository = Depends(get_network_repository),
 ):
     try:
-        data = repo.get_person_profile(person_name)
+        data = repo.get_person_profile(person_name, scope=current_user.get("scope"))
         return {"status": "success", "data": data}
     except Exception as e:
         logger.error(e)
@@ -67,7 +72,7 @@ async def get_person_graph(
     repo: NetworkRepository = Depends(get_network_repository),
 ):
     try:
-        data = repo.get_person_graph(person_name, depth=depth)
+        data = repo.get_person_graph(person_name, depth=depth, scope=current_user.get("scope"))
         return {"status": "success", "data": data}
     except Exception as e:
         logger.error(e)
@@ -82,7 +87,7 @@ async def get_associates(
     repo: NetworkRepository = Depends(get_network_repository),
 ):
     try:
-        data = repo.get_associates(person_name)
+        data = repo.get_associates(person_name, scope=current_user.get("scope"))
         return {"status": "success", "data": data}
     except Exception as e:
         logger.error(e)
@@ -97,7 +102,7 @@ async def get_timeline(
     repo: NetworkRepository = Depends(get_network_repository),
 ):
     try:
-        data = repo.get_timeline(person_name)
+        data = repo.get_timeline(person_name, scope=current_user.get("scope"))
         return {"status": "success", "data": data}
     except Exception as e:
         logger.error(e)
@@ -112,7 +117,7 @@ async def get_analytics(
     repo: NetworkRepository = Depends(get_network_repository),
 ):
     try:
-        data = repo.get_analytics(person_name)
+        data = repo.get_analytics(person_name, scope=current_user.get("scope"))
         return {"status": "success", "data": data}
     except Exception as e:
         logger.error(e)
@@ -122,12 +127,14 @@ async def get_analytics(
 
 @router.get("/communities", status_code=status.HTTP_200_OK)
 async def get_communities(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_networks_bulk),
     repo: NetworkRepository = Depends(get_network_repository),
 ):
     try:
-        data = repo.get_communities()
+        data = repo.get_communities(scope=current_user.get("scope"))
         return {"status": "success", "data": data}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(e)
         traceback.print_exc()
@@ -137,12 +144,14 @@ async def get_communities(
 @router.get("/bridge-individuals", status_code=status.HTTP_200_OK)
 async def get_bridge_individuals(
     limit: int = Query(20, ge=1, le=100),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_networks_bulk),
     repo: NetworkRepository = Depends(get_network_repository),
 ):
     try:
-        data = repo.get_bridge_individuals(limit=limit)
+        data = repo.get_bridge_individuals(limit=limit, scope=current_user.get("scope"))
         return {"status": "success", "data": data}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(e)
         traceback.print_exc()

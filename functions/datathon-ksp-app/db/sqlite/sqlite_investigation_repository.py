@@ -17,85 +17,163 @@ class SQLiteInvestigationRepository:
 
             return row["EmployeeID"] if row else None
 
+    def get_officer_scope(self, kgid: str) -> dict | None:
+        """Employee + posting context used for RBAC scoping. See auth/roles.py."""
+        from auth.roles import build_scope, tier_from_hierarchy
+
+        with get_connection() as conn:
+            row = conn.execute(
+                """
+                SELECT e.EmployeeID AS employee_id,
+                       e.DistrictID AS district_id,
+                       e.UnitID AS unit_id,
+                       e.RankID AS rank_id,
+                       r.Hierarchy AS hierarchy
+                FROM Employee e
+                LEFT JOIN Rank r ON r.RankID = e.RankID
+                WHERE e.KGID = ?
+                """,
+                (kgid,),
+            ).fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            tier = tier_from_hierarchy(d.get("hierarchy"))
+            return build_scope(tier, d.get("employee_id"), d.get("district_id"), d.get("unit_id"))
+
+    @staticmethod
+    def _scope_clause(scope: dict | None, alias: str = "cm") -> tuple[str, list]:
+        """Translate an RBAC scope into (SQL fragment, params).
+
+        Levels: all (no filter), district (via Unit join), unit (station),
+        self (assigned officer only — legacy behaviour).
+        """
+        if not scope:
+            return "", []
+        level = scope.get("level", "self")
+        if level == "all":
+            return "", []
+        if level == "district" and scope.get("district_id") is not None:
+            return (
+                f" AND {alias}.PoliceStationID IN "
+                "(SELECT UnitID FROM Unit WHERE DistrictID = ?)",
+                [scope["district_id"]],
+            )
+        if level == "unit" and scope.get("unit_id") is not None:
+            return (f" AND {alias}.PoliceStationID = ?", [scope["unit_id"]])
+        # self / fallback
+        if scope.get("employee_id") is not None:
+            return (f" AND {alias}.PolicePersonID = ?", [scope["employee_id"]])
+        # No identity to scope on — deny by default rather than leak.
+        return (" AND 1 = 0", [])
+
     # ------------------------------------------------------------------
     # Dashboard Summary
     # ------------------------------------------------------------------
-    def get_summary(self, employee_id: int):
+    def get_summary(self, employee_id: int, scope: dict | None = None):
+        # Legacy callers pass only employee_id -> preserve "own cases" behaviour.
+        if scope is None:
+            scope = {"level": "self", "employee_id": employee_id}
+        elif scope.get("employee_id") is None:
+            scope = {**scope, "employee_id": employee_id}
 
         with get_connection() as conn:
+            scope_sql, scope_params = self._scope_clause(scope, "cm")
 
             assigned = conn.execute(
-                """
+                f"""
                 SELECT COUNT(*) cnt
-                FROM CaseMaster
-                WHERE PolicePersonID = ?
+                FROM CaseMaster cm
+                WHERE 1 = 1
+                {scope_sql}
                 """,
-                (employee_id,),
+                scope_params,
             ).fetchone()["cnt"]
 
             chargesheet_pending = conn.execute(
-                """
+                f"""
                 SELECT COUNT(*) cnt
                 FROM CaseMaster cm
                 LEFT JOIN ChargesheetDetails cs
                     ON cm.CaseMasterID = cs.CaseMasterID
-                WHERE
-                    cm.PolicePersonID = ?
-                    AND cs.CSID IS NULL
+                WHERE cs.CSID IS NULL
+                {scope_sql}
                 """,
-                (employee_id,),
+                scope_params,
             ).fetchone()["cnt"]
 
             arrest_pending = conn.execute(
-                """
+                f"""
                 SELECT COUNT(*) cnt
                 FROM CaseMaster cm
                 LEFT JOIN ArrestSurrender ars
                     ON cm.CaseMasterID = ars.CaseMasterID
-                WHERE
-                    cm.PolicePersonID = ?
-                    AND ars.ArrestSurrenderID IS NULL
+                WHERE ars.ArrestSurrenderID IS NULL
+                {scope_sql}
                 """,
-                (employee_id,),
+                scope_params,
             ).fetchone()["cnt"]
 
             repeat_offenders = conn.execute(
-                """
+                f"""
                 SELECT COUNT(*) cnt
                 FROM (
-
                     SELECT a.PersonID
-
                     FROM Accused a
-
                     INNER JOIN CaseMaster cm
                     ON cm.CaseMasterID = a.CaseMasterID
-
-                    WHERE cm.PolicePersonID = ?
-
+                    WHERE 1 = 1
+                    {scope_sql}
                     GROUP BY a.PersonID
-
                     HAVING COUNT(DISTINCT a.CaseMasterID) > 1
-
                 )
                 """,
-                (employee_id,),
+                scope_params,
             ).fetchone()["cnt"]
 
             review_today = conn.execute(
-                """
+                f"""
                 SELECT COUNT(*) cnt
-                FROM CaseMaster
-                WHERE
-                    PolicePersonID = ?
-                    AND julianday('now') - julianday(CrimeRegisteredDate) >= 30
+                FROM CaseMaster cm
+                WHERE julianday('now') - julianday(CrimeRegisteredDate) >= 30
+                {scope_sql}
                 """,
-                (employee_id,),
+                scope_params,
+            ).fetchone()["cnt"]
+
+            chargesheet_overdue = conn.execute(
+                f"""
+                SELECT COUNT(*) cnt
+                FROM CaseMaster cm
+                LEFT JOIN ChargesheetDetails cs
+                    ON cm.CaseMasterID = cs.CaseMasterID
+                LEFT JOIN GravityOffence go
+                    ON cm.GravityOffenceID = go.GravityOffenceID
+                WHERE cs.CSID IS NULL
+                  AND (julianday('now') - julianday(cm.CrimeRegisteredDate)) >
+                      CASE WHEN go.LookupValue = 'Heinous' THEN 90 ELSE 60 END
+                {scope_sql}
+                """,
+                scope_params,
+            ).fetchone()["cnt"]
+
+            critical = conn.execute(
+                f"""
+                SELECT COUNT(*) cnt
+                FROM CaseMaster cm
+                LEFT JOIN GravityOffence go
+                    ON cm.GravityOffenceID = go.GravityOffenceID
+                WHERE go.LookupValue = 'Heinous'
+                {scope_sql}
+                """,
+                scope_params,
             ).fetchone()["cnt"]
 
             return {
                 "assigned": assigned,
                 "chargesheet_pending": chargesheet_pending,
+                "chargesheet_overdue": chargesheet_overdue,
+                "critical": critical,
                 "repeat_offenders": repeat_offenders,
                 "arrests_pending": arrest_pending,
                 "review_today": review_today,
@@ -171,6 +249,109 @@ class SQLiteInvestigationRepository:
     # Investigation Table
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _id_or_name(value, id_col: str, name_col: str) -> tuple[str, list]:
+        """Dropdowns send display names; accept a numeric ID or a name."""
+        s = str(value).strip()
+        if s.isdigit():
+            return (f" AND {id_col} = ?", [int(s)])
+        return (f" AND {name_col} = ?", [s])
+
+    def _list_conditions(
+        self,
+        scope: dict | None,
+        status=None,
+        gravity=None,
+        station=None,
+        district=None,
+        crime_head=None,
+        officer=None,
+        search=None,
+        only_overdue=False,
+        only_chargesheet_pending=False,
+        only_arrest_pending=False,
+    ) -> tuple[str, list]:
+        """Shared WHERE fragment (after 'WHERE 1 = 1') for COUNT + SELECT."""
+        scope_sql, scope_params = self._scope_clause(scope, "cm")
+        conds = [scope_sql.lstrip(" ")] if scope_sql else []
+        # strip leading AND -> normalize: _scope_clause returns " AND ..."
+        conds = [c[4:] if c.startswith("AND ") else c for c in conds]
+        params: list = list(scope_params)
+
+        def add(fragment: str, values: list):
+            conds.append(fragment)
+            params.extend(values)
+
+        if status:
+            add("csm.CaseStatusName = ?", [status])
+        if gravity:
+            add("go.LookupValue = ?", [gravity])
+        if station:
+            frag, vals = self._id_or_name(station, "u.UnitID", "u.UnitName")
+            add(frag[5:], vals)
+        if district:
+            frag, vals = self._id_or_name(district, "d.DistrictID", "d.DistrictName")
+            add(frag[5:], vals)
+        if crime_head:
+            frag, vals = self._id_or_name(crime_head, "ch.CrimeHeadID", "ch.CrimeGroupName")
+            add(frag[5:], vals)
+        if officer:
+            add("TRIM(e.FirstName) = ?", [str(officer).strip()])
+        if only_chargesheet_pending or only_overdue:
+            add(
+                "NOT EXISTS (SELECT 1 FROM ChargesheetDetails cs"
+                " WHERE cs.CaseMasterID = cm.CaseMasterID)",
+                [],
+            )
+        if only_overdue:
+            add(
+                "(julianday('now') - julianday(cm.CrimeRegisteredDate)) >"
+                " CASE WHEN go.LookupValue = 'Heinous' THEN 90 ELSE 60 END",
+                [],
+            )
+        if only_arrest_pending:
+            add(
+                "NOT EXISTS (SELECT 1 FROM ArrestSurrender ars"
+                " WHERE ars.CaseMasterID = cm.CaseMasterID)",
+                [],
+            )
+        if search:
+            like = f"%{search}%"
+            add(
+                "(cm.CrimeNo LIKE ? OR u.UnitName LIKE ?"
+                " OR d.DistrictName LIKE ? OR TRIM(e.FirstName) LIKE ?"
+                " OR ch.CrimeGroupName LIKE ? OR csh.CrimeHeadName LIKE ?)",
+                [like] * 6,
+            )
+
+        where = "".join(f" AND {c}" for c in conds)
+        return where, params
+
+    _LIST_JOINS = """
+            FROM CaseMaster cm
+
+            LEFT JOIN Unit u
+                ON cm.PoliceStationID=u.UnitID
+
+            LEFT JOIN District d
+                ON u.DistrictID=d.DistrictID
+
+            LEFT JOIN GravityOffence go
+                ON cm.GravityOffenceID=go.GravityOffenceID
+
+            LEFT JOIN CrimeHead ch
+                ON cm.CrimeMajorHeadID=ch.CrimeHeadID
+
+            LEFT JOIN CrimeSubHead csh
+                ON cm.CrimeMinorHeadID=csh.CrimeSubHeadID
+
+            LEFT JOIN Employee e
+                ON cm.PolicePersonID=e.EmployeeID
+
+            LEFT JOIN CaseStatusMaster csm
+                ON cm.CaseStatusID=csm.CaseStatusID
+    """
+
     def get_investigations(
         self,
         employee_id,
@@ -183,15 +364,62 @@ class SQLiteInvestigationRepository:
         crime_head=None,
         search=None,
         sort="priority",
+        scope: dict | None = None,
+        officer=None,
+        only_overdue=False,
+        only_chargesheet_pending=False,
+        only_arrest_pending=False,
+        sort_dir="desc",
     ):
+        if scope is None:
+            scope = {"level": "self", "employee_id": employee_id}
+        elif scope.get("employee_id") is None:
+            scope = {**scope, "employee_id": employee_id}
 
         with get_connection() as conn:
+            where, params = self._list_conditions(
+                scope,
+                status=status,
+                gravity=gravity,
+                station=station,
+                district=district,
+                crime_head=crime_head,
+                officer=officer,
+                search=search,
+                only_overdue=only_overdue,
+                only_chargesheet_pending=only_chargesheet_pending,
+                only_arrest_pending=only_arrest_pending,
+            )
 
-            sql = """
+            total = conn.execute(
+                f"SELECT COUNT(*) cnt {self._LIST_JOINS} WHERE 1 = 1{where}",
+                params,
+            ).fetchone()["cnt"]
+
+            descending = str(sort_dir).lower() != "asc"
+            if sort in ("date", "date_desc", "date_asc"):
+                direction = "ASC" if sort == "date_asc" else "DESC"
+                order_by = f"ORDER BY cm.CrimeRegisteredDate {direction}"
+            else:  # priority: Heinous first, then oldest — most urgent on top
+                if descending:
+                    order_by = (
+                        "ORDER BY CASE WHEN go.LookupValue = 'Heinous' THEN 0 ELSE 1 END ASC,"
+                        " cm.CrimeRegisteredDate ASC"
+                    )
+                else:
+                    order_by = (
+                        "ORDER BY CASE WHEN go.LookupValue = 'Heinous' THEN 0 ELSE 1 END DESC,"
+                        " cm.CrimeRegisteredDate DESC"
+                    )
+
+            sql = f"""
             SELECT
 
                 cm.CaseMasterID,
                 cm.CrimeNo,
+                cm.PoliceStationID,
+                cm.PolicePersonID,
+                d.DistrictID,
 
                 u.UnitName AS Station,
 
@@ -222,71 +450,26 @@ class SQLiteInvestigationRepository:
                     SELECT COUNT(*)
                     FROM Victim v
                     WHERE v.CaseMasterID = cm.CaseMasterID
-                ) AS VictimCount
-                
-            FROM CaseMaster cm
+                ) AS VictimCount,
 
-            LEFT JOIN Unit u
-                ON cm.PoliceStationID=u.UnitID
+                EXISTS (
+                    SELECT 1 FROM ChargesheetDetails cs
+                    WHERE cs.CaseMasterID = cm.CaseMasterID
+                ) AS HasChargesheet,
 
-            LEFT JOIN District d
-                ON u.DistrictID=d.DistrictID
+                EXISTS (
+                    SELECT 1 FROM ArrestSurrender ars
+                    WHERE ars.CaseMasterID = cm.CaseMasterID
+                ) AS HasArrest
 
-            LEFT JOIN GravityOffence go
-                ON cm.GravityOffenceID=go.GravityOffenceID
-
-            LEFT JOIN CrimeHead ch
-                ON cm.CrimeMajorHeadID=ch.CrimeHeadID
-
-            LEFT JOIN CrimeSubHead csh
-                ON cm.CrimeMinorHeadID=csh.CrimeSubHeadID
-
-            LEFT JOIN Employee e
-                ON cm.PolicePersonID=e.EmployeeID
-
-            LEFT JOIN CaseStatusMaster csm
-                ON cm.CaseStatusID=csm.CaseStatusID
-
-            WHERE cm.PolicePersonID = ?
-            """
-
-            params = [employee_id]
-
-            if status:
-                sql += " AND csm.CaseStatusName = ?"
-                params.append(status)
-
-            if gravity:
-                sql += " AND go.LookupValue = ?"
-                params.append(gravity)
-
-            if station:
-                sql += " AND u.UnitID = ?"
-                params.append(station)
-
-            if district:
-                sql += " AND d.DistrictID = ?"
-                params.append(district)
-
-            if crime_head:
-                sql += " AND ch.CrimeHeadID = ?"
-                params.append(crime_head)
-
-            if search:
-                sql += """
-                AND (
-                    cm.CrimeNo LIKE ?
-                    OR u.UnitName LIKE ?
-                )
-                """
-                params.extend([f"%{search}%", f"%{search}%"])
-
-            sql += """
-            ORDER BY cm.CrimeRegisteredDate DESC
+            {self._LIST_JOINS}
+            WHERE 1 = 1{where}
+            {order_by}
             LIMIT ?
             OFFSET ?
             """
 
+            params = list(params)
             params.extend([
                 page_size,
                 (page - 1) * page_size,
@@ -315,7 +498,7 @@ class SQLiteInvestigationRepository:
 
                 data.append(item)
 
-            return data
+            return {"data": data, "total": total}
 
     # ------------------------------------------------------------------
     # Right Panel
@@ -332,6 +515,7 @@ class SQLiteInvestigationRepository:
                     cm.*,
 
                     u.UnitName,
+                    u.DistrictID,
 
                     d.DistrictName,
 

@@ -46,7 +46,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--quick", action="store_true", help="only 8 high-priority districts")
     parser.add_argument("--weather-days", type=int, default=30)
-    parser.add_argument("--radius", type=int, default=20000)
+    parser.add_argument("--radius", type=int, default=35000)
     args = parser.parse_args()
 
     print("Ensuring intelligence tables ...")

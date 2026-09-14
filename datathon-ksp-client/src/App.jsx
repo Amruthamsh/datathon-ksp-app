@@ -52,7 +52,14 @@ function AppRoutes() {
           <Route path="/chat/:id" element={<Home />} />
           <Route path="/investigations" element={<InvestigationsQueue />} />
           <Route path="/investigations/:caseId" element={<InvestigationWorkspace />} />
-          <Route path="/crime-intelligence-map" element={<CrimeIntelligenceMap />} />
+          <Route
+            path="/crime-intelligence-map"
+            element={
+              <ProtectedRoute allowedTiers={["state_command", "district_command"]}>
+                <CrimeIntelligenceMap />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/networks" element={<Networks />} />
           <Route path="/reports" element={<Reports />} />
         </Route>

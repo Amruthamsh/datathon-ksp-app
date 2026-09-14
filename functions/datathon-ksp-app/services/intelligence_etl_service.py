@@ -58,9 +58,14 @@ POI_DEFS = [
 ]
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+OVERPASS_URLS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.nchc.org.tw/api/interpreter",
+]
 
-def _overpass_query(district: str, lat: float, lng: float, radius_m: int = 20000) -> List[Dict]:
-    """Fetch POIs around district centroid via bbox (avoids around syntax 406 issues). Use bbox delta ~0.18deg ~20km"""
+def _overpass_query(district: str, lat: float, lng: float, radius_m: int = 35000) -> List[Dict]:
+    """Fetch POIs around district centroid via bbox (avoids around syntax 406 issues). Use bbox delta ~0.32deg ~35km"""
     delta = radius_m / 111000.0
     min_lat, max_lat = lat - delta, lat + delta
     min_lng, max_lng = lng - delta, lng + delta
@@ -73,19 +78,35 @@ def _overpass_query(district: str, lat: float, lng: float, radius_m: int = 20000
     def run(clauses, limit):
         if not clauses:
             return []
-        q = f'[out:json][timeout:25];\n(\n' + "\n".join(clauses) + f'\n);\nout body {limit};'
-        req = urllib.request.Request(OVERPASS_URL, data=q.encode("utf-8"), headers={"Content-Type":"text/plain", "User-Agent":"KSP-Intel-ETL/1.0"})
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            return data.get("elements", [])
-    try:
-        high = run(high_clauses, 400)
-        time.sleep(0.4)  # be nice to Overpass
-        bus = run(bus_clauses, 400)
-        return high + bus
-    except Exception as e:
-        logger.warning("Overpass fetch failed for %s: %s", district, e)
+        q = f'[out:json][timeout:40];\n(\n' + "\n".join(clauses) + f'\n);\nout body {limit};'
+        last_err = None
+        for url in OVERPASS_URLS:
+            try:
+                req = urllib.request.Request(url, data=q.encode("utf-8"), headers={"Content-Type":"text/plain", "User-Agent":"KSP-Intel-ETL/1.0"})
+                with urllib.request.urlopen(req, timeout=45) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    return data.get("elements", [])
+            except Exception as e:
+                last_err = e
+                logger.warning("Overpass %s failed for %s: %s", url, district, e)
+                time.sleep(0.5)
+                continue
+        logger.warning("All Overpass endpoints failed for %s: %s", district, last_err)
         return []
+    # Fetch groups independently so one group's failure doesn't wipe the other.
+    # Fall back to smaller bbox/limit if the large query returns nothing (timeout protection).
+    high = run(high_clauses, 1500)
+    time.sleep(0.4)  # be nice to Overpass
+    bus = run(bus_clauses, 1500)
+    combined = (high or []) + (bus or [])
+    if not combined:
+        logger.info("Overpass empty for %s at %dm, retrying at 20km/400", district, radius_m)
+        time.sleep(0.5)
+        high = run(high_clauses, 400) if not high else high
+        time.sleep(0.4)
+        bus = run(bus_clauses, 400) if not bus else bus
+        combined = (high or []) + (bus or [])
+    return combined
 
 def _classify_osm_element(el: Dict) -> tuple:
     tags = el.get("tags", {})
@@ -101,19 +122,12 @@ def _classify_osm_element(el: Dict) -> tuple:
         return "Railway_Station", 2
     return "Other", 1
 
-def fetch_live_pois(limit_districts: List[str] = None, radius_m: int = 20000, delay_s: float = 1.2) -> Dict:
+def fetch_live_pois(limit_districts: List[str] = None, radius_m: int = 35000, delay_s: float = 1.2) -> Dict:
     ensure_intelligence_tables()
     districts = limit_districts or list(_KARNATAKA_CENTERS.keys())
-    total = 0
     per_district = {}
-    # clear old if fresh
-    con = sqlite3.connect(SQLITE_DATABASE_PATH)
-    try:
-        con.execute("PRAGMA query_only=OFF")
-        con.execute("DELETE FROM DistrictPOI WHERE Source='osm-overpass'")
-        con.commit()
-    finally:
-        con.close()
+    # NOTE: non-destructive — only replace rows for districts actually refreshed,
+    # and only when the fetch returned rows. A failed/empty fetch keeps old rows.
     for d in districts:
         lat, lng = _KARNATAKA_CENTERS[d]
         did = _DISTRICT_IDS.get(d)
@@ -133,19 +147,40 @@ def fetch_live_pois(limit_districts: List[str] = None, radius_m: int = 20000, de
             con = sqlite3.connect(SQLITE_DATABASE_PATH)
             try:
                 con.execute("PRAGMA query_only=OFF")
+                # Replace only this district's rows — other districts stay intact
+                con.execute("DELETE FROM DistrictPOI WHERE DistrictName=? AND Source='osm-overpass'", (d,))
                 con.executemany("INSERT INTO DistrictPOI(DistrictID, DistrictName, POIType, POIName, Latitude, Longitude, RiskWeight, OSMId, Source, UpdatedAt) VALUES(?,?,?,?,?,?,?,?,'osm-overpass', datetime('now'))", rows)
                 con.commit()
             finally:
                 con.close()
-            total += len(rows)
             per_district[d]=len(rows)
             logger.info("POI %s: %d", d, len(rows))
         else:
-            per_district[d]=0
+            # Keep old rows on empty/failed fetch; record existing count
+            try:
+                con = sqlite3.connect(SQLITE_DATABASE_PATH)
+                cur = con.execute("SELECT COUNT(*) FROM DistrictPOI WHERE DistrictName=?", (d,))
+                per_district[d]=cur.fetchone()[0]
+            except Exception:
+                per_district[d]=0
+            finally:
+                try:
+                    con.close()
+                except Exception:
+                    pass
+            logger.warning("POI %s: empty fetch, kept %s existing", d, per_district[d])
         time.sleep(delay_s)
+    # Global total across all districts (not just this batch) so quick 8-district
+    # refreshes never shrink the header count.
+    try:
+        con = sqlite3.connect(SQLITE_DATABASE_PATH)
+        global_total = con.execute("SELECT COUNT(*) FROM DistrictPOI").fetchone()[0]
+        con.close()
+    except Exception:
+        global_total = sum(per_district.values())
     set_meta("poi_last_refresh", datetime.utcnow().isoformat())
-    set_meta("poi_total", str(total))
-    return {"total": total, "per_district": per_district}
+    set_meta("poi_total", str(global_total))
+    return {"total": global_total, "per_district": per_district, "refreshed": districts}
 
 def fetch_live_weather(days: int = 30) -> Dict:
     ensure_intelligence_tables()
@@ -191,8 +226,16 @@ def fetch_live_weather(days: int = 30) -> Dict:
             logger.warning("Weather fetch failed %s: %s", d, e)
         time.sleep(0.35)
     set_meta("weather_last_refresh", datetime.utcnow().isoformat())
-    set_meta("weather_rows", str(total_rows))
-    return {"rows": total_rows, "start": start_s, "end": end_s}
+    # Report global table count (INSERT OR REPLACE preserves history outside range),
+    # so a 14-day quick refresh never shrinks the header from 961 -> 465.
+    try:
+        con = sqlite3.connect(SQLITE_DATABASE_PATH)
+        global_weather = con.execute("SELECT COUNT(*) FROM DistrictWeather").fetchone()[0]
+        con.close()
+    except Exception:
+        global_weather = total_rows
+    set_meta("weather_rows", str(global_weather))
+    return {"rows": global_weather, "fetched": total_rows, "start": start_s, "end": end_s}
 
 # --- Socio-economic via Data.gov.in (CKAN) ---
 # Known Karnataka datasets (examples): District-wise population, economic survey
@@ -271,7 +314,7 @@ def fetch_live_socio_economic() -> Dict:
     set_meta("socio_source", "data.gov.in+open-meteo+osm" if success else "open-meteo+osm (set DATA_GOV_API_KEY for full data.gov.in)")
     return {"year": year, "districts": len(_KARNATAKA_CENTERS), "attempted": attempted, "api_success": success}
 
-def run_full_refresh(poi_radius_m=20000, weather_days=30):
+def run_full_refresh(poi_radius_m=35000, weather_days=30):
     res={}
     res["pois"]=fetch_live_pois(radius_m=poi_radius_m)
     res["weather"]=fetch_live_weather(days=weather_days)

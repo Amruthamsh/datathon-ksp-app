@@ -199,10 +199,10 @@ export default function CrimeIntelligenceMap() {
   // Intelligence overlays
   const [poiFilters, setPoiFilters] = useState({
     ATM: true,
-    Bank: false,
+    Bank: true,
     Liquor_Store: true,
-    Bus_Stop: false,
-    Railway_Station: false,
+    Bus_Stop: true,
+    Railway_Station: true,
   });
   const [showSocioOverlay, setShowSocioOverlay] = useState(false);
   const [enhancedRisk, setEnhancedRisk] = useState([]);
@@ -1456,9 +1456,9 @@ function MapView({
       setPoiData([]);
       return;
     }
-    // fetch all then filter client-side for speed (single request) — limit 5000 covers 31 districts
+    // fetch all then filter client-side for speed (single request) — limit 20000 covers 31 districts at higher density
     crimeMapApi
-      .getPOIs(token, { limit: 5000 })
+      .getPOIs(token, { limit: 20000 })
       .then((r) => {
         const all = r.data || [];
         const filtered = all.filter((d) => activeTypes.includes(d.POIType));

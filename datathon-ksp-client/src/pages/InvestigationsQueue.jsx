@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -16,7 +16,23 @@ import {
   getFilters,
 } from "../api/investigations";
 import { useAuth } from "../auth/AuthContext";
-import { getMockExtensions } from "../data/mockCaseExtensions";
+import ScopeBanner from "../components/ScopeBanner";
+
+const PAGE_SIZE = 100;
+
+// Compact windowed page numbers: 1 … 48 49 [50] 51 52 … 500
+function pageNumbers(current, total) {
+  const pages = new Set([1, total, current - 1, current, current + 1]);
+  const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const out = [];
+  let prev = 0;
+  for (const p of sorted) {
+    if (p - prev > 1) out.push("…");
+    out.push(p);
+    prev = p;
+  }
+  return out;
+}
 
 export default function InvestigationsQueue() {
   const { token, officer: authOfficer } = useAuth();
@@ -26,14 +42,18 @@ export default function InvestigationsQueue() {
 
   const [summary, setSummary] = useState(null);
   const [cases, setCases] = useState([]);
+  const [pagination, setPagination] = useState(null);
   const [filtersData, setFiltersData] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [listLoading, setListLoading] = useState(false);
   const [selected, setSelected] = useState([]); // capped at 4
 
-  // Filters live in URL — survives refresh/bookmark/back
+  // Filters + page live in URL — survives refresh/bookmark/back
   const searchQuery = searchParams.get("search") || "";
   const sortAscending = searchParams.get("sortDir") === "asc";
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+  const activeStat = searchParams.get("stat") || "";
   const activeFilters = useMemo(
     () => ({
       CaseStatusName: searchParams.get("status") || "",
@@ -50,53 +70,43 @@ export default function InvestigationsQueue() {
     const next = new URLSearchParams(searchParams);
     if (!val) next.delete(key);
     else next.set(key, val);
+    // any filter/search/sort change restarts at page 1
+    if (key !== "page") next.delete("page");
     setSearchParams(next);
   };
 
-  // chargesheet countdown per row (same legal base as workspace: arrest → fallback FIR)
+  // Chargesheet countdown from real fields only: FIR date + 90d (Heinous) / 60d.
+  // Meaningful only when no chargesheet is on file — callers gate on HasChargesheet.
   const getChargesheetDiff = (row) => {
-    const mock = getMockExtensions(row.CaseMasterID, {
-      accused: Array(Math.max(1, Number(row.AccusedCount) || 1)).fill({}),
-      victims: Array(Number(row.VictimCount) || 0).fill({}),
-    });
-    const arrests = mock.mockAccused
-      .filter((a) => a.arrestDate)
-      .map((a) => a.arrestDate);
-    const earliest = arrests.length ? arrests.sort()[0] : null;
-    const base = earliest || row.CrimeRegisteredDate;
-    if (!base) return null;
+    if (!row.CrimeRegisteredDate) return null;
     const isSerious = String(row.Gravity).toLowerCase().includes("heinous");
     const limit = isSerious ? 90 : 60;
-    const due = new Date(new Date(base).getTime() + limit * 864e5);
+    const due = new Date(new Date(row.CrimeRegisteredDate).getTime() + limit * 864e5);
     return Math.ceil((due - Date.now()) / 864e5);
   };
 
-  const getWhyNow = (row) => {
-    const mock = getMockExtensions(row.CaseMasterID, {
-      accused: Array(Math.max(1, Number(row.AccusedCount) || 1)).fill({}),
-      victims: Array(Number(row.VictimCount) || 0).fill({}),
-    });
-    const abscond = mock.mockAccused.filter(
-      (a) => a.arrestStatus === "Absconding",
-    ).length;
+  const isOverdue = (row) => {
+    if (row.HasChargesheet) return false;
     const diff = getChargesheetDiff(row);
-    if (diff !== null && diff < 0)
+    return diff !== null && diff < 0;
+  };
+
+  const hasNoArrest = (row) =>
+    !row.HasArrest && Number(row.AccusedCount || 0) > 0;
+
+  const getWhyNow = (row) => {
+    const diff = getChargesheetDiff(row);
+    if (isOverdue(row))
       return t("investigations.queue.why.chargesheetOverdue", {
         count: Math.abs(diff),
       });
-    if (mock.fsl.status === "overdue") {
-      const days = Math.max(
-        5,
-        Math.floor(
-          (Date.now() - new Date(mock.fsl.sentDate).getTime()) / 864e5,
-        ),
-      );
-      return t("investigations.queue.why.fslOverdue", { count: days });
-    }
-    if (abscond > 0)
-      return t("investigations.queue.why.absconding", { count: abscond });
-    if (mock.fsl.status === "pending")
-      return t("investigations.queue.why.fslPending");
+    if (!row.HasChargesheet && diff !== null && diff <= 7)
+      return t("investigations.queue.why.chargesheetDue", {
+        count: Math.max(diff, 0),
+      });
+    if (hasNoArrest(row)) return t("investigations.queue.why.noArrest");
+    if (!row.HasChargesheet)
+      return t("investigations.queue.why.chargesheetNotFiled");
     const cs = String(row.CaseStatusName || "").toLowerCase();
     if (cs.includes("under investigation"))
       return t("investigations.queue.why.investigationPending");
@@ -104,37 +114,17 @@ export default function InvestigationsQueue() {
       .toLowerCase()
       .includes("heinous")
       ? t("investigations.queue.why.heinousAttention")
-      : t("investigations.queue.why.reviewNeeded");
+      : t("investigations.queue.why.accusedStatus", {
+          count: row.AccusedCount ?? 0,
+          status: row.CaseStatusName || t("investigations.queue.statusOpen"),
+        });
   };
 
   const getNextAction = (row) => {
-    const mock = getMockExtensions(row.CaseMasterID, {
-      accused: Array(Math.max(1, Number(row.AccusedCount) || 1)).fill({}),
-      victims: Array(Number(row.VictimCount) || 0).fill({}),
-    });
-    const abscond = mock.mockAccused.filter(
-      (a) => a.arrestStatus === "Absconding",
-    ).length;
-    const diff = getChargesheetDiff(row);
-    if (diff !== null && diff < 0)
+    if (isOverdue(row) || !row.HasChargesheet)
       return t("investigations.queue.next.fileChargesheet");
-    if (abscond > 0) return t("investigations.queue.next.locateAccused");
-    if (mock.fsl.status === "overdue" || mock.fsl.status === "pending")
-      return t("investigations.queue.next.followFsl");
-    if (mock.witnesses.filter((w) => !w.examined).length)
-      return t("investigations.queue.next.examineWitnesses");
+    if (hasNoArrest(row)) return t("investigations.queue.next.locateAccused");
     return t("investigations.queue.next.reviewCase");
-  };
-
-  const getPriorityWeight = (priorityStr) => {
-    const val = String(priorityStr || "")
-      .trim()
-      .toLowerCase();
-    if (val.includes("critical")) return 4;
-    if (val.includes("high")) return 3;
-    if (val.includes("medium")) return 2;
-    if (val.includes("low")) return 1;
-    return 0;
   };
 
   const priorityBox = (p) => {
@@ -168,89 +158,126 @@ export default function InvestigationsQueue() {
     };
   };
 
-  // one-line intelligence per row — why it's critical, not just that it is
-  // sourced from checklist + similarity data we already have (mock deterministically per caseId)
+  // one-line intelligence per row — real row signals only (no mocks).
   // Never mid-word truncate: drop signals to fit ~38ch (≈260px at 11px) instead of truncating.
-  const getRowIntel = useCallback(
-    (row) => {
-      const mock = getMockExtensions(row.CaseMasterID, {
-      accused: Array(Math.max(1, Number(row.AccusedCount) || 1)).fill({}),
-      victims: Array(Number(row.VictimCount) || 0).fill({}),
-    });
-    const parts = [];
-    const abscond = mock.mockAccused.filter(
-      (a) => a.arrestStatus === "Absconding",
-    ).length;
-    if (abscond > 0)
-      parts.push(t("investigations.queue.why.absconding", { count: abscond }));
-    if (mock.fsl.status === "overdue") {
-      const days = Math.max(
-        5,
-        Math.floor(
-          (Date.now() - new Date(mock.fsl.sentDate).getTime()) / 864e5,
-        ),
-      );
-      parts.push(t("investigations.queue.why.fslOverdue", { count: days }));
-    } else if (mock.fsl.status === "pending") {
-      parts.push(t("investigations.queue.why.fslPending"));
-    }
-    // deterministic similar FIRs (0-3) — stands in for similarity engine until queue API returns it
-    let x = (Number(row.CaseMasterID) * 999) % 2 ** 32;
-    x = (x * 1664525 + 1013904223) % 2 ** 32;
-    const similar = Math.floor((x / 2 ** 32) * 4);
-    if (similar > 0)
-      parts.push(t("investigations.queue.why.similarFirs", { count: similar }));
-    if (parts.length === 0) {
-      if (String(row.Gravity).toLowerCase().includes("heinous"))
+  // Plain function (not memoized): depends on the rule helpers above.
+  const getRowIntel = (row) => {
+      const parts = [];
+      if (isOverdue(row)) {
+        const diff = getChargesheetDiff(row);
         parts.push(
-          row.CrimeGroupName
-            ? t("investigations.queue.why.heinousGroup", {
-                group: row.CrimeGroupName,
-              })
-            : t("investigations.queue.why.heinousAttention"),
-        );
-      else
-        parts.push(
-          t("investigations.queue.why.accusedStatus", {
-            count: row.AccusedCount ?? 0,
-            status: row.CaseStatusName || t("investigations.queue.statusOpen"),
+          t("investigations.queue.why.chargesheetOverdue", {
+            count: Math.abs(diff),
           }),
         );
-    }
-    // budget fit: prefer complete signals over truncated ones
-    const BUDGET = 38;
-    const join = (n) => parts.slice(0, n).join(" · ");
-    if (join(3).length <= BUDGET) return join(3);
-    if (join(2).length <= BUDGET) return join(2);
-    return join(1);
-    },
-    [t],
-  );
+      }
+      if (hasNoArrest(row)) parts.push(t("investigations.queue.why.noArrest"));
+      if (!row.HasChargesheet && !isOverdue(row))
+        parts.push(t("investigations.queue.why.chargesheetNotFiled"));
+      if (parts.length === 0) {
+        if (String(row.Gravity).toLowerCase().includes("heinous"))
+          parts.push(
+            row.CrimeGroupName
+              ? t("investigations.queue.why.heinousGroup", {
+                  group: row.CrimeGroupName,
+                })
+              : t("investigations.queue.why.heinousAttention"),
+          );
+        else
+          parts.push(
+            t("investigations.queue.why.accusedStatus", {
+              count: row.AccusedCount ?? 0,
+              status: row.CaseStatusName || t("investigations.queue.statusOpen"),
+            }),
+          );
+      }
+      if (Number(row.VictimCount || 0) > 0)
+        parts.push(
+          t("investigations.queue.why.victimCount", {
+            count: row.VictimCount,
+          }),
+        );
+      // budget fit: prefer complete signals over truncated ones
+      const BUDGET = 38;
+      const join = (n) => parts.slice(0, n).join(" · ");
+      if (join(3).length <= BUDGET) return join(3);
+      if (join(2).length <= BUDGET) return join(2);
+      return join(1);
+  };
 
+  // Scope-wide totals + global filter options: stable per session, not per page.
   useEffect(() => {
-    loadPage();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!token) return;
+    (async () => {
+      try {
+        const [summaryRes, filtersRes] = await Promise.all([
+          getSummary(token),
+          getFilters(token),
+        ]);
+        setSummary(summaryRes?.data ?? null);
+        setFiltersData(filtersRes?.data ?? null);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, [token]);
 
-  async function loadPage() {
-    try {
-      setLoading(true);
-      const [summaryRes, investigationsRes, filtersRes] = await Promise.all([
-        getSummary(token),
-        getInvestigations(token),
-        getFilters(token),
-      ]);
-      setSummary(summaryRes?.data ?? null);
-      setCases(
-        Array.isArray(investigationsRes?.data) ? investigationsRes.data : [],
-      );
-      setFiltersData(filtersRes?.data ?? null);
-    } catch (e) {
-      console.error(e);
-      setCases([]);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Case list: fully server-driven (RBAC scope + filters + search + sort + page).
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    (async () => {
+      setListLoading(true);
+      try {
+        const res = await getInvestigations(token, {
+          page,
+          pageSize: PAGE_SIZE,
+          statusFilter: activeFilters.CaseStatusName,
+          gravity: activeFilters.Gravity,
+          station: activeFilters.UnitName,
+          officer: activeFilters.FirstName,
+          district: activeFilters.DistrictName,
+          crimeHead: activeFilters.CrimeHeadName,
+          search: searchQuery.trim(),
+          sort: "priority",
+          sortDir: sortAscending ? "asc" : "desc",
+          onlyOverdue: activeStat === "overdue",
+          onlyChargesheetPending: activeStat === "chargesheet_pending",
+          onlyArrestPending: activeStat === "arrests_pending",
+        });
+        if (cancelled) return;
+        setCases(Array.isArray(res?.data) ? res.data : []);
+        setPagination(res?.pagination ?? null);
+      } catch (e) {
+        if (!cancelled) {
+          console.error(e);
+          setCases([]);
+          setPagination(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setListLoading(false);
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    token,
+    page,
+    searchQuery,
+    sortAscending,
+    activeStat,
+    activeFilters.CaseStatusName,
+    activeFilters.Gravity,
+    activeFilters.UnitName,
+    activeFilters.FirstName,
+    activeFilters.DistrictName,
+    activeFilters.CrimeHeadName,
+  ]);
 
   const dynamicFilterOptions = useMemo(() => {
     const extractUnique = (key, fallbackKey) => {
@@ -271,151 +298,16 @@ export default function InvestigationsQueue() {
     };
   }, [cases, filtersData]);
 
-  // chargesheet pending = no chargesheet filed yet — proxy via status until queue API returns ChargesheetDetails flag
-  const isChargesheetPending = (row) => {
-    const s = String(row.CaseStatusName || row.status || "").toLowerCase();
-    // only "Charge Sheeted" means filed; everything else (including Convicted for demo visibility) is pending
-    // keeps display (3) aligned with filter so click visibly reduces rows
-    return !(s.includes("charge sheeted") || s.includes("chargesheet filed"));
+  // Stat bar counts come from the scope-aware backend summary (real DB counts
+  // across the officer's whole scope) — never from the loaded page or mocks.
+  const statCounts = {
+    overdue: summary?.chargesheet_overdue ?? 0,
+    chargesheetPending: summary?.chargesheet_pending ?? 0,
+    arrestsPending: summary?.arrests_pending ?? 0,
   };
 
-  // stat bar counts — derived client-side from same mock so click → exact rows
-  const statCounts = useMemo(() => {
-    if (!cases.length)
-      return {
-        deadlines: 0,
-        overdue: 0,
-        abscondingCases: 0,
-        abscondingTotal: 0,
-        chargesheetPending: 0,
-        repeat: 0,
-        arrestsPending: 0,
-      };
-    let deadlines = 0,
-      overdue = 0,
-      abscondingCases = 0,
-      abscondingTotal = 0,
-      chargesheetPending = 0,
-      repeat = 0,
-      arrestsPending = 0;
-    for (const row of cases) {
-      const mock = getMockExtensions(row.CaseMasterID, {
-        accused: Array(Math.max(1, Number(row.AccusedCount) || 1)).fill({}),
-        victims: Array(Number(row.VictimCount) || 0).fill({}),
-      });
-      const diff = getChargesheetDiff(row);
-      if (diff !== null && diff >= 0 && diff <= 7) deadlines++;
-      if (diff !== null && diff < 0) overdue++;
-      const abscond = mock.mockAccused.filter(
-        (a) => a.arrestStatus === "Absconding",
-      ).length;
-      if (abscond > 0) abscondingCases++;
-      abscondingTotal += abscond;
-      const hasPrior = mock.mockAccused.some((a) => a.priorCases > 0);
-      if (hasPrior) repeat++;
-      if (abscond > 0) arrestsPending++;
-      if (isChargesheetPending(row)) chargesheetPending++;
-    }
-    return {
-      deadlines,
-      overdue,
-      abscondingCases,
-      abscondingTotal,
-      chargesheetPending,
-      repeat,
-      arrestsPending,
-    };
-  }, [cases]);
-
-  const activeStat = searchParams.get("stat") || "";
-
-  const filteredCases = useMemo(() => {
-    return cases
-      .filter((row) => {
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          const ok =
-            row.CrimeNo?.toLowerCase().includes(q) ||
-            (row.Station || row.UnitName)?.toLowerCase().includes(q) ||
-            row.DistrictName?.toLowerCase().includes(q) ||
-            row.FirstName?.toLowerCase().includes(q) ||
-            row.AssignedOfficer?.toLowerCase().includes(q) ||
-            row.CrimeHeadName?.toLowerCase().includes(q) ||
-            row.CrimeGroupName?.toLowerCase().includes(q) ||
-            getRowIntel(row).toLowerCase().includes(q);
-          if (!ok) return false;
-        }
-        if (
-          activeFilters.CaseStatusName &&
-          row.CaseStatusName !== activeFilters.CaseStatusName
-        )
-          return false;
-        if (activeFilters.Gravity && row.Gravity !== activeFilters.Gravity)
-          return false;
-        if (
-          activeFilters.UnitName &&
-          row.UnitName !== activeFilters.UnitName &&
-          row.Station !== activeFilters.UnitName
-        )
-          return false;
-        if (
-          activeFilters.FirstName &&
-          row.FirstName !== activeFilters.FirstName
-        )
-          return false;
-        if (
-          activeFilters.DistrictName &&
-          row.DistrictName !== activeFilters.DistrictName
-        )
-          return false;
-        if (
-          activeFilters.CrimeHeadName &&
-          row.CrimeHeadName !== activeFilters.CrimeHeadName
-        )
-          return false;
-        // clickable stat bar filter — only earns its space if it actually filters
-        if (activeStat) {
-          const mock = getMockExtensions(row.CaseMasterID, {
-            accused: Array(Math.max(1, Number(row.AccusedCount) || 1)).fill({}),
-            victims: Array(Number(row.VictimCount) || 0).fill({}),
-          });
-          const diff = getChargesheetDiff(row);
-          if (
-            activeStat === "deadlines" &&
-            !(diff !== null && diff >= 0 && diff <= 7)
-          )
-            return false;
-          if (activeStat === "overdue" && !(diff !== null && diff < 0))
-            return false;
-          if (
-            activeStat === "absconding" &&
-            !mock.mockAccused.some((a) => a.arrestStatus === "Absconding")
-          )
-            return false;
-          if (
-            activeStat === "chargesheet_pending" &&
-            !isChargesheetPending(row)
-          )
-            return false;
-          if (
-            activeStat === "repeat" &&
-            !mock.mockAccused.some((a) => a.priorCases > 0)
-          )
-            return false;
-          if (
-            activeStat === "arrests_pending" &&
-            !mock.mockAccused.some((a) => a.arrestStatus === "Absconding")
-          )
-            return false;
-        }
-        return true;
-      })
-      .sort((a, b) => {
-        const wa = getPriorityWeight(a.Priority),
-          wb = getPriorityWeight(b.Priority);
-        return sortAscending ? wa - wb : wb - wa;
-      });
-  }, [cases, searchQuery, activeFilters, sortAscending, activeStat, getRowIntel]);
+  // Rows arrive already filtered + sorted from the server (scope-aware).
+  const filteredCases = cases;
 
   const handleFilterSelect = (filterKey, value) => {
     const paramMap = {
@@ -474,25 +366,9 @@ export default function InvestigationsQueue() {
   const greetingName =
     authOfficer?.full_name?.split(" ")[0] ||
     authOfficer?.FirstName || t("investigations.queue.defaultOfficer");
-  const criticalCount = useMemo(
-    () =>
-      cases.filter((r) => String(r.Priority).toLowerCase().includes("critical"))
-        .length,
-    [cases],
-  );
-  const immediateCases = useMemo(() => {
-    return cases.filter((r) => {
-      const d = getChargesheetDiff(r);
-      const mock = getMockExtensions(r.CaseMasterID, {
-        accused: Array(Math.max(1, Number(r.AccusedCount) || 1)).fill({}),
-        victims: [],
-      });
-      const abscond = mock.mockAccused.filter(
-        (a) => a.arrestStatus === "Absconding",
-      ).length;
-      return (d !== null && d < 0) || abscond > 0;
-    }).length;
-  }, [cases]);
+  // Scope-wide critical count (Heinous) from the backend summary — not the page.
+  const criticalCount = summary?.critical ?? 0;
+  const totalCount = pagination?.total ?? filteredCases.length;
 
   if (loading) {
     return (
@@ -521,7 +397,7 @@ export default function InvestigationsQueue() {
             </h1>
             <p className="mt-1 text-[13px] leading-tight text-[#374151]">
               {t("investigations.queue.needAttention", {
-                count: filteredCases.length,
+                count: totalCount,
               })}
               {criticalCount > 0 && (
                 <span className="ml-2 inline-flex items-center gap-1.5">
@@ -535,10 +411,15 @@ export default function InvestigationsQueue() {
                 <span className="ml-2 text-[#6B7280]">
                   {t("investigations.queue.shownOf", {
                     shown: filteredCases.length,
-                    total: cases.length,
+                    total: totalCount,
                   })}
                 </span>
               ) : null}
+              {listLoading && (
+                <span className="ml-2 inline-flex items-center gap-1 text-[#6B7280]">
+                  <Loader2 className="animate-spin" size={12} />
+                </span>
+              )}
             </p>
             <p className="hidden text-[12px] text-[#6B7280] sm:block">
               {t("investigations.subtitle")}
@@ -567,6 +448,9 @@ export default function InvestigationsQueue() {
           </div>
         </div>
         {/* Stat bar — urgent, high-contrast; each filters */}
+        <div className="mt-3">
+          <ScopeBanner officer={authOfficer} count={summary?.assigned} />
+        </div>
         <div className="mt-4 grid grid-cols-3 gap-3">
           {[
             {
@@ -582,16 +466,16 @@ export default function InvestigationsQueue() {
               subKey: "investigations.queue.subPastDue",
             },
             {
-              id: "absconding",
-              labelKey: "investigations.queue.statAbsconding",
-              value: statCounts.abscondingTotal,
+              id: "arrests_pending",
+              labelKey: "investigations.queue.statArrests",
+              value: statCounts.arrestsPending,
               bg: "bg-orange-300",
               valueColor: "text-slate-900",
               dot: "bg-slate-800",
               labelColor: "text-slate-800",
               subColor: "text-slate-700",
               badgeColor: "text-slate-800",
-              subKey: "investigations.queue.subAtLarge",
+              subKey: "investigations.queue.subAwaitingArrest",
             },
             {
               id: "chargesheet_pending",
@@ -746,11 +630,8 @@ export default function InvestigationsQueue() {
                 const isSel = selected.includes(row.CaseMasterID);
                 const why = getWhyNow(row);
                 const next = getNextAction(row);
-                const diff = getChargesheetDiff(row);
-                const isBlocking =
-                  (diff !== null && diff < 0) ||
-                  why.toLowerCase().includes("absconding") ||
-                  why.toLowerCase().includes("overdue");
+                // red flag only on real blockers: overdue chargesheet / missing arrest
+                const isBlocking = isOverdue(row) || hasNoArrest(row);
                 return (
                   <tr
                     key={row.CaseMasterID}
@@ -844,6 +725,53 @@ export default function InvestigationsQueue() {
           </tbody>
         </table>
       </div>
+      {/* Pagination — server-side, scope-aware totals */}
+      {pagination && pagination.total_pages > 1 && (
+        <div className="flex shrink-0 items-center justify-between border-t border-[#DDE3EC] bg-white px-6 py-2.5">
+          <p className="text-[12px] text-[#6B7280]">
+            {t("investigations.queue.pageOf", {
+              from: (page - 1) * PAGE_SIZE + 1,
+              to: Math.min(page * PAGE_SIZE, pagination.total),
+              total: pagination.total,
+            })}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setParam("page", String(page - 1))}
+              disabled={page <= 1}
+              className="rounded border border-[#DDE3EC] px-2.5 py-1 text-[12px] font-semibold text-[#374151] hover:bg-[#F4F6F9] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t("investigations.queue.prevPage")}
+            </button>
+            {pageNumbers(page, pagination.total_pages).map((p, i) =>
+              p === "…" ? (
+                <span key={`gap-${i}`} className="px-1 text-[12px] text-[#9CA3AF]">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setParam("page", String(p))}
+                  className={`rounded px-2.5 py-1 text-[12px] font-semibold ${
+                    p === page
+                      ? "bg-[#1A1A2E] text-white"
+                      : "text-[#374151] hover:bg-[#F4F6F9]"
+                  }`}
+                >
+                  {p}
+                </button>
+              ),
+            )}
+            <button
+              onClick={() => setParam("page", String(page + 1))}
+              disabled={page >= pagination.total_pages}
+              className="rounded border border-[#DDE3EC] px-2.5 py-1 text-[12px] font-semibold text-[#374151] hover:bg-[#F4F6F9] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t("investigations.queue.nextPage")}
+            </button>
+          </div>
+        </div>
+      )}
       {/* Floating cross-case bar — compact FAB anchored bottom-right */}
       {selected.length >= 1 && (
         <div className="pointer-events-none fixed inset-x-4 bottom-2 z-40 flex justify-center sm:inset-x-auto sm:bottom-3 sm:right-3 sm:justify-end">

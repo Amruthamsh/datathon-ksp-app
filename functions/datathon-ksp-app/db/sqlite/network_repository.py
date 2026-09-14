@@ -7,47 +7,91 @@ from db.sqlite.sqlite import get_connection
 
 class NetworkRepository:
 
+    @staticmethod
+    def _scope_filter(scope: dict | None, alias: str = "cm") -> tuple[str, list]:
+        """RBAC filter on CaseMaster (mirror of investigations repo).
+
+        all -> no filter; district -> stations in officer's district;
+        unit -> officer's station; self -> cases assigned to officer.
+        """
+        if not scope:
+            return "", []
+        level = scope.get("level", "self")
+        if level == "all":
+            return "", []
+        if level == "district" and scope.get("district_id") is not None:
+            return (
+                f" AND {alias}.PoliceStationID IN "
+                "(SELECT UnitID FROM Unit WHERE DistrictID = ?)",
+                [scope["district_id"]],
+            )
+        if level == "unit" and scope.get("unit_id") is not None:
+            return (f" AND {alias}.PoliceStationID = ?", [scope["unit_id"]])
+        if scope.get("employee_id") is not None:
+            return (f" AND {alias}.PolicePersonID = ?", [scope["employee_id"]])
+        return (" AND 1 = 0", [])
+
     # ------------------------------------------------------------------
     # Search
     # ------------------------------------------------------------------
-    def search(self, q: str):
+    def search(self, q: str, scope: dict | None = None):
+        scope_sql, scope_params = self._scope_filter(scope, "cm")
         with get_connection() as conn:
             people = conn.execute(
-                """
+                f"""
                 SELECT DISTINCT a.AccusedName AS name,
                    COUNT(DISTINCT a.CaseMasterID) AS case_count,
                    'person' AS type
                 FROM Accused a
+                JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
                 WHERE a.AccusedName LIKE ?
+                {scope_sql}
                 GROUP BY a.AccusedName
                 ORDER BY case_count DESC
                 LIMIT 20
                 """,
-                (f"%{q}%",),
+                ([f"%{q}%"] + scope_params),
             ).fetchall()
 
             cases = conn.execute(
-                """
+                f"""
                 SELECT cm.CaseMasterID AS id,
                        cm.CrimeNo AS label,
                        'case' AS type
                 FROM CaseMaster cm
                 WHERE cm.CrimeNo LIKE ?
+                {scope_sql}
                 LIMIT 20
                 """,
-                (f"%{q}%",),
+                ([f"%{q}%"] + scope_params),
             ).fetchall()
 
+            level = (scope or {}).get("level", "self") if scope else "all"
+            if level == "all":
+                station_sql, station_params = "", []
+            elif level == "district" and (scope or {}).get("district_id") is not None:
+                station_sql, station_params = " AND u.DistrictID = ?", [scope["district_id"]]
+            elif level == "unit" and (scope or {}).get("unit_id") is not None:
+                station_sql, station_params = " AND u.UnitID = ?", [scope["unit_id"]]
+            elif (scope or {}).get("employee_id") is not None:
+                station_sql, station_params = (
+                    " AND EXISTS (SELECT 1 FROM CaseMaster cm2"
+                    " WHERE cm2.PoliceStationID = u.UnitID AND cm2.PolicePersonID = ?)",
+                    [scope["employee_id"]],
+                )
+            else:
+                station_sql, station_params = " AND 1 = 0", []
             stations = conn.execute(
-                """
+                f"""
                 SELECT u.UnitID AS id,
                        u.UnitName AS label,
                        'station' AS type
                 FROM Unit u
                 WHERE u.UnitName LIKE ?
+                {station_sql}
                 LIMIT 10
                 """,
-                (f"%{q}%",),
+                ([f"%{q}%"] + station_params),
             ).fetchall()
 
             return {
@@ -59,10 +103,11 @@ class NetworkRepository:
     # ------------------------------------------------------------------
     # Person Profile
     # ------------------------------------------------------------------
-    def get_person_profile(self, person_name: str):
+    def get_person_profile(self, person_name: str, scope: dict | None = None):
+        scope_sql, scope_params = self._scope_filter(scope, "cm")
         with get_connection() as conn:
             cases = conn.execute(
-                """
+                f"""
                 SELECT cm.CaseMasterID,
                        cm.CrimeNo,
                        cm.CrimeRegisteredDate,
@@ -77,9 +122,10 @@ class NetworkRepository:
                 LEFT JOIN Unit u ON cm.PoliceStationID = u.UnitID
                 LEFT JOIN District d ON u.DistrictID = d.DistrictID
                 WHERE a.AccusedName = ?
+                {scope_sql}
                 ORDER BY cm.CrimeRegisteredDate DESC
                 """,
-                (person_name,),
+                ([person_name] + scope_params),
             ).fetchall()
             case_list = [dict(r) for r in cases]
 
@@ -104,13 +150,15 @@ class NetworkRepository:
             )
 
             arrest_count = conn.execute(
-                """
+                f"""
                 SELECT COUNT(DISTINCT ar.ArrestSurrenderID) AS cnt
                 FROM Accused a
                 JOIN ArrestSurrender ar ON a.AccusedMasterID = ar.AccusedMasterID
+                JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
                 WHERE a.AccusedName = ?
+                {scope_sql}
                 """,
-                (person_name,),
+                ([person_name] + scope_params),
             ).fetchone()["cnt"]
 
             most_common_crime = crime_counter.most_common(1)[0][0] if crime_counter else "Unknown"
@@ -122,19 +170,21 @@ class NetworkRepository:
             rank_pct = "Top 5%" if network_score >= 80 else "Top 15%" if network_score >= 60 else "Top 30%" if network_score >= 40 else "Moderate"
 
             associates = conn.execute(
-                """
+                f"""
                 SELECT a2.AccusedName AS name,
                        COUNT(DISTINCT a2.CaseMasterID) AS shared_firs
                 FROM Accused a1
                 JOIN Accused a2 ON a1.CaseMasterID = a2.CaseMasterID
+                JOIN CaseMaster cm ON a1.CaseMasterID = cm.CaseMasterID
                 WHERE a1.AccusedName = ?
                   AND a2.AccusedName != ?
                   AND a2.AccusedName IS NOT NULL
+                {scope_sql}
                 GROUP BY a2.AccusedName
                 ORDER BY shared_firs DESC
                 LIMIT 20
                 """,
-                (person_name, person_name),
+                ([person_name, person_name] + scope_params),
             ).fetchall()
 
             return {
@@ -160,7 +210,8 @@ class NetworkRepository:
     # ------------------------------------------------------------------
     # Person Graph (nodes + edges for Cytoscape)
     # ------------------------------------------------------------------
-    def get_person_graph(self, person_name: str, depth: int = 1):
+    def get_person_graph(self, person_name: str, depth: int = 1, scope: dict | None = None):
+        scope_sql, scope_params = self._scope_filter(scope, "cm")
         with get_connection() as conn:
             nodes = {}
             edges = []
@@ -181,7 +232,7 @@ class NetworkRepository:
             add_node(person_id, person_name, "accused", "Primary Subject")
 
             cases = conn.execute(
-                """
+                f"""
                 SELECT DISTINCT cm.CaseMasterID, cm.CrimeNo, ch.CrimeGroupName,
                        u.UnitName, d.DistrictName
                 FROM Accused a
@@ -190,10 +241,11 @@ class NetworkRepository:
                 LEFT JOIN Unit u ON cm.PoliceStationID = u.UnitID
                 LEFT JOIN District d ON u.DistrictID = d.DistrictID
                 WHERE a.AccusedName = ?
+                {scope_sql}
                 ORDER BY cm.CrimeRegisteredDate DESC
                 LIMIT 30
                 """,
-                (person_name,),
+                ([person_name] + scope_params),
             ).fetchall()
 
             for c in cases:
@@ -229,10 +281,11 @@ class NetworkRepository:
     # ------------------------------------------------------------------
     # Associates
     # ------------------------------------------------------------------
-    def get_associates(self, person_name: str):
+    def get_associates(self, person_name: str, scope: dict | None = None):
+        scope_sql, scope_params = self._scope_filter(scope, "cm")
         with get_connection() as conn:
             rows = conn.execute(
-                """
+                f"""
                 SELECT a2.AccusedName AS name,
                        COUNT(DISTINCT a2.CaseMasterID) AS shared_firs,
                        COUNT(DISTINCT ar.ArrestSurrenderID) AS shared_arrests,
@@ -245,23 +298,25 @@ class NetworkRepository:
                 WHERE a1.AccusedName = ?
                   AND a2.AccusedName != ?
                   AND a2.AccusedName IS NOT NULL
+                {scope_sql}
                 GROUP BY a2.AccusedName
                 ORDER BY shared_firs DESC
                 LIMIT 50
                 """,
-                (person_name, person_name),
+                ([person_name, person_name] + scope_params),
             ).fetchall()
             return [dict(r) for r in rows]
 
     # ------------------------------------------------------------------
     # Timeline
     # ------------------------------------------------------------------
-    def get_timeline(self, person_name: str):
+    def get_timeline(self, person_name: str, scope: dict | None = None):
+        scope_sql, scope_params = self._scope_filter(scope, "cm")
         with get_connection() as conn:
             events = []
 
             fir_events = conn.execute(
-                """
+                f"""
                 SELECT cm.CrimeRegisteredDate AS event_date,
                        'FIR Registered' AS event_type,
                        cm.CrimeNo AS ref,
@@ -271,8 +326,9 @@ class NetworkRepository:
                 LEFT JOIN CrimeHead ch ON cm.CrimeMajorHeadID = ch.CrimeHeadID
                 WHERE a.AccusedName = ?
                   AND cm.CrimeRegisteredDate IS NOT NULL
+                {scope_sql}
                 """,
-                (person_name,),
+                ([person_name] + scope_params),
             ).fetchall()
             for e in fir_events:
                 events.append({
@@ -283,7 +339,7 @@ class NetworkRepository:
                 })
 
             arrest_events = conn.execute(
-                """
+                f"""
                 SELECT ar.ArrestSurrenderDate AS event_date,
                        cm.CrimeNo AS ref
                 FROM Accused a
@@ -291,8 +347,9 @@ class NetworkRepository:
                 JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
                 WHERE a.AccusedName = ?
                   AND ar.ArrestSurrenderDate IS NOT NULL
+                {scope_sql}
                 """,
-                (person_name,),
+                ([person_name] + scope_params),
             ).fetchall()
             for e in arrest_events:
                 events.append({
@@ -303,7 +360,7 @@ class NetworkRepository:
                 })
 
             chargesheet_events = conn.execute(
-                """
+                f"""
                 SELECT cs.csdate AS event_date,
                        cm.CrimeNo AS ref
                 FROM Accused a
@@ -311,8 +368,9 @@ class NetworkRepository:
                 JOIN ChargesheetDetails cs ON cm.CaseMasterID = cs.CaseMasterID
                 WHERE a.AccusedName = ?
                   AND cs.csdate IS NOT NULL
+                {scope_sql}
                 """,
-                (person_name,),
+                ([person_name] + scope_params),
             ).fetchall()
             for e in chargesheet_events:
                 events.append({
@@ -328,65 +386,76 @@ class NetworkRepository:
     # ------------------------------------------------------------------
     # Analytics
     # ------------------------------------------------------------------
-    def get_analytics(self, person_name: str):
+    def get_analytics(self, person_name: str, scope: dict | None = None):
+        scope_sql, scope_params = self._scope_filter(scope, "cm")
         with get_connection() as conn:
             fir_count = conn.execute(
-                "SELECT COUNT(*) AS cnt FROM Accused WHERE AccusedName = ?",
-                (person_name,),
+                f"""SELECT COUNT(*) AS cnt
+                FROM Accused a
+                JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
+                WHERE AccusedName = ?
+                {scope_sql}""",
+                ([person_name] + scope_params),
             ).fetchone()["cnt"]
 
             arrest_count = conn.execute(
-                """
+                f"""
                 SELECT COUNT(DISTINCT ar.ArrestSurrenderID) AS cnt
                 FROM Accused a
                 JOIN ArrestSurrender ar ON a.AccusedMasterID = ar.AccusedMasterID
+                JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
                 WHERE a.AccusedName = ?
+                {scope_sql}
                 """,
-                (person_name,),
+                ([person_name] + scope_params),
             ).fetchone()["cnt"]
 
             stations = conn.execute(
-                """
+                f"""
                 SELECT COUNT(DISTINCT cm.PoliceStationID) AS cnt
                 FROM Accused a
                 JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
                 WHERE a.AccusedName = ?
+                {scope_sql}
                 """,
-                (person_name,),
+                ([person_name] + scope_params),
             ).fetchone()["cnt"]
 
             districts = conn.execute(
-                """
+                f"""
                 SELECT COUNT(DISTINCT u.DistrictID) AS cnt
                 FROM Accused a
                 JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
                 JOIN Unit u ON cm.PoliceStationID = u.UnitID
                 WHERE a.AccusedName = ?
+                {scope_sql}
                 """,
-                (person_name,),
+                ([person_name] + scope_params),
             ).fetchone()["cnt"]
 
             years_active = conn.execute(
-                """
+                f"""
                 SELECT COUNT(DISTINCT strftime('%Y', cm.CrimeRegisteredDate)) AS cnt
                 FROM Accused a
                 JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
                 WHERE a.AccusedName = ? AND cm.CrimeRegisteredDate IS NOT NULL
+                {scope_sql}
                 """,
-                (person_name,),
+                ([person_name] + scope_params),
             ).fetchone()["cnt"]
 
             crime_types = conn.execute(
-                """
+                f"""
                 SELECT ch.CrimeGroupName, COUNT(*) AS cnt
                 FROM Accused a
                 JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
                 LEFT JOIN CrimeHead ch ON cm.CrimeMajorHeadID = ch.CrimeHeadID
                 WHERE a.AccusedName = ?
+                {scope_sql}
                 GROUP BY ch.CrimeGroupName
                 ORDER BY cnt DESC
                 """,
-                (person_name,),
+                ([person_name] + scope_params),
             ).fetchall()
 
             return {
@@ -401,10 +470,16 @@ class NetworkRepository:
     # ------------------------------------------------------------------
     # Networks (Connected Components)
     # ------------------------------------------------------------------
-    def get_communities(self):
+    def get_communities(self, scope: dict | None = None):
+        scope_sql, scope_params = self._scope_filter(scope, "cm")
+        scope_exists = (
+            " AND EXISTS (SELECT 1 FROM CaseMaster cm"
+            f" WHERE cm.CaseMasterID = a1.CaseMasterID{scope_sql})"
+            if (scope_sql or scope) else ""
+        )
         with get_connection() as conn:
             co_accused_pairs = conn.execute(
-                """
+                f"""
                 SELECT a1.AccusedName AS name1, a2.AccusedName AS name2,
                        COUNT(DISTINCT a1.CaseMasterID) AS weight
                 FROM Accused a1
@@ -412,10 +487,12 @@ class NetworkRepository:
                 WHERE a1.AccusedName < a2.AccusedName
                   AND a1.AccusedName IS NOT NULL
                   AND a2.AccusedName IS NOT NULL
+                {scope_exists}
                 GROUP BY a1.AccusedName, a2.AccusedName
                 HAVING weight >= 2
                 ORDER BY weight DESC
                 """,
+                (scope_params if scope_exists else []),
             ).fetchall()
 
             pairs = [(r["name1"], r["name2"], r["weight"]) for r in co_accused_pairs]
@@ -457,18 +534,23 @@ class NetworkRepository:
                 station_set = set()
                 for m in comp:
                     row = conn.execute(
-                        "SELECT COUNT(*) AS cnt FROM Accused WHERE AccusedName = ?",
-                        (m,),
+                        f"""SELECT COUNT(*) AS cnt
+                        FROM Accused a
+                        JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
+                        WHERE a.AccusedName = ?
+                        {scope_sql}""",
+                        ([m] + scope_params),
                     ).fetchone()
                     fir_counts.append(row["cnt"])
                     station_rows = conn.execute(
-                        """
+                        f"""
                         SELECT DISTINCT cm.PoliceStationID
                         FROM Accused a
                         JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
                         WHERE a.AccusedName = ?
+                        {scope_sql}
                         """,
-                        (m,),
+                        ([m] + scope_params),
                     ).fetchall()
                     for sr in station_rows:
                         station_set.add(sr["PoliceStationID"])
@@ -489,10 +571,11 @@ class NetworkRepository:
     # ------------------------------------------------------------------
     # Bridge Individuals (degree centrality approximation)
     # ------------------------------------------------------------------
-    def get_bridge_individuals(self, limit: int = 20):
+    def get_bridge_individuals(self, limit: int = 20, scope: dict | None = None):
+        scope_sql, scope_params = self._scope_filter(scope, "cm")
         with get_connection() as conn:
             rows = conn.execute(
-                """
+                f"""
                 SELECT a.AccusedName AS name,
                        COUNT(DISTINCT a.CaseMasterID) AS fir_count,
                        COUNT(DISTINCT a2.AccusedName) AS unique_associates,
@@ -505,12 +588,13 @@ class NetworkRepository:
                     AND a2.AccusedName != a.AccusedName
                     AND a2.AccusedName IS NOT NULL
                 WHERE a.AccusedName IS NOT NULL
+                {scope_sql}
                 GROUP BY a.AccusedName
                 HAVING fir_count >= 2
                 ORDER BY unique_associates DESC, fir_count DESC
                 LIMIT ?
                 """,
-                (limit,),
+                (scope_params + [limit]),
             ).fetchall()
 
             return [dict(r) for r in rows]
@@ -518,46 +602,56 @@ class NetworkRepository:
     # ------------------------------------------------------------------
     # Summary / Landing Page stats
     # ------------------------------------------------------------------
-    def get_summary(self):
+    def get_summary(self, scope: dict | None = None):
+        scope_sql, scope_params = self._scope_filter(scope, "cm")
         with get_connection() as conn:
             repeat_offenders = conn.execute(
-                """
+                f"""
                 SELECT COUNT(*) AS cnt
                 FROM (
-                    SELECT AccusedName
-                    FROM Accused
-                    WHERE AccusedName IS NOT NULL
-                    GROUP BY AccusedName
-                    HAVING COUNT(DISTINCT CaseMasterID) > 1
+                    SELECT a.AccusedName
+                    FROM Accused a
+                    JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
+                    WHERE a.AccusedName IS NOT NULL
+                    {scope_sql}
+                    GROUP BY a.AccusedName
+                    HAVING COUNT(DISTINCT a.CaseMasterID) > 1
                 )
-                """
+                """,
+                scope_params,
             ).fetchone()["cnt"]
 
             criminal_groups = conn.execute(
-                """
+                f"""
                 SELECT COUNT(*) AS cnt
                 FROM (
                     SELECT a1.AccusedName
                     FROM Accused a1
                     JOIN Accused a2 ON a1.CaseMasterID = a2.CaseMasterID
+                    JOIN CaseMaster cm ON a1.CaseMasterID = cm.CaseMasterID
                     WHERE a1.AccusedName < a2.AccusedName
+                    {scope_sql}
                     GROUP BY a1.AccusedName, a2.AccusedName
                     HAVING COUNT(DISTINCT a1.CaseMasterID) >= 2
                 )
-                """
+                """,
+                scope_params,
             ).fetchone()["cnt"]
 
             high_risk = conn.execute(
-                """
+                f"""
                 SELECT COUNT(*) AS cnt
                 FROM (
-                    SELECT AccusedName
-                    FROM Accused
-                    WHERE AccusedName IS NOT NULL
-                    GROUP BY AccusedName
-                    HAVING COUNT(DISTINCT CaseMasterID) >= 5
+                    SELECT a.AccusedName
+                    FROM Accused a
+                    JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
+                    WHERE a.AccusedName IS NOT NULL
+                    {scope_sql}
+                    GROUP BY a.AccusedName
+                    HAVING COUNT(DISTINCT a.CaseMasterID) >= 5
                 )
-                """
+                """,
+                scope_params,
             ).fetchone()["cnt"]
 
             return {

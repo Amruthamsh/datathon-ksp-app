@@ -4,8 +4,56 @@ from db.dependencies import get_officer_repository, get_catalyst_user_repository
 from db.sqlite.officer_repository import SQLiteOfficerRepository
 from db.catalyst.user_repository import CatalystUserRepository
 from auth.security import verify_password, create_token, decode_token
+from auth.roles import build_scope, scope_level_for_tier, tier_from_hierarchy, tier_from_rank_name
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _officer_scope_context(kgid: str) -> dict:
+    """Employee posting + RBAC tier for auth responses. Never raises."""
+    try:
+        from db.sqlite.sqlite import get_connection
+
+        with get_connection() as conn:
+            row = conn.execute(
+                """
+                SELECT e.EmployeeID AS employee_id,
+                       e.DistrictID AS district_id,
+                       e.UnitID AS unit_id,
+                       e.RankID AS rank_id,
+                       r.RankName AS rank_name,
+                       r.Hierarchy AS hierarchy,
+                       d.DistrictName AS district_name,
+                       u.UnitName AS unit_name
+                FROM Employee e
+                LEFT JOIN Rank r ON r.RankID = e.RankID
+                LEFT JOIN District d ON d.DistrictID = e.DistrictID
+                LEFT JOIN Unit u ON u.UnitID = e.UnitID
+                WHERE e.KGID = ?
+                """,
+                (kgid,),
+            ).fetchone()
+            if not row:
+                return {}
+            d = dict(row)
+            tier = (
+                tier_from_hierarchy(d.get("hierarchy"))
+                if d.get("hierarchy") is not None
+                else tier_from_rank_name(d.get("rank_name"))
+            )
+            return {
+                "tier": tier,
+                "scope_level": scope_level_for_tier(tier),
+                "hierarchy": d.get("hierarchy"),
+                "rank_id": d.get("rank_id"),
+                "district_id": d.get("district_id"),
+                "district_name": d.get("district_name"),
+                "unit_id": d.get("unit_id"),
+                "unit_name": d.get("unit_name"),
+                "scope": build_scope(tier, d.get("employee_id"), d.get("district_id"), d.get("unit_id")),
+            }
+    except Exception:
+        return {}
 
      
 def _extract_bearer_token(request: Request) -> str:
@@ -108,14 +156,16 @@ def signin(
         )
 
     token = create_token(kgid=user["kgid"], rank=user["rank"])
+    officer = {
+        "kgid": user["kgid"],
+        "full_name": user["full_name"],
+        "rank": user["rank"],
+        "district": user["district"],
+        **_officer_scope_context(user["kgid"]),
+    }
     return AuthResponse(
         access_token=token,
-        officer={
-            "kgid": user["kgid"],
-            "full_name": user["full_name"],
-            "rank": user["rank"],
-            "district": user["district"],
-        },
+        officer=officer,
     )
 
 
@@ -154,6 +204,7 @@ def me(
             "full_name": user["full_name"],
             "rank": user["rank"],
             "district": user["district"],
+            **_officer_scope_context(kgid),
         }
     }
 
