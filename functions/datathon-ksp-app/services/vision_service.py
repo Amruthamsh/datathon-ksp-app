@@ -94,6 +94,40 @@ def _get_config() -> tuple[str, str]:
     return url, key
 
 
+def sanitize_blocks(blocks) -> list:
+    """Clamp VLM bounding boxes to the 0-1000 relative grid (never raises).
+
+    Shared by the /ocr/analyze route and the Home-chat evidence pipeline so
+    the frontend overlay can trust the coordinates. Keeps max 40 boxes.
+    """
+    clean = []
+    for b in (blocks or [])[:40]:
+        if not isinstance(b, dict) or not b.get("text"):
+            continue
+        try:
+            x, y, w, h = (int(b.get(k, 0)) for k in ("x", "y", "w", "h"))
+        except (TypeError, ValueError):
+            continue
+        x, y = max(0, min(1000, x)), max(0, min(1000, y))
+        w, h = max(8, min(1000 - x, w)), max(8, min(1000 - y, h))
+        try:
+            conf = max(0.0, min(1.0, float(b.get("conf", 0.7))))
+        except (TypeError, ValueError):
+            conf = 0.7
+        kind = str(b.get("kind", "other")).lower()
+        if kind not in (
+            "fir_no", "station", "date", "section",
+            "vehicle", "phone", "name", "other",
+        ):
+            kind = "other"
+        clean.append({
+            "text": str(b["text"])[:160],
+            "x": x, "y": y, "w": w, "h": h,
+            "conf": conf, "kind": kind,
+        })
+    return clean
+
+
 def _get_access_token(catalyst_app) -> str:
     if catalyst_app is None:
         raise RuntimeError(

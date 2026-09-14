@@ -52,25 +52,11 @@ def _parse_json(raw: str) -> dict:
 
 
 def _sanitize_blocks(blocks) -> list:
-    clean = []
-    for b in (blocks or [])[:40]:
-        if not isinstance(b, dict) or not b.get("text"):
-            continue
-        try:
-            x, y, w, h = (int(b.get(k, 0)) for k in ("x", "y", "w", "h"))
-        except (TypeError, ValueError):
-            continue
-        x, y = max(0, min(1000, x)), max(0, min(1000, y))
-        w, h = max(8, min(1000 - x, w)), max(8, min(1000 - y, h))
-        try:
-            conf = max(0.0, min(1.0, float(b.get("conf", 0.7))))
-        except (TypeError, ValueError):
-            conf = 0.7
-        kind = str(b.get("kind", "other")).lower()
-        if kind not in ("fir_no", "station", "date", "section", "vehicle", "phone", "name", "other"):
-            kind = "other"
-        clean.append({"text": str(b["text"])[:160], "x": x, "y": y, "w": w, "h": h, "conf": conf, "kind": kind})
-    return clean
+    # Shared implementation lives in services.vision_service; kept here for
+    # backwards-compat imports.
+    from services.vision_service import sanitize_blocks as _shared_sanitize
+
+    return _shared_sanitize(blocks)
 
 
 def _call_vision(data_url: str, case_hint: str, language: str, catalyst_app=None) -> dict:

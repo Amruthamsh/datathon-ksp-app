@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Download, FileWarning, FileText, Loader2, Expand } from "lucide-react";
+import { X, Download, FileWarning, FileText, Loader2, Expand, ScanLine, Eye, EyeOff } from "lucide-react";
 import { fetchEvidenceBlob } from "../api/chat";
 
 // Images open in an in-app viewer (FileStore has no public URLs, and the
@@ -10,6 +10,119 @@ export function isViewableImage(ev) {
   if (!ev) return false;
   if ((ev.content_type || "").startsWith("image/")) return true;
   return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(ev.filename || "");
+}
+
+// OCR overlay colours — same semantics as the DocOcrPanel POC (red FIR-No,
+// amber sections, blue vehicles, green phones, purple stations, cyan dates).
+export const OCR_KIND_STYLE = {
+  fir_no: "border-red-600 text-red-700 bg-red-600/10",
+  section: "border-amber-600 text-amber-800 bg-amber-500/10",
+  vehicle: "border-blue-700 text-blue-800 bg-blue-600/10",
+  phone: "border-green-700 text-green-800 bg-green-600/10",
+  station: "border-purple-700 text-purple-800 bg-purple-600/10",
+  date: "border-cyan-700 text-cyan-800 bg-cyan-600/10",
+  name: "border-slate-700 text-slate-800 bg-slate-500/10",
+  other: "border-slate-400 text-slate-600 bg-slate-400/10",
+};
+
+export function hasOcrData(ev) {
+  if (!ev) return false;
+  return Boolean(
+    (Array.isArray(ev.ocr_blocks) && ev.ocr_blocks.length > 0) ||
+      (ev.ocr_text || "").trim() ||
+      (ev.doc_summary || "").trim() ||
+      (ev.ocr_entities && Object.values(ev.ocr_entities).some((v) => (v || []).length > 0)),
+  );
+}
+
+// Image with VLM bounding boxes overlaid (0-1000 relative coords → %).
+// Hover any box for the transcribed text + confidence.
+export function OcrOverlayImage({ url, filename, blocks, showBoxes, rounded = "rounded-lg" }) {
+  return (
+    <div className={`relative ${rounded} overflow-hidden bg-slate-100`}>
+      <img
+        src={url}
+        alt={filename || "evidence"}
+        className="block w-full object-contain"
+      />
+      {showBoxes &&
+        (blocks || []).map((b, i) => (
+          <div
+            key={i}
+            title={`${b.text || ""} (${Math.round((b.conf ?? 0.7) * 100)}%)`}
+            className={`group absolute border-2 ${OCR_KIND_STYLE[b.kind] || OCR_KIND_STYLE.other}`}
+            style={{
+              left: `${(b.x || 0) / 10}%`,
+              top: `${(b.y || 0) / 10}%`,
+              width: `${(b.w || 8) / 10}%`,
+              height: `${(b.h || 8) / 10}%`,
+            }}
+          >
+            <span className="absolute -top-5 left-0 z-10 hidden whitespace-nowrap rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-medium text-white group-hover:block">
+              {b.text} · {Math.round((b.conf ?? 0.7) * 100)}%
+            </span>
+            {b.kind && b.kind !== "other" && (
+              <span className="absolute -top-2 -left-2 rounded-sm bg-slate-900 px-1 text-[9px] font-bold uppercase text-white">
+                {String(b.kind).replace("_", " ")}
+              </span>
+            )}
+          </div>
+        ))}
+    </div>
+  );
+}
+
+// OCR analysis section for workspace evidence: vision summary, entity chips,
+// full transcription. Rendered under the document preview when the backend
+// attached OCR data to the evidence meta.
+export function OcrDetails({ ev }) {
+  const { t } = useTranslation();
+  const entities = useMemo(() => {
+    const out = [];
+    for (const [group, vals] of Object.entries(ev?.ocr_entities || {})) {
+      for (const v of vals || []) out.push({ group, value: v });
+    }
+    return out.slice(0, 40);
+  }, [ev]);
+  const transcription = (ev?.ocr_text || ev?.snippet || "").trim();
+  if (!ev?.doc_summary && entities.length === 0 && !transcription) return null;
+  return (
+    <div className="space-y-3 border-t border-violet-100 px-5 py-3">
+      <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-violet-900">
+        <ScanLine size={12} />
+        {t("analysis.ocrAnalysis", { defaultValue: "OCR analysis" })}
+      </p>
+      {ev.doc_summary && (
+        <p className="text-[13px] leading-6 text-slate-800">{ev.doc_summary}</p>
+      )}
+      {entities.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {entities.map((c, i) => (
+            <span
+              key={i}
+              title={c.group}
+              className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[11px] text-slate-800"
+            >
+              {c.value}
+            </span>
+          ))}
+        </div>
+      )}
+      {transcription && (
+        <details className="rounded-md border border-slate-200">
+          <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700">
+            {t("analysis.ocrText", {
+              count: transcription.length,
+              defaultValue: `Full OCR text (${transcription.length} chars)`,
+            })}
+          </summary>
+          <pre className="max-h-48 overflow-auto whitespace-pre-wrap px-3 pb-3 font-mono text-[11px] leading-5 text-slate-700">
+            {transcription}
+          </pre>
+        </details>
+      )}
+    </div>
+  );
 }
 
 function useEvidenceObjectUrl(token, ev) {
@@ -58,11 +171,14 @@ export function DocumentPreview({ token, ev, onOpenImage }) {
   const { t } = useTranslation();
   const { url, loading, error } = useEvidenceObjectUrl(token, ev || {});
   const [text, setText] = useState(null);
+  const [showBoxes, setShowBoxes] = useState(true);
 
   const filename = ev?.filename || "evidence";
   const ctype = ev?.content_type || "";
   const lower = filename.toLowerCase();
   const image = isViewableImage(ev);
+  const ocr = hasOcrData(ev);
+  const blocks = Array.isArray(ev?.ocr_blocks) ? ev.ocr_blocks : [];
   const pdf = ctype === "application/pdf" || lower.endsWith(".pdf");
   const textish =
     ctype.startsWith("text/") || /\.(txt|csv|md|json|log)$/i.test(lower);
@@ -102,17 +218,43 @@ export function DocumentPreview({ token, ev, onOpenImage }) {
           </span>
         )}
         {!loading && !error && image && url && (
-          <button
-            onClick={onOpenImage}
-            title={t("analysis.expandFile", { defaultValue: "Click to expand" })}
-            className="cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded-lg"
-          >
-            <img
-              src={url}
-              alt={filename}
-              className="max-h-[420px] w-auto max-w-full rounded-lg object-contain shadow"
-            />
-          </button>
+          ocr ? (
+            <div className="w-full">
+              <button
+                onClick={onOpenImage}
+                title={t("analysis.expandFile", { defaultValue: "Click to expand" })}
+                className="block w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded-lg"
+              >
+                <OcrOverlayImage
+                  url={url}
+                  filename={filename}
+                  blocks={blocks}
+                  showBoxes={showBoxes && blocks.length > 0}
+                />
+              </button>
+              <p className="mt-1.5 text-center text-[11px] text-slate-500">
+                {t("analysis.ocrHoverHint", {
+                  count: blocks.length,
+                  defaultValue:
+                    blocks.length > 0
+                      ? `${blocks.length} OCR regions — hover any box for text + confidence. Click image to expand.`
+                      : "Click image to expand.",
+                })}
+              </p>
+            </div>
+          ) : (
+            <button
+              onClick={onOpenImage}
+              title={t("analysis.expandFile", { defaultValue: "Click to expand" })}
+              className="cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded-lg"
+            >
+              <img
+                src={url}
+                alt={filename}
+                className="max-h-[420px] w-auto max-w-full rounded-lg object-contain shadow"
+              />
+            </button>
+          )
         )}
         {!loading && !error && pdf && url && (
           <iframe
@@ -142,6 +284,8 @@ export function DocumentPreview({ token, ev, onOpenImage }) {
           </div>
         )}
       </div>
+      {/* OCR analysis: vision summary, entity chips, transcription */}
+      {!loading && !error && ocr && <OcrDetails ev={ev} />}
       <div className="flex flex-wrap items-center gap-2 border-t border-violet-100 px-5 py-2.5">
         <p className="min-w-0 flex-1 truncate text-[12px] text-slate-500">
           <span className="font-medium text-slate-700">{filename}</span>
@@ -161,6 +305,17 @@ export function DocumentPreview({ token, ev, onOpenImage }) {
           >
             <Expand size={13} />
             {t("analysis.viewFile", { defaultValue: "View" })}
+          </button>
+        )}
+        {image && blocks.length > 0 && (
+          <button
+            onClick={() => setShowBoxes((s) => !s)}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+          >
+            {showBoxes ? <EyeOff size={13} /> : <Eye size={13} />}
+            {showBoxes
+              ? t("analysis.hideBoxes", { defaultValue: "Hide boxes" })
+              : t("analysis.showBoxes", { defaultValue: "Show boxes" })}
           </button>
         )}
         {url && (
@@ -183,7 +338,11 @@ export function DocumentPreview({ token, ev, onOpenImage }) {
 export function EvidenceLightbox({ token, ev, onClose }) {
   const { t } = useTranslation();
   const { url, loading, error } = useEvidenceObjectUrl(token, ev || {});
+  const [showBoxes, setShowBoxes] = useState(true);
   const name = ev?.filename || "evidence";
+  const ocr = hasOcrData(ev);
+  const blocks = Array.isArray(ev?.ocr_blocks) ? ev.ocr_blocks : [];
+  const transcription = (ev?.ocr_text || ev?.snippet || "").trim();
 
   useEffect(() => {
     const onKey = (e) => {
@@ -229,7 +388,7 @@ export function EvidenceLightbox({ token, ev, onClose }) {
             </button>
           </div>
         </div>
-        <div className="flex min-h-[200px] items-center justify-center bg-slate-100 p-4">
+        <div className="flex max-h-[80vh] min-h-[200px] flex-col items-center justify-center overflow-y-auto bg-slate-100 p-4">
           {loading && (
             <span className="flex items-center gap-2 text-sm text-slate-500">
               <Loader2 size={16} className="animate-spin" />
@@ -243,11 +402,56 @@ export function EvidenceLightbox({ token, ev, onClose }) {
             </span>
           )}
           {url && !error && (
-            <img
-              src={url}
-              alt={name}
-              className="max-h-[75vh] w-auto max-w-full rounded-lg object-contain shadow"
-            />
+            ocr && blocks.length > 0 ? (
+              <div className="w-full max-w-3xl">
+                <OcrOverlayImage
+                  url={url}
+                  filename={name}
+                  blocks={blocks}
+                  showBoxes={showBoxes}
+                />
+                <div className="mt-2 flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => setShowBoxes((s) => !s)}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    {showBoxes ? <EyeOff size={13} /> : <Eye size={13} />}
+                    {showBoxes
+                      ? t("analysis.hideBoxes", {
+                          defaultValue: "Hide boxes",
+                        })
+                      : t("analysis.showBoxes", {
+                          defaultValue: "Show boxes",
+                        })}
+                  </button>
+                  <span className="text-[11px] text-slate-500">
+                    {t("analysis.ocrHoverHintShort", {
+                      count: blocks.length,
+                      defaultValue: `${blocks.length} OCR regions — hover for text`,
+                    })}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <img
+                src={url}
+                alt={name}
+                className="max-h-[75vh] w-auto max-w-full rounded-lg object-contain shadow"
+              />
+            )
+          )}
+          {url && !error && ocr && transcription && (
+            <details className="mt-3 w-full max-w-3xl rounded-md border border-slate-200 bg-white">
+              <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700">
+                {t("analysis.ocrText", {
+                  count: transcription.length,
+                  defaultValue: `Full OCR text (${transcription.length} chars)`,
+                })}
+              </summary>
+              <pre className="max-h-40 overflow-auto whitespace-pre-wrap px-3 pb-3 font-mono text-[11px] leading-5 text-slate-700">
+                {transcription}
+              </pre>
+            </details>
           )}
         </div>
       </div>

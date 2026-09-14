@@ -122,7 +122,10 @@ async def generate_response(
                 # MIME, which previously skipped OCR silently.
                 if _looks_like_image(f.content_type, f.filename):
                     try:
-                        from services.vision_service import transcribe_image_bytes
+                        from services.vision_service import (
+                            sanitize_blocks,
+                            transcribe_image_bytes,
+                        )
 
                         parsed = transcribe_image_bytes(
                             blob,
@@ -138,9 +141,23 @@ async def generate_response(
                             summary = str(parsed.get("summary") or "").strip()
                             if summary:
                                 meta["doc_summary"] = summary[:500]
+                            # Bounding boxes + entities power the analysis
+                            # workspace overlay (image + boxes + chips).
+                            blocks = sanitize_blocks(parsed.get("blocks"))
+                            if blocks:
+                                meta["ocr_blocks"] = blocks
+                            entities = parsed.get("entities") or {}
+                            if isinstance(entities, dict):
+                                capped = {
+                                    k: list(v)[:20]
+                                    for k, v in entities.items()
+                                    if isinstance(v, list) and v
+                                }
+                                if capped:
+                                    meta["ocr_entities"] = capped
                             logger.info(
                                 f"Evidence OCR transcribed {len(ocr_text)} chars "
-                                f"from {f.filename}"
+                                f"({len(blocks)} boxes) from {f.filename}"
                             )
                         else:
                             ocr_warnings.append(
