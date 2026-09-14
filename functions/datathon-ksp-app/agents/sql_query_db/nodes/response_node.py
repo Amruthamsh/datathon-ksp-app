@@ -112,6 +112,19 @@ Guidelines:
 - If the dataset is too small for reliable conclusions, clearly state that.
 - Avoid repeating statistics.
 - Write like a police intelligence analyst, not a chatbot.
+- If an "Uploaded Evidence" block with a document Transcription is supplied:
+  the user asked about THAT document — it is the primary subject.
+  Open the answer with a "## Document Summary" section: document type,
+  then the concrete fields/entities read from it (FIR/complaint numbers,
+  police station, district, dates, sections, names, vehicles, phones —
+  only values actually present in the transcription, never invented).
+  Then cross-reference those entities against the database results
+  (confirm / contradict / supplement with specific values from both).
+  If the database results are generic and unrelated to the document,
+  say so plainly in one line instead of presenting them as document
+  insights. Mention filenames inline when referring to the document.
+  Never add an "Evidence Referenced" section or file links — the files are
+  shown in the analysis workspace.
 
 Generate exactly three follow-up questions that:
 - build naturally on the current findings,
@@ -168,11 +181,21 @@ Return valid JSON only.
 
         row_count = len(state["sql_result"])
 
+        evidence_context = state.get("evidence_context") or ""
+        evidence_block = (
+            f"\nUploaded Evidence (FileStore-backed; the user can see the files "
+            f"in the analysis workspace, so never add an 'Evidence Referenced' "
+            f"section or file links — just mention filenames inline where "
+            f"relevant):\n{evidence_context}\n"
+            if evidence_context
+            else ""
+        )
+
         prompt = f"""
 Conversation:
 
 {conversation_str}
-
+{evidence_block}
 SQL Query:
 
 {state['sql_query']}
@@ -194,6 +217,9 @@ Remember:
 
 - Follow-up questions belong ONLY inside follow_up_questions.
 - Do NOT include them inside answer.
+- When uploaded evidence is present: cross-reference the crime-database
+  findings with the evidence excerpts, mentioning filenames inline where
+  relevant.
 
 Return valid JSON only.
 """

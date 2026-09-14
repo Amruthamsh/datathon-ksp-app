@@ -142,3 +142,41 @@ export async function sendFeedback(token, conversationId, createdAt, feedback) {
   });
   return handleResponse(res);
 }
+
+// Raw authenticated fetch for an evidence file — returns the Blob.
+// FileStore has no public URLs, so every view/download goes through here.
+export async function fetchEvidenceBlob(token, downloadUrl) {
+  const res = await fetch(downloadUrl, {
+    headers: { "X-Auth-Token": token },
+  });
+  if (res.status === 401) {
+    localStorage.removeItem("ksp_auth_token");
+    localStorage.removeItem("ksp_auth_officer");
+    window.dispatchEvent(new Event("session-expired"));
+    throw new Error("Session expired");
+  }
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+  return res.blob();
+}
+
+// Authenticated evidence open for non-image files (docs, spreadsheets…).
+// Fetches the bytes with the header, then opens a blob URL in a new tab.
+// (Images use the in-app EvidenceLightbox instead — no new tab involved.)
+export async function openEvidence(token, downloadUrl, fallbackName = "evidence") {
+  const blob = await fetchEvidenceBlob(token, downloadUrl);
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noreferrer";
+  // Hint download for non-viewable types; PDFs/text still render inline.
+  const viewable = /^(application\/pdf|text\/)/.test(blob.type);
+  if (!viewable) a.download = fallbackName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+  return fallbackName;
+}

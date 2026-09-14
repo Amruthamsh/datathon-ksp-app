@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Save, Download, Copy, Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Save, Download, Copy, Check, Paperclip } from "lucide-react";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx";
@@ -8,6 +8,7 @@ import { toBlob } from "html-to-image";
 import ChartRenderer, { computeChartHeight } from "./ChartRenderer";
 import { formatValue } from "../utils/chatUtils";
 import { saveReport } from "../api/reports";
+import { EvidenceLightbox, DocumentPreview } from "./EvidenceViewer";
 import { useAuth } from "../auth/AuthContext";
 
 // ── Data Table ───────────────────────────────────────────────────────────────
@@ -192,11 +193,24 @@ export default function AnalysisPanel({ analysis }) {
   const rows = Array.isArray(analysis?.sql_result) ? analysis.sql_result : [];
   const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
   const charts = Array.isArray(analysis?.charts) ? analysis.charts : [];
+  const evidenceFiles = Array.isArray(analysis?.evidence_files)
+    ? analysis.evidence_files
+    : [];
   const rowCount = rows.length;
 
   const [savingIdx, setSavingIdx] = useState(null);
   const [copiedSql, setCopiedSql] = useState(false);
+  const [lightboxEv, setLightboxEv] = useState(null);
+  const [selectedEvidenceIdx, setSelectedEvidenceIdx] = useState(0);
   const { token, officer } = useAuth();
+
+  // Reset the document selector whenever a different turn's evidence loads.
+  const evidenceKey = evidenceFiles.map((f) => f.file_id || f.filename).join("|");
+  useEffect(() => {
+    setSelectedEvidenceIdx(0);
+  }, [evidenceKey]);
+  const selectedEvidence =
+    evidenceFiles[Math.min(selectedEvidenceIdx, evidenceFiles.length - 1)];
 
   async function handleCopySql() {
     const sql = analysis?.sql_query;
@@ -295,7 +309,9 @@ export default function AnalysisPanel({ analysis }) {
 
   if (
     !analysis ||
-    (analysis.sql_result?.length === 0 && analysis.charts?.length === 0)
+    (analysis.sql_result?.length === 0 &&
+      analysis.charts?.length === 0 &&
+      evidenceFiles.length === 0)
   ) {
     return (
       <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white/80 px-8 text-center text-slate-500 shadow-sm">
@@ -354,6 +370,47 @@ export default function AnalysisPanel({ analysis }) {
       {/* Body */}
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 bg-slate-100">
         <section className="space-y-4">
+          {/* Evidence — the uploaded document itself, shown above the analysis */}
+          {evidenceFiles.length > 0 && selectedEvidence && (
+            <div className="overflow-hidden rounded-lg border border-violet-200 bg-white shadow-sm">
+              <div className="border-b border-violet-100 bg-violet-50/60 px-5 py-3">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-violet-900">
+                  <Paperclip size={14} />
+                  {t("analysis.evidence", { defaultValue: "Evidence" })}
+                  <span className="text-xs font-normal text-violet-600">
+                    {t("analysis.evidenceCount", {
+                      count: evidenceFiles.length,
+                      defaultValue: `{{count}} file${evidenceFiles.length > 1 ? "s" : ""}`,
+                    })}
+                  </span>
+                </h3>
+                {evidenceFiles.length > 1 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {evidenceFiles.map((f, i) => (
+                      <button
+                        key={f.file_id || i}
+                        onClick={() => setSelectedEvidenceIdx(i)}
+                        className={`inline-flex max-w-[180px] items-center gap-1.5 truncate rounded-full border px-2.5 py-1 text-[11px] font-medium transition cursor-pointer ${
+                          i === Math.min(selectedEvidenceIdx, evidenceFiles.length - 1)
+                            ? "border-violet-500 bg-violet-600 text-white shadow-sm"
+                            : "border-violet-200 bg-white text-violet-700 hover:bg-violet-50"
+                        }`}
+                      >
+                        <span className="truncate">
+                          {f.filename || `Evidence ${i + 1}`}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <DocumentPreview
+                token={token}
+                ev={selectedEvidence}
+                onOpenImage={() => setLightboxEv(selectedEvidence)}
+              />
+            </div>
+          )}
           {hasCharts &&
             charts.map((chartConfig, idx) => {
               const containerHeight = computeChartHeight(chartConfig, rows);
@@ -452,6 +509,14 @@ export default function AnalysisPanel({ analysis }) {
           </details>
         </section>
       </div>
+      {/* In-app image viewer for evidence (auth-safe, no new-tab 401s) */}
+      {lightboxEv && (
+        <EvidenceLightbox
+          token={token}
+          ev={lightboxEv}
+          onClose={() => setLightboxEv(null)}
+        />
+      )}
     </div>
   );
 }

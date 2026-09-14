@@ -46,6 +46,13 @@ Database question:
 {
     "intent":"sql"
 }
+
+Evidence rule: if the conversation contains an "[Evidence attached]" block
+for THIS turn and the latest user message refers to the attachment
+("analyze/summarize/extract/read this", "this document/image/proforma/file",
+"matching FIRs", or any substantive non-greeting request), the document must
+be analyzed against the crime database — return {"intent":"sql"}.
+Only a pure greeting with no task (e.g. just "hi" + file) is "chat".
 """
 
     response = llm.generate(

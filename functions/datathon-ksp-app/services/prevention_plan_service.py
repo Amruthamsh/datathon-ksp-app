@@ -1,13 +1,15 @@
 import json
-import os
 from typing import Dict, Any
 
-def _get_llm():
+def _get_llm(catalyst_app=None):
+    """Zoho QuickML (GLM) access. Routes pass the request-derived Catalyst app."""
     try:
-        from llm.groq_service import groq_service
-        if not os.getenv("GROQ_API_KEY"):
+        if catalyst_app is None:
             return None
-        return groq_service
+        from llm.catalyst_llm_service import catalyst_llm_service
+
+        catalyst_llm_service.set_catalyst_app(catalyst_app)
+        return catalyst_llm_service
     except Exception as e:
         print(f"LLM unavailable: {e}")
         return None
@@ -193,7 +195,7 @@ def heuristic_plan(stats, district, crime_label, archetype):
     data["_llm"] = "heuristic"
     return data
 
-def generate_prevention_plan(stats, district, crime_label, time_range="night"):
+def generate_prevention_plan(stats, district, crime_label, time_range="night", catalyst_app=None):
     crime_label = crime_label or "All Crimes"
     archetype = CRIME_ARCHETYPE.get(crime_label, "property_patrol")
     # fallback for unknown labels via group inference
@@ -202,7 +204,7 @@ def generate_prevention_plan(stats, district, crime_label, time_range="night"):
     if archetype == "property_patrol" and any(k in crime_label.lower() for k in ["domestic", "dowry", "sexual", "stalking", "women"]):
         archetype = "women_safety"
 
-    llm = _get_llm()
+    llm = _get_llm(catalyst_app)
     if not llm:
         return heuristic_plan(stats, district, crime_label, archetype)
     try:
@@ -214,7 +216,7 @@ def generate_prevention_plan(stats, district, crime_label, time_range="night"):
         # ensure required keys
         parsed.setdefault("crime_label", crime_label)
         parsed.setdefault("stats", stats)
-        parsed["_llm"] = "groq"
+        parsed["_llm"] = "zoho-glm"
         if not parsed.get("deployment_type"):
             parsed["deployment_type"] = archetype
         return parsed

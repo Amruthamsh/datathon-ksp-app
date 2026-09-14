@@ -20,3 +20,8 @@ class SQLAgentState(TypedDict):
     language: Literal["en", "kn"]
     original_query: str
     translated_query: str
+    # Evidence attached to this turn (FileStore-backed uploads from Home chat).
+    # Each entry: {file_id, filename, stored_name, content_type, size_bytes,
+    #              storage, folder_id, download_url, snippet}
+    evidence_files: list[dict]
+    evidence_context: str

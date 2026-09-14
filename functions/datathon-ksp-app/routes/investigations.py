@@ -3,7 +3,7 @@
 import logging
 import traceback
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from auth.dependencies import get_current_user
 from auth.roles import case_in_scope
@@ -278,6 +278,7 @@ async def get_similar_cases(
 @router.get("/{case_id}/brief", status_code=status.HTTP_200_OK)
 async def get_case_brief(
     case_id: int,
+    request: Request,
     language: str | None = Query(None),
     current_user: dict = Depends(get_current_user),
     repo: SQLiteInvestigationRepository = Depends(
@@ -294,9 +295,16 @@ async def get_case_brief(
 
         # Lazy import — keeps cold starts light (same pattern as chat graph)
         from services.case_brief_service import generate_case_brief
+        try:
+            from db.catalyst.catalyst import get_catalyst_app
+
+            catalyst_app = get_catalyst_app(request)
+        except Exception:
+            catalyst_app = None
 
         result = generate_case_brief(
-            details, intel or {}, (language or "en")[:2]
+            details, intel or {}, (language or "en")[:2],
+            catalyst_app=catalyst_app,
         )
 
         return {

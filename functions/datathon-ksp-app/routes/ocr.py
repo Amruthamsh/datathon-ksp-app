@@ -1,44 +1,24 @@
-"""Crime-document OCR POC route.
+"""Crime-document OCR route.
 
-Zero new deploy deps (stdlib + groq + fastapi only) so the Catalyst
-~115MB zip limit is untouched. OCR itself is done by a Groq vision
-model; bounding boxes are returned as 0-1000 relative coords and the
-frontend renders them as an overlay (flashy + useful for verification).
+Only stdlib (+ Pillow for image downscale, fastapi) so the Catalyst ~115MB
+zip limit is untouched. OCR itself is done by the Zoho QuickML Qwen vision
+endpoint (ZOHO_VL_ENDPOINT_URL); bounding boxes are returned as 0-1000
+relative coords and the frontend renders them as an overlay.
 """
 
 import base64
-import json
 import logging
-import os
 import re
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from auth.dependencies import get_current_user
+from db.catalyst.catalyst import get_catalyst_app
+from services.vision_service import transcribe_data_url
 
 logger = logging.getLogger("fastapi_function")
 router = APIRouter(prefix="/ocr", tags=["OCR"])
 
 MAX_BYTES = 8 * 1024 * 1024
-# Groq retired all Llama vision models (Scout/Maverick Jul 2026, 3.2-Vision Apr 2025).
-# Current vision models per https://console.groq.com/docs/vision:
-VISION_MODEL = os.getenv("OCR_VISION_MODEL", "qwen/qwen3.6-27b")
-FALLBACK_VISION_MODEL = os.getenv("OCR_VISION_FALLBACK", "qwen/qwen3.8-27b")
-
-SYSTEM_PROMPT = """You are a Karnataka police document analyst. Given a crime-related image \
-(FIR scan, complaint, seizure memo, vehicle plate photo, CCTV still), do OCR and return STRICT JSON only:
-{
-  "ocr_text": "full transcribed text, line breaks preserved",
-  "blocks": [{"text": "line/word", "x": 0-1000, "y": 0-1000, "w": 0-1000, "h": 0-1000,
-              "conf": 0.0-1.0, "kind": "fir_no|station|date|section|vehicle|phone|name|other"}],
-  "entities": {"fir_no": [], "stations": [], "dates": [], "sections": [],
-               "vehicles": [], "phones": [], "names": []},
-  "summary": "3-line crime summary: what, where/when, who/what involved",
-  "crime_head": "theft|robbery|assault|fraud|...",
-  "insights": ["3 short actionable IO insights"],
-  "verify": ["fields to double-check against original (low confidence / handwriting)"]
-}
-Rules: boxes cover each text LINE (max 40). Coords are relative 0-1000. conf is your estimate. \
-Kind must be one of the listed values. No markdown, JSON only."""
 
 # Offline regex safety net — merged with LLM entities so demo still shows chips
 # even if the model under-extracts.
@@ -64,11 +44,11 @@ def _regex_entities(text: str) -> dict:
 
 
 def _parse_json(raw: str) -> dict:
-    raw = (raw or "").strip()
-    if raw.startswith("```"):
-        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.S).strip()
-    m = re.search(r"\{.*\}", raw, flags=re.S)
-    return json.loads(m.group(0) if m else raw)
+    # Response parsing lives in services.vision_service; kept here for
+    # backwards-compat imports.
+    from services.vision_service import _parse_json as _shared_parse_json
+
+    return _shared_parse_json(raw)
 
 
 def _sanitize_blocks(blocks) -> list:
@@ -93,42 +73,27 @@ def _sanitize_blocks(blocks) -> list:
     return clean
 
 
-def _call_vision(data_url: str, case_hint: str, language: str) -> dict:
-    from groq import Groq
-
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail="GROQ_API_KEY not configured.")
-    client = Groq(api_key=api_key)
-    user_text = (f"Case context: {case_hint}\nResponse language: {language}\n"
-                 "Transcribe this crime document image and return the JSON.").strip()
-    last_err: Exception | None = None
-    for model in (VISION_MODEL, FALLBACK_VISION_MODEL):
-        try:
-            resp = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": [
-                        {"type": "text", "text": user_text},
-                        {"type": "image_url", "image_url": {"url": data_url}},
-                    ]},
-                ],
-                temperature=0.1,
-                max_completion_tokens=2500,
-                response_format={"type": "json_object"},
+def _call_vision(data_url: str, case_hint: str, language: str, catalyst_app=None) -> dict:
+    try:
+        return transcribe_data_url(
+            data_url, (case_hint or "")[:500], language or "en", catalyst_app
+        )
+    except RuntimeError as e:
+        msg = str(e)
+        if "ZOHO_VL_ENDPOINT_URL" in msg or "standalone dev mode" in msg:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Zoho vision endpoint not configured (ZOHO_VL_ENDPOINT_URL).",
             )
-            return _parse_json(resp.choices[0].message.content)
-        except Exception as e:  # fall through to fallback model, then 502
-            last_err = e
-            logger.warning(f"OCR vision call failed on {model}: {e}")
-    raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY,
-                        detail=f"Vision OCR failed: {last_err}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Vision OCR failed: {e}",
+        )
 
 
 @router.post("/analyze", status_code=200)
 async def analyze_document(
+    request: Request,
     file: UploadFile = File(...),
     case_hint: str = Form(""),
     language: str = Form("en"),
@@ -142,9 +107,14 @@ async def analyze_document(
     if len(blob) > MAX_BYTES:
         raise HTTPException(status_code=413, detail="Image too large (max 8MB).")
 
+    try:
+        catalyst_app = get_catalyst_app(request)
+    except Exception:
+        catalyst_app = None
+
     mime = file.content_type or "image/png"
     data_url = f"data:{mime};base64,{base64.b64encode(blob).decode()}"
-    parsed = _call_vision(data_url, (case_hint or "")[:500], language or "en")
+    parsed = _call_vision(data_url, (case_hint or "")[:500], language or "en", catalyst_app)
 
     ocr_text = str(parsed.get("ocr_text", "") or "")
     blocks = _sanitize_blocks(parsed.get("blocks"))

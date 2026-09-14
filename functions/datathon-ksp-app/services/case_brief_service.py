@@ -6,18 +6,24 @@ server-side from case facts so the frontend calls one purpose-built API
 instead of the generic chat /generate endpoint.
 """
 
-import os
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 
-def _get_llm():
-    """Lazy LLM access — keeps Catalyst cold starts light (no import at startup)."""
+def _get_llm(catalyst_app=None):
+    """Zoho QuickML (GLM) access — keeps Catalyst cold starts light.
+
+    The OAuth token comes from the request-derived Catalyst app, which the
+    calling route passes in. None in standalone dev mode -> caller falls
+    back gracefully.
+    """
     try:
-        from llm.groq_service import groq_service
-        if not os.getenv("GROQ_API_KEY"):
+        if catalyst_app is None:
             return None
-        return groq_service
+        from llm.catalyst_llm_service import catalyst_llm_service
+
+        catalyst_llm_service.set_catalyst_app(catalyst_app)
+        return catalyst_llm_service
     except Exception as e:
         print(f"LLM unavailable: {e}")
         return None
@@ -58,9 +64,10 @@ def generate_case_brief(
     details: Dict[str, Any],
     intel: Dict[str, Any],
     language: str = "en",
+    catalyst_app=None,
 ) -> Optional[Dict[str, str]]:
     """Generate a short narrative briefing. Returns None when the LLM is unavailable."""
-    llm = _get_llm()
+    llm = _get_llm(catalyst_app)
     if llm is None:
         return None
 

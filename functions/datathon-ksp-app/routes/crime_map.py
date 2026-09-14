@@ -1,7 +1,7 @@
 import logging
 import traceback
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from auth.dependencies import require_tier
 from auth.roles import DISTRICT_COMMAND, STATE_COMMAND
@@ -425,6 +425,7 @@ async def get_patrol_plan(
 
 @router.get("/prevention-plan", status_code=status.HTTP_200_OK)
 async def get_prevention_plan(
+    request: Request,
     crime_label: str = Query(None),
     area: str = Query(None),
     time_range: str = Query("night"),
@@ -459,7 +460,16 @@ async def get_prevention_plan(
             routes = []
 
         from services.prevention_plan_service import generate_prevention_plan
-        advisory = generate_prevention_plan(stats, area, crime_label or "All Crimes", time_range)
+        try:
+            from db.catalyst.catalyst import get_catalyst_app
+
+            catalyst_app = get_catalyst_app(request)
+        except Exception:
+            catalyst_app = None
+        advisory = generate_prevention_plan(
+            stats, area, crime_label or "All Crimes", time_range,
+            catalyst_app=catalyst_app,
+        )
 
         return {"status": "success", "data": {"stats": stats, "routes": routes, "advisory": advisory}}
     except Exception as e:

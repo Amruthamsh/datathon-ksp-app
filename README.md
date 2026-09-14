@@ -141,7 +141,7 @@ KGID-verified identity system: officers sign in with their Karnataka Government 
 | **Graphs**     | Cytoscape.js                                                                                                      |
 | **i18n**       | react-i18next (English + Kannada)                                                                                 |
 | **Backend**    | Python 3.13, FastAPI, LangGraph, LangChain                                                                        |
-| **LLM**        | Zoho Catalyst QuickML (GLM-47B), with Groq and Ollama fallbacks                                                   |
+| **LLM**        | Zoho Catalyst QuickML only — GLM-4.7-Flash (text) + Qwen 3.6-35B VL (vision/OCR via LLM Serving endpoint) |
 | **Auth**       | passlib (pbkdf2_sha256 + bcrypt), itsdangerous (JWT-like tokens)                                                  |
 | **Database**   | SQLite (read-only FIR data), Zoho Catalyst NoSQL (chat persistence), Zoho Catalyst Datastore (user auth, reports) |
 | **Export**     | Playwright (PDF rendering), python-docx (Word), jsPDF + SheetJS (client-side PDF/Excel)                           |
@@ -175,7 +175,7 @@ datathon-ksp-app/
 │   │                             # reports, crime_map, network
 │   ├── db/                       # SQLite + Catalyst repositories
 │   ├── auth/                     # Password hashing, token management
-│   ├── llm/                      # LLM abstractions (Catalyst, Groq, Ollama)
+│   ├── llm/                      # LLM abstractions (Zoho QuickML only)
 │   ├── schemas/                  # Pydantic request/response models
 │   ├── config/domain_dictionary.py  # Kannada↔English crime terminology
 │   └── services/                 # PDF, Word, report generation
@@ -248,7 +248,8 @@ Set in `functions/datathon-ksp-app/.env`:
 | Variable               | Description                                                                       |
 | ---------------------- | --------------------------------------------------------------------------------- |
 | `SQLITE_DATABASE_PATH` | Path to `fir_system.db` (defaults to backend bundle; override with absolute path) |
-| `GROQ_API_KEY`         | Groq LLM API key (fallback provider)                                              |
+| `ZOHO_VL_ENDPOINT_URL` | QuickML LLM Serving endpoint URL for vision/OCR (Qwen 3.6-35B VL)                 |
+| `ZOHO_VL_ENDPOINT_KEY` | `x-quickml-endpoint-key` from the endpoint details page                            |
 | `SECRET_KEY`           | Token signing key for authentication                                              |
 
 ---
@@ -287,7 +288,7 @@ The LangGraph agent is a 13-node state machine that processes every user query:
 9. **Finalization** — Merges outputs into a unified response
 10. **Response Translation** — Translates English output back to Kannada if needed
 
-The agent uses **Catalyst QuickML** (GLM-47B) for all LLM calls, with Groq and Ollama available as fallback providers.
+The agent uses **Catalyst QuickML** (GLM-4.7-Flash) for all text LLM calls, and a QuickML LLM Serving endpoint (Qwen 3.6-35B VL) for vision/OCR. No third-party LLM providers.
 
 ---
 

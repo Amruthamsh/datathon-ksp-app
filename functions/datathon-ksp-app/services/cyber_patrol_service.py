@@ -1,12 +1,14 @@
 import json
-import os
 
-def _get_llm():
+def _get_llm(catalyst_app=None):
+    """Zoho QuickML (GLM) access. Routes pass the request-derived Catalyst app."""
     try:
-        from llm.groq_service import groq_service
-        if not os.getenv("GROQ_API_KEY"):
+        if catalyst_app is None:
             return None
-        return groq_service
+        from llm.catalyst_llm_service import catalyst_llm_service
+
+        catalyst_llm_service.set_catalyst_app(catalyst_app)
+        return catalyst_llm_service
     except Exception:
         return None
 
@@ -59,8 +61,8 @@ HEURISTIC_FALLBACK = {
     "metrics_to_track": ["1930 report-to-lien time", "Amount put on hold", "Repeat mule accounts blocked"],
 }
 
-def generate_cyber_advisory(stats, district, crime_label="Cybercrime / Online Fraud", time_range="night"):
-    llm = _get_llm()
+def generate_cyber_advisory(stats, district, crime_label="Cybercrime / Online Fraud", time_range="night", catalyst_app=None):
+    llm = _get_llm(catalyst_app)
     if not llm:
         data = dict(HEURISTIC_FALLBACK)
         data["station_actions"] = [{"station": s["station"], "action": f"Appoint cyber nodal officer; review {s['count']} cases for mule account linkage"} for s in stats.get("top_stations", [])[:3]]
@@ -73,7 +75,7 @@ def generate_cyber_advisory(stats, district, crime_label="Cybercrime / Online Fr
         if raw.startswith("```"):
             raw = raw.replace("```json", "").replace("```", "").strip()
         parsed = json.loads(raw)
-        parsed["_llm"] = "groq"
+        parsed["_llm"] = "zoho-glm"
         return parsed
     except Exception as e:
         print(f"cyber llm failed {e}")

@@ -64,7 +64,7 @@ export default function DocOcrPanel({ caseData, onAsk }) {
       const res = await analyzeDocumentImage(token, file, { caseHint, language: lang });
       setResult(res);
     } catch (e) {
-      setError(e.message || "OCR failed. Check backend / Groq key and retry.");
+      setError(e.message || "OCR failed. Check the Zoho vision endpoint config and retry.");
     } finally {
       setLoading(false);
     }

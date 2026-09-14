@@ -120,7 +120,18 @@
     "noData": "No data available.",
     "noVisualization": "No visualization available for this result.",
     "aboutThisChart": "About this chart",
-    "aboutThisChartFallback": "Visualization selected to best represent the query result."
+    "aboutThisChartFallback": "Visualization selected to best represent the query result.",
+    "evidence": "Evidence",
+    "evidenceCount": "{{count}} file(s)",
+    "evidenceStored": " · Stored in FileStore",
+    "openFile": "Open file",
+    "viewFile": "View",
+    "downloadFile": "Download",
+    "close": "Close",
+    "loadingFile": "Loading file…",
+    "expandFile": "Click to expand",
+    "emptyFile": "(empty file)",
+    "noPreview": "No inline preview for this file type — download to view."
   },
   "chart": {
     "noData": "No data available.",
@@ -132,7 +143,14 @@
   "home": {
     "greeting": "Hello! Ask me anything about the crime database.",
     "openInvestigation": "Open Investigation",
-    "viewingInvestigation": "Viewing Investigation"
+    "viewingInvestigation": "Viewing Investigation",
+    "upload": {
+      "unsupported": "Unsupported file type: {{name}}",
+      "tooBig": "File too large (max 10MB): {{name}}",
+      "openEvidence": "Open evidence file",
+      "openFailed": "Could not open {{name}}. Please try again.",
+      "partialFail": "Some files could not be stored: {{names}}. The analysis still ran."
+    }
   },
   "sources": {
     "addIntelligenceSources": "Add intelligence sources",

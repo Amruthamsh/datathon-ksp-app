@@ -25,7 +25,7 @@ import useSpeechRecognition from "../hooks/useSpeechRecognition";
 import useSpeechSynthesis from "../hooks/useSpeechSynthesis";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
 import {
   useParams,
   useNavigate,
@@ -33,8 +33,12 @@ import {
   useOutletContext,
 } from "react-router-dom";
 import AnalysisPanel from "../components/AnalysisPanel";
+import {
+  EvidenceLightbox,
+  isViewableImage,
+} from "../components/EvidenceViewer";
 import { useAuth } from "../auth/AuthContext";
-import { generateResponse, getConversation, sendFeedback } from "../api/chat";
+import { generateResponse, getConversation, sendFeedback, openEvidence } from "../api/chat";
 
 const CHAT_WIDTH_DEFAULT = 47;
 const CHAT_WIDTH_MIN = 25;
@@ -196,10 +200,23 @@ export default function Home() {
       setLoading(true);
       getConversation(token, id)
         .then((data) => {
-          setMessages(data.messages || [GREETING]);
+          // Normalize persisted evidence: user turns carry it under
+          // analysis.evidence_files (saved alongside the FileStore upload).
+          const hydrated = (data.messages || [GREETING]).map((m) => {
+            if (
+              m.role === "user" &&
+              !m.evidence &&
+              Array.isArray(m.analysis?.evidence_files) &&
+              m.analysis.evidence_files.length
+            ) {
+              return { ...m, evidence: m.analysis.evidence_files };
+            }
+            return m;
+          });
+          setMessages(hydrated);
           setConversationId(id);
 
-          const lastMsg = data.messages?.[data.messages.length - 1];
+          const lastMsg = hydrated[hydrated.length - 1];
           if (lastMsg?.analysis) {
             setActiveAnalysis({
               ...lastMsg.analysis,
@@ -368,6 +385,11 @@ export default function Home() {
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
+  // Older turns may contain a trailing "Evidence Referenced" section
+  // (no longer generated). Hide it — files live in the workspace now.
+  const stripEvidenceSection = (text) =>
+    String(text || "").replace(/\n*##\s*Evidence Referenced\s*[\s\S]*$/, "").trimEnd();
+
   // --- Fake streaming: reveal the full response in chunks after API returns ---
   const startFakeStreaming = useCallback(
     (fullText, analysis, meta, pendingConversationId) => {
@@ -378,6 +400,10 @@ export default function Home() {
       }
 
       const text = fullText || "";
+      // Surface failed FileStore uploads without losing the analysis
+      if (meta?.failedUploads?.length) {
+        alert(t("home.upload.partialFail", { names: meta.failedUploads.join(", ") }));
+      }
       if (!text) {
         // No content — just finalize immediately
         setMessages((prev) => [
@@ -443,7 +469,7 @@ export default function Home() {
         }
       }, INTERVAL_MS);
     },
-    [navigate, refreshConversations],
+    [navigate, refreshConversations, t],
   );
 
   const sendMessage = async (message = input) => {
@@ -458,6 +484,8 @@ export default function Home() {
     }
 
     stop();
+
+    const filesToSend = attachedFiles;
 
     // Capture context snapshot for this turn (used for display + backend)
     const hasSceneCoords =
@@ -488,10 +516,16 @@ export default function Home() {
         role: "user",
         content: message,
         context: contextSnapshot,
+        // Optimistic evidence chips — replaced with FileStore metadata
+        // (incl. download links) once the backend responds.
+        evidence: filesToSend.map((f) => ({
+          filename: f.name,
+          size_bytes: f.size,
+          pending: true,
+        })),
       },
     ]);
 
-    const filesToSend = attachedFiles;
     setInput("");
     setAttachedFiles([]);
     setLoading(true);
@@ -507,17 +541,39 @@ export default function Home() {
         contextSnapshot,
       );
 
+      const evidenceFiles = Array.isArray(data.evidence_files)
+        ? data.evidence_files
+        : [];
+
+      // Hydrate the optimistic user-bubble chips with FileStore links
+      if (evidenceFiles.length) {
+        setMessages((prev) => {
+          const next = [...prev];
+          for (let k = next.length - 1; k >= 0; k--) {
+            if (next[k].role === "user") {
+              next[k] = { ...next[k], evidence: evidenceFiles };
+              break;
+            }
+          }
+          return next;
+        });
+      }
+
       const analysis = {
         sql_query: data.sql_query,
         sql_result: data.sql_result,
         charts: data.charts,
         response: data.response,
         follow_up_questions: data.follow_up_questions,
+        evidence_files: evidenceFiles,
+        evidence_context: data.evidence_context || "",
       };
 
       const meta = {
         message_id: data.message_id,
         created_at: data.created_at,
+        evidence_files: evidenceFiles,
+        failedUploads: data.failed_uploads || [],
         sources: {
           crimeDatabase: true,
           location: contextSnapshot.useScenePin,
@@ -562,6 +618,60 @@ export default function Home() {
       console.error("Failed to copy:", err);
     }
   };
+
+  // Authenticated evidence open — plain <a href> navigation carries no
+  // X-Auth-Token header, so evidence links must go through this instead.
+  // Images open in the in-app lightbox (preview + download); other files
+  // download via an authenticated blob URL (no popup-prone blank tab).
+  const [lightboxEv, setLightboxEv] = useState(null);
+  const handleOpenEvidence = useCallback(
+    async (downloadUrl, filename, ev = null) => {
+      const target = ev || { download_url: downloadUrl, filename };
+      if (isViewableImage(target)) {
+        setLightboxEv(target);
+        return;
+      }
+      try {
+        await openEvidence(token, downloadUrl, filename);
+      } catch (err) {
+        console.error("Failed to open evidence:", err);
+        alert(t("home.upload.openFailed", { name: filename }));
+      }
+    },
+    [token, t],
+  );
+
+  // Markdown link renderer — intercepts /chat/evidence/ links from the
+  // assistant's "Evidence Referenced" section for authenticated open.
+  const markdownComponents = useMemo(
+    () => ({
+      a: ({ href, children }) => {
+        if (href && href.includes("/chat/evidence/")) {
+          return (
+            <button
+              onClick={() =>
+                handleOpenEvidence(href, String(children?.[0] ?? "evidence"))
+              }
+              className="font-medium text-violet-700 underline underline-offset-2 decoration-violet-300 hover:text-violet-900 cursor-pointer"
+            >
+              {children}
+            </button>
+          );
+        }
+        return (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-700 underline underline-offset-2 hover:text-blue-900"
+          >
+            {children}
+          </a>
+        );
+      },
+    }),
+    [handleOpenEvidence],
+  );
 
   const handleFeedback = (index, value) => {
     const msg = messages[index];
@@ -643,6 +753,7 @@ export default function Home() {
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
+                      ...markdownComponents,
                       h1: ({ children }) => (
                         <h1 className="text-xl font-bold mt-3 mb-1.5 text-slate-900">
                           {children}
@@ -702,13 +813,55 @@ export default function Home() {
                       ),
                     }}
                   >
-                    {m.content}
+                    {stripEvidenceSection(m.content)}
                   </ReactMarkdown>
                   {isStreaming &&
                     i === messages.length - 1 &&
                     m.role === "assistant" && (
                       <span className="inline-block w-2 h-4 bg-slate-500 animate-pulse ml-0.5 translate-y-0.5 align-middle" />
                     )}
+                  {/* Evidence chips — user bubbles only; the workspace shows the files */}
+                  {m.role === "user" &&
+                    Array.isArray(m.evidence) &&
+                    m.evidence.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {m.evidence.map((ev, k) => {
+                        const label = ev.filename || t("sources.documentsEvidence");
+                        const size = ev.size_bytes
+                          ? ` · ${formatFileSize(ev.size_bytes)}`
+                          : "";
+                        const chip = (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase text-violet-700">
+                            <File size={10} />
+                            <span className="max-w-[160px] truncate normal-case">
+                              {label}
+                            </span>
+                            <span className="font-normal normal-case">{size}</span>
+                            {ev.pending && (
+                              <Loader2 size={10} className="animate-spin" />
+                            )}
+                          </span>
+                        );
+                        if (ev.pending || !ev.download_url) {
+                          return <span key={`${label}-${k}`}>{chip}</span>;
+                        }
+                        // Clicking the chip opens the viewer (images) or
+                        // downloads the file — no inline thumbnail in bubbles.
+                        return (
+                          <button
+                            key={`${label}-${k}`}
+                            onClick={() =>
+                              handleOpenEvidence(ev.download_url, label, ev)
+                            }
+                            title={t("home.upload.openEvidence")}
+                            className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                          >
+                            {chip}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   {/* Per-message intelligence-source badges */}
                   {m.role === "user" &&
                     m.context &&
@@ -1457,6 +1610,15 @@ export default function Home() {
       <section className="flex-1 min-w-0 overflow-auto">
         <AnalysisPanel analysis={activeAnalysis} />
       </section>
+
+      {/* In-app image viewer for evidence (auth-safe, no new-tab 401s) */}
+      {lightboxEv && (
+        <EvidenceLightbox
+          token={token}
+          ev={lightboxEv}
+          onClose={() => setLightboxEv(null)}
+        />
+      )}
     </div>
   );
 }

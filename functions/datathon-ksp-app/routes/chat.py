@@ -2,12 +2,19 @@ import logging
 import traceback
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import Response
 
 from auth.dependencies import get_current_user
+from db.catalyst.catalyst import get_catalyst_app
 from db.dependencies import get_chat_repository, get_conversation_repository
 from db.catalyst.nosql_chat_repository import ChatRepository, ConversationRepository
 from schemas.chat import RenameConversationRequest, FeedbackRequest
+from services.evidence_service import (
+    MAX_EVIDENCE_BYTES,
+    download_evidence_file,
+    upload_evidence_file,
+)
 
 logger = logging.getLogger("fastapi_function")
 router = APIRouter(prefix="/chat", tags=["Chat"])
@@ -38,6 +45,7 @@ def _build_state_messages(history: list, current_query: str) -> list:
 
 @router.post("/generate", status_code=200)
 async def generate_response(
+    request: Request,
     user_query: str = Form(...),
     conversation_id: str | None = Form(None),
     language: str | None = Form(None),
@@ -66,20 +74,101 @@ async def generate_response(
             logger.warning(f"NoSQL conversation setup failed (non-fatal): {e}")
             conversation_id = conversation_id  # keep whatever was passed in
 
+    # --- Evidence: persist Home-chat uploads to Catalyst FileStore ---
+    # Best-effort — the query must still run even if FileStore is unavailable.
+    # Uploads happen BEFORE the user message is saved so the message record
+    # carries the FileStore metadata (analysis.evidence_files).
+    evidence_files: list[dict] = []
+    failed_uploads: list[str] = []
+    if files:
         try:
-            chat_repo.save_message(conversation_id, "user", user_query)
+            catalyst_app = get_catalyst_app(request)
+        except Exception as e:
+            logger.warning(f"Catalyst SDK unavailable for evidence upload: {e}")
+            catalyst_app = None
+        for f in files:
+            try:
+                blob = await f.read()
+                if not blob:
+                    failed_uploads.append(f.filename or "unnamed file")
+                    continue
+                if len(blob) > MAX_EVIDENCE_BYTES:
+                    logger.warning(
+                        f"Evidence file too large, skipping: {f.filename} "
+                        f"({len(blob)} bytes)"
+                    )
+                    failed_uploads.append(f.filename or "unnamed file")
+                    continue
+                meta = upload_evidence_file(
+                    catalyst_app,
+                    blob,
+                    f.filename or "evidence",
+                    f.content_type,
+                    conversation_id,
+                )
+                # Images/PDF scans carry no extractable text via the storage
+                # path — transcribe with the Zoho QuickML vision endpoint so
+                # the agent actually reads the document (best-effort; never
+                # blocks the query).
+                if (f.content_type or "").startswith("image/"):
+                    try:
+                        from services.vision_service import transcribe_image_bytes
+
+                        parsed = transcribe_image_bytes(
+                            blob,
+                            f.content_type,
+                            (user_query or "")[:200],
+                            language or "en",
+                            catalyst_app,
+                        )
+                        ocr_text = str(parsed.get("ocr_text") or "").strip()
+                        if ocr_text:
+                            meta["ocr_text"] = ocr_text[:6000]
+                            meta["snippet"] = ocr_text[:2000]
+                            summary = str(parsed.get("summary") or "").strip()
+                            if summary:
+                                meta["doc_summary"] = summary[:500]
+                            logger.info(
+                                f"Evidence OCR transcribed {len(ocr_text)} chars "
+                                f"from {f.filename}"
+                            )
+                    except Exception as e:
+                        logger.warning(
+                            f"Evidence OCR failed for {f.filename} "
+                            f"(non-fatal): {e}"
+                        )
+                evidence_files.append(meta)
+                logger.info(
+                    f"Received file upload: {f.filename} ({f.content_type}) "
+                    f"-> {meta['storage']}:{meta['file_id']}"
+                )
+            except Exception as e:
+                logger.warning(f"Evidence upload failed for {f.filename}: {e}")
+                failed_uploads.append(f.filename or "unnamed file")
+            finally:
+                try:
+                    await f.close()
+                except Exception:
+                    pass
+
+    if conv_repo and chat_repo and conversation_id:
+        try:
+            user_analysis = (
+                {"evidence_files": evidence_files} if evidence_files else None
+            )
+            chat_repo.save_message(
+                conversation_id, "user", user_query, analysis=user_analysis
+            )
         except Exception as e:
             logger.warning(f"Failed to save user message (non-fatal): {e}")
-
-    if files:
-        for f in files:
-            logger.info(f"Received file upload: {f.filename} ({f.content_type})")
 
     state = {
         "messages": _build_state_messages(history, user_query),
         "language": language or "en",
         "original_query": user_query,
         "translated_query": "",
+        "evidence_files": evidence_files,
+        "evidence_context": "",
     }
 
     graph_error = None
@@ -108,6 +197,10 @@ async def generate_response(
                     "sql_result": result.get("sql_result", []),
                     "charts": result.get("charts", []),
                     "follow_up_questions": result.get("follow_up_questions", []),
+                    # FileStore-backed evidence, rendered with links in the
+                    # analysis workspace.
+                    "evidence_files": result.get("evidence_files") or evidence_files,
+                    "evidence_context": result.get("evidence_context", ""),
                 },
             )
         except Exception as e:
@@ -130,7 +223,37 @@ async def generate_response(
         "error": result.get("error"),
         "follow_up_questions": result.get("follow_up_questions", []),
         "charts": result.get("charts", []),
+        "evidence_files": result.get("evidence_files") or evidence_files,
+        "evidence_context": result.get("evidence_context", ""),
+        "failed_uploads": failed_uploads,
     }
+
+
+@router.get("/evidence/{file_id}/download", status_code=200)
+async def download_evidence(
+    file_id: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """Stream an evidence file back (FileStore first, local fallback).
+
+    Auth is required; the link is rendered in the analysis workspace as
+    ``/api/chat/evidence/<file_id>/download``.
+    """
+    try:
+        catalyst_app = get_catalyst_app(request)
+    except Exception:
+        catalyst_app = None
+    found = download_evidence_file(catalyst_app, file_id)
+    if not found:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence file not found.")
+    blob, filename, content_type = found
+    safe = (filename or file_id).replace('"', "_")
+    return Response(
+        content=blob,
+        media_type=content_type or "application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{safe}"'},
+    )
 
 
 @router.get("/conversations", status_code=200)
