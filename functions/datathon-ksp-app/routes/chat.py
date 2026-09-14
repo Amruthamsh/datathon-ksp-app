@@ -19,6 +19,14 @@ from services.evidence_service import (
 logger = logging.getLogger("fastapi_function")
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
+_IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp")
+
+
+def _looks_like_image(content_type: str | None, filename: str | None) -> bool:
+    if (content_type or "").lower().startswith("image/"):
+        return True
+    return (filename or "").lower().endswith(_IMAGE_EXTS)
+
 _graph = None
 
 
@@ -80,6 +88,7 @@ async def generate_response(
     # carries the FileStore metadata (analysis.evidence_files).
     evidence_files: list[dict] = []
     failed_uploads: list[str] = []
+    ocr_warnings: list[str] = []
     if files:
         try:
             catalyst_app = get_catalyst_app(request)
@@ -106,11 +115,12 @@ async def generate_response(
                     f.content_type,
                     conversation_id,
                 )
-                # Images/PDF scans carry no extractable text via the storage
-                # path — transcribe with the Zoho QuickML vision endpoint so
-                # the agent actually reads the document (best-effort; never
-                # blocks the query).
-                if (f.content_type or "").startswith("image/"):
+                # Images carry no extractable text via the storage path —
+                # transcribe with the Zoho QuickML vision endpoint so the
+                # agent actually reads the document. Match by MIME *or*
+                # extension: some browsers/OS report an empty or generic
+                # MIME, which previously skipped OCR silently.
+                if _looks_like_image(f.content_type, f.filename):
                     try:
                         from services.vision_service import transcribe_image_bytes
 
@@ -132,10 +142,58 @@ async def generate_response(
                                 f"Evidence OCR transcribed {len(ocr_text)} chars "
                                 f"from {f.filename}"
                             )
+                        else:
+                            ocr_warnings.append(
+                                f"OCR returned no text for {f.filename or 'image'}."
+                            )
                     except Exception as e:
+                        # Surface to the UI instead of a log-only warning —
+                        # previously OCR failed silently and the agent saw an
+                        # empty file.
+                        msg = str(e)
                         logger.warning(
                             f"Evidence OCR failed for {f.filename} "
                             f"(non-fatal): {e}"
+                        )
+                        meta["ocr_error"] = msg[:300]
+                        if "ZOHO_VL_ENDPOINT_URL" in msg or "ZOHO_VL_ENDPOINT_KEY" in msg:
+                            ocr_warnings.append(
+                                "Document OCR is not configured (ZOHO_VL_ENDPOINT "
+                                "URL/KEY missing). The file was stored but not read."
+                            )
+                        elif "Catalyst credential unavailable" in msg:
+                            ocr_warnings.append(
+                                f"OCR unavailable in standalone dev mode for "
+                                f"{f.filename or 'image'} — serve via "
+                                "`catalyst serve` so the vision endpoint can "
+                                "authenticate. The file was stored but not read."
+                            )
+                        elif "INVALID_OAUTHTOKEN" in msg or "HTTP 401" in msg:
+                            ocr_warnings.append(
+                                f"OCR authentication failed for "
+                                f"{f.filename or 'image'} (vision endpoint "
+                                "rejected the token). Re-login and retry; if it "
+                                "persists, the QuickML endpoint's OAuth scope "
+                                "may need attention. The file was stored but "
+                                "not read."
+                            )
+                        else:
+                            ocr_warnings.append(
+                                f"OCR failed for {f.filename or 'image'}: "
+                                f"{msg[:160]}"
+                            )
+                elif (f.filename or "").lower().endswith(".pdf") or (
+                    f.content_type or ""
+                ).lower() == "application/pdf":
+                    # Digital PDFs get text via extract_text_snippet; scanned
+                    # PDFs have no text layer and the VL endpoint only accepts
+                    # images — flag so the UI can advise uploading a photo.
+                    if not (meta.get("snippet") or "").strip():
+                        meta["needs_image_ocr"] = True
+                        ocr_warnings.append(
+                            f"{f.filename or 'PDF'} has no readable text "
+                            "(scanned PDF?). For OCR, upload a photo "
+                            "(PNG/JPG) of the document."
                         )
                 evidence_files.append(meta)
                 logger.info(
@@ -226,6 +284,7 @@ async def generate_response(
         "evidence_files": result.get("evidence_files") or evidence_files,
         "evidence_context": result.get("evidence_context", ""),
         "failed_uploads": failed_uploads,
+        "ocr_warnings": ocr_warnings,
     }
 
 
@@ -252,7 +311,9 @@ async def download_evidence(
     return Response(
         content=blob,
         media_type=content_type or "application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{safe}"'},
+        # inline (not attachment) so images/PDFs preview when opened
+        # directly; the frontend still downloads via authenticated blob URLs.
+        headers={"Content-Disposition": f'inline; filename="{safe}"'},
     )
 
 

@@ -1,9 +1,19 @@
 from datetime import datetime, timezone
 from typing import Optional
+import logging
+import time
 import uuid
 import json
 
 from zcatalyst_sdk.nosql.transfom import Item
+
+logger = logging.getLogger("fastapi_function")
+
+# Transient Catalyst API hiccups (e.g. RemoteDisconnected on insert) must not
+# silently drop chat history — the doc is built once so retries are idempotent
+# (same message_id/created_at overwrite the same item instead of duplicating).
+_SAVE_MESSAGE_ATTEMPTS = 3
+_SAVE_MESSAGE_BACKOFF_S = (0.5, 1.5)
 
 
 def _serialize(doc: dict) -> dict:
@@ -39,8 +49,20 @@ class ChatRepository:
         if analysis is not None:
             doc["analysis"] = json.dumps(analysis)
 
-        self.table.insert_items({"item": _serialize(doc)})
-        return doc
+        last_err: Optional[Exception] = None
+        for attempt in range(1, _SAVE_MESSAGE_ATTEMPTS + 1):
+            try:
+                self.table.insert_items({"item": _serialize(doc)})
+                return doc
+            except Exception as err:
+                last_err = err
+                logger.warning(
+                    f"save_message attempt {attempt}/{_SAVE_MESSAGE_ATTEMPTS} "
+                    f"failed for {conversation_id}/{role} (non-fatal): {err}"
+                )
+                if attempt < _SAVE_MESSAGE_ATTEMPTS:
+                    time.sleep(_SAVE_MESSAGE_BACKOFF_S[attempt - 1])
+        raise last_err  # type: ignore[misc]
 
     def delete_messages(self, conversation_id: str) -> None:
         try:

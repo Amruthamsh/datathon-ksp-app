@@ -11,7 +11,10 @@ async function handleResponse(res) {
   }
 
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    // Preserve backend FastAPI `detail` so upload/OCR failures are visible
+    // to the caller instead of a bare "HTTP 4xx/5xx".
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `HTTP ${res.status}`);
   }
 
   return res.json();

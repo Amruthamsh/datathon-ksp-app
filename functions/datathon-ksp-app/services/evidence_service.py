@@ -50,6 +50,35 @@ def _unique_stored_name(conversation_id: str | None, filename: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:8]}_{_safe_filename(filename)}"
 
 
+def _extract_pdf_text(blob: bytes) -> str:
+    """Best-effort digital-PDF text extraction (optional pypdf, never raises).
+
+    pypdf is intentionally NOT a required deploy dep (Catalyst zip size
+    limits), so this is a graceful optional import: digital FIR PDFs get
+    readable context when pypdf happens to be available, and scanned-image
+    PDFs fall through to "" (caller flags them for image OCR).
+    """
+    try:
+        from pypdf import PdfReader  # optional; absent on deploy -> ""
+    except Exception:
+        try:
+            from PyPDF2 import PdfReader  # type: ignore[no-redef]
+        except Exception:
+            return ""
+    try:
+        reader = PdfReader(io.BytesIO(blob))
+        parts = []
+        for page in (reader.pages or [])[:10]:
+            try:
+                parts.append(page.extract_text() or "")
+            except Exception:
+                continue
+        return "\n".join(parts).strip()[:_SNIPPET_CHARS]
+    except Exception as e:
+        logger.warning(f"PDF snippet extraction failed: {e}")
+        return ""
+
+
 def extract_text_snippet(
     blob: bytes, content_type: str | None, filename: str | None
 ) -> str:
@@ -57,7 +86,7 @@ def extract_text_snippet(
     try:
         ctype = (content_type or "").lower()
         name = (filename or "").lower()
-        if ctype.startswith("text/") or name.endswith((".txt", ".csv", ".md", ".json")):
+        if ctype.startswith("text/") or name.endswith((".txt", ".csv", ".md", ".json", ".log")):
             return blob.decode("utf-8", errors="replace")[:_SNIPPET_CHARS]
         if name.endswith(".docx"):
             try:
@@ -70,9 +99,7 @@ def extract_text_snippet(
                 logger.warning(f"DOCX snippet extraction failed: {e}")
                 return ""
         if name.endswith(".pdf") or ctype == "application/pdf":
-            # pypdf is NOT a deploy dep (size limits) — skip server-side parse.
-            # The filename itself still gives the agent a citation handle.
-            return ""
+            return _extract_pdf_text(blob)
         return ""
     except Exception as e:
         logger.warning(f"Evidence snippet extraction failed: {e}")

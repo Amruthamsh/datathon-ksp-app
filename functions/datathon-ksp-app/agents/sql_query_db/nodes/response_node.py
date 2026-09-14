@@ -54,6 +54,43 @@ def _extract_questions(answer: str):
     return cleaned_answer, questions[:3]
 
 
+def _parse_analysis_response(raw: str) -> tuple[str, list[str]]:
+    """Tolerantly parse the LLM's analysis JSON.
+
+    The model sometimes returns only {"answer": ...} with the follow-up
+    questions embedded as a markdown section, wraps the JSON in prose/fences,
+    or emits minor JSON flaws. All of those previously raised ValidationError
+    and failed the whole turn — recover instead.
+    """
+    text = (raw or "").strip()
+    if text.startswith("```"):
+        text = text.replace("```json", "").replace("```", "").strip()
+    # Tolerate prose around the JSON payload.
+    m = re.search(r"\{.*\}", text, flags=re.S)
+    candidate = m.group(0) if m else text
+    data = None
+    try:
+        data = json.loads(candidate)
+    except Exception:
+        data = None
+    if not isinstance(data, dict):
+        # Last resort: treat the whole output as the answer body and mine it
+        # for an embedded questions section.
+        answer, questions = _extract_questions(text)
+        return answer, questions[:3]
+    answer = str(data.get("answer") or "").strip()
+    followups = data.get("follow_up_questions") or []
+    if isinstance(followups, str):
+        followups = [followups]
+    followups = [str(q).strip() for q in followups if str(q).strip()]
+    # Safety net if model ignored instructions and embedded the questions.
+    extracted_answer, extracted_questions = _extract_questions(answer)
+    answer = extracted_answer
+    if not followups:
+        followups = extracted_questions
+    return answer, followups[:3]
+
+
 def response_node(state: SQLAgentState):
     """
     Generates a detailed markdown analysis together with follow-up questions.
@@ -225,36 +262,16 @@ Return valid JSON only.
 """
 
     try:
-
         response = llm.generate(
             system_prompt=system_prompt,
             user_prompt=prompt,
         )
 
-        response = response.strip()
-
-        if response.startswith("```"):
-            response = (
-                response.replace("```json", "")
-                .replace("```", "")
-                .strip()
-            )
-
-        parsed = AnalysisResponse.model_validate_json(response)
-
-        answer = parsed.answer.strip()
-        followups = parsed.follow_up_questions
-
-        # Safety net if model ignored instructions
-        extracted_answer, extracted_questions = _extract_questions(answer)
-
-        answer = extracted_answer
-
-        if not followups:
-            followups = extracted_questions
-
-        if len(followups) > 3:
-            followups = followups[:3]
+        answer, followups = _parse_analysis_response(response)
+        if not answer:
+            # Parser found nothing usable — preserve the raw model output
+            # rather than failing the turn.
+            answer = (response or "").strip()
 
         return {
             "response": answer,
@@ -264,13 +281,23 @@ Return valid JSON only.
             ],
         }
 
-    except ValidationError as e:
-        print("Failed to validate structured output:")
-        print(e)
-        print(response)
-        raise
-
     except Exception as e:
+        # Never fail the turn: surface whatever we can plus the error.
         print("Error during response generation:")
         print(e)
-        raise
+        fallback = ""
+        try:
+            fallback = str(response).strip()  # type: ignore[name-defined]
+        except Exception:
+            fallback = ""
+        if not fallback:
+            fallback = (
+                "I encountered an error while processing your request. "
+                "Please try again."
+            )
+        return {
+            "response": fallback,
+            "follow_up_questions": [],
+            "error": f"Response formatting failed: {e}",
+            "messages": [AIMessage(content=fallback)] if fallback else [],
+        }

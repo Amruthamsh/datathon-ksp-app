@@ -80,10 +80,15 @@ def _call_vision(data_url: str, case_hint: str, language: str, catalyst_app=None
         )
     except RuntimeError as e:
         msg = str(e)
-        if "ZOHO_VL_ENDPOINT_URL" in msg or "standalone dev mode" in msg:
+        if "ZOHO_VL_ENDPOINT_URL" in msg or "ZOHO_VL_ENDPOINT_KEY" in msg:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Zoho vision endpoint not configured (ZOHO_VL_ENDPOINT_URL).",
+                detail="Zoho vision endpoint not configured (ZOHO_VL_ENDPOINT_URL / ZOHO_VL_ENDPOINT_KEY).",
+            )
+        if "Catalyst credential unavailable" in msg or "standalone dev mode" in msg:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="OCR needs Catalyst auth — serve via `catalyst serve`, not standalone `python main.py`.",
             )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -100,7 +105,7 @@ async def analyze_document(
     current_user: dict = Depends(get_current_user),
 ):
     if not (file.content_type or "").startswith("image/"):
-        raise HTTPException(status_code=400, detail="Upload an image file (PNG/JPG).")
+        raise HTTPException(status_code=400, detail="Upload an image file (PNG/JPG/WEBP).")
     blob = await file.read()
     if not blob:
         raise HTTPException(status_code=400, detail="Empty upload.")

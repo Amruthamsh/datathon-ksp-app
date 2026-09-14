@@ -34,6 +34,7 @@ def evidence_node(state: SQLAgentState):
         link = ev.get("download_url", "")
         snippet = (ev.get("snippet") or ev.get("ocr_text") or "").strip()
         summary = (ev.get("doc_summary") or "").strip()
+        ocr_error = (ev.get("ocr_error") or "").strip()
         header = f"- **{fname}** ({_format_size(ev.get('size_bytes', 0))})"
         if link:
             header += f" — [Open file]({link})"
@@ -45,6 +46,13 @@ def evidence_node(state: SQLAgentState):
             # (FIR numbers, districts, sections, names, vehicles).
             clipped = snippet[:3000] + ("…" if len(snippet) > 3000 else "")
             lines.append(f"  Transcription: {clipped}")
+        elif ocr_error:
+            lines.append(f"  OCR failed: {ocr_error[:200]}")
+        elif ev.get("needs_image_ocr"):
+            lines.append(
+                "  No readable text (likely a scanned PDF) — ask the user for "
+                "a PNG/JPG photo to enable OCR."
+            )
 
     evidence_context = (
         "Uploaded evidence for this turn (stored in Catalyst FileStore, "

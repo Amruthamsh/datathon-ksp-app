@@ -350,19 +350,38 @@ export default function Home() {
     const selected = Array.from(e.target.files || []);
     if (!selected.length) return;
 
-    const allowed = [
+    // Accept-list mirrors the <input accept> attribute below. Match by MIME
+    // first, then fall back to file extension — some OS/browser combos report
+    // an empty or generic MIME for .csv/.doc/.jpg, which previously caused
+    // valid files to be rejected as "unsupported".
+    const allowedMimes = new Set([
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "application/vnd.ms-excel",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword",
+      "text/csv",
+      "text/plain",
       "image/png",
       "image/jpeg",
+      "image/jpg",
       "image/gif",
-    ];
+      "image/webp",
+    ]);
+    const allowedExts = new Set([
+      ".pdf", ".xlsx", ".xls", ".csv", ".doc", ".docx", ".txt",
+      ".png", ".jpg", ".jpeg", ".gif", ".webp",
+    ]);
+    const extOf = (name) => {
+      const i = String(name || "").lastIndexOf(".");
+      return i >= 0 ? String(name).slice(i).toLowerCase() : "";
+    };
 
     const valid = [];
     for (const file of selected) {
-      if (!allowed.includes(file.type)) {
+      const ext = extOf(file.name);
+      const mimeOk = file.type ? allowedMimes.has(file.type.toLowerCase()) : false;
+      if (!mimeOk && !allowedExts.has(ext)) {
         alert(t("home.upload.unsupported", { name: file.name }));
         continue;
       }
@@ -403,6 +422,11 @@ export default function Home() {
       // Surface failed FileStore uploads without losing the analysis
       if (meta?.failedUploads?.length) {
         alert(t("home.upload.partialFail", { names: meta.failedUploads.join(", ") }));
+      }
+      // Surface OCR degradation (e.g. vision endpoint unconfigured) so the
+      // user knows the file was stored but not read.
+      if (meta?.ocrWarnings?.length) {
+        alert(meta.ocrWarnings.join("\n"));
       }
       if (!text) {
         // No content — just finalize immediately
@@ -574,6 +598,7 @@ export default function Home() {
         created_at: data.created_at,
         evidence_files: evidenceFiles,
         failedUploads: data.failed_uploads || [],
+        ocrWarnings: data.ocr_warnings || [],
         sources: {
           crimeDatabase: true,
           location: contextSnapshot.useScenePin,
@@ -603,6 +628,9 @@ export default function Home() {
     } catch (e) {
       console.error(e);
       setLoading(false);
+      // Surface backend failures (upload/OCR/validation) — previously the
+      // chat silently stayed empty with only a console error.
+      alert(e?.message || t("home.upload.failed", { defaultValue: "Send failed. Please retry." }));
     }
   };
 
@@ -1572,7 +1600,7 @@ export default function Home() {
             type="file"
             multiple
             className="hidden"
-            accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.png,.jpg,.jpeg,.gif"
+            accept=".pdf,.xlsx,.xls,.csv,.txt,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp"
             onChange={handleFileSelect}
           />
 
