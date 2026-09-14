@@ -680,7 +680,7 @@ export default function Home() {
               onClick={() =>
                 handleOpenEvidence(href, String(children?.[0] ?? "evidence"))
               }
-              className="font-medium text-violet-700 underline underline-offset-2 decoration-violet-300 hover:text-violet-900 cursor-pointer"
+              className="font-medium text-blue-700 underline underline-offset-2 decoration-blue-300 hover:text-blue-900 cursor-pointer"
             >
               {children}
             </button>
@@ -859,7 +859,7 @@ export default function Home() {
                           ? ` · ${formatFileSize(ev.size_bytes)}`
                           : "";
                         const chip = (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase text-violet-700">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-white border border-slate-300 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase text-slate-700">
                             <File size={10} />
                             <span className="max-w-[160px] truncate normal-case">
                               {label}
@@ -882,7 +882,7 @@ export default function Home() {
                               handleOpenEvidence(ev.download_url, label, ev)
                             }
                             title={t("home.upload.openEvidence")}
-                            className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                            className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                           >
                             {chip}
                           </button>

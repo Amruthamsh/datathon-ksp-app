@@ -87,8 +87,8 @@ export function OcrDetails({ ev }) {
   const transcription = (ev?.ocr_text || ev?.snippet || "").trim();
   if (!ev?.doc_summary && entities.length === 0 && !transcription) return null;
   return (
-    <div className="space-y-3 border-t border-violet-100 px-5 py-3">
-      <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-violet-900">
+    <div className="space-y-3 border-t border-slate-100 px-5 py-3">
+      <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-800">
         <ScanLine size={12} />
         {t("analysis.ocrAnalysis", { defaultValue: "OCR analysis" })}
       </p>
@@ -223,7 +223,7 @@ export function DocumentPreview({ token, ev, onOpenImage }) {
               <button
                 onClick={onOpenImage}
                 title={t("analysis.expandFile", { defaultValue: "Click to expand" })}
-                className="block w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded-lg"
+                className="block w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded-lg"
               >
                 <OcrOverlayImage
                   url={url}
@@ -246,7 +246,7 @@ export function DocumentPreview({ token, ev, onOpenImage }) {
             <button
               onClick={onOpenImage}
               title={t("analysis.expandFile", { defaultValue: "Click to expand" })}
-              className="cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded-lg"
+              className="cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded-lg"
             >
               <img
                 src={url}
@@ -270,7 +270,7 @@ export function DocumentPreview({ token, ev, onOpenImage }) {
         )}
         {!loading && !error && !image && !pdf && !textish && (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
               <FileText size={22} />
             </span>
             <p className="max-w-[280px] truncate text-sm font-medium text-slate-700">
@@ -286,7 +286,7 @@ export function DocumentPreview({ token, ev, onOpenImage }) {
       </div>
       {/* OCR analysis: vision summary, entity chips, transcription */}
       {!loading && !error && ocr && <OcrDetails ev={ev} />}
-      <div className="flex flex-wrap items-center gap-2 border-t border-violet-100 px-5 py-2.5">
+      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-2.5">
         <p className="min-w-0 flex-1 truncate text-[12px] text-slate-500">
           <span className="font-medium text-slate-700">{filename}</span>
           {ev.size_bytes
@@ -301,7 +301,7 @@ export function DocumentPreview({ token, ev, onOpenImage }) {
         {image && url && (
           <button
             onClick={onOpenImage}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-100 transition-colors cursor-pointer"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-blue-900/90 bg-blue-900/90 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-900 transition-colors cursor-pointer"
           >
             <Expand size={13} />
             {t("analysis.viewFile", { defaultValue: "View" })}

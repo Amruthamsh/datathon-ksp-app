@@ -372,12 +372,12 @@ export default function AnalysisPanel({ analysis }) {
         <section className="space-y-4">
           {/* Evidence — the uploaded document itself, shown above the analysis */}
           {evidenceFiles.length > 0 && selectedEvidence && (
-            <div className="overflow-hidden rounded-lg border border-violet-200 bg-white shadow-sm">
-              <div className="border-b border-violet-100 bg-violet-50/60 px-5 py-3">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-violet-900">
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 bg-slate-50/60 px-5 py-3">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                   <Paperclip size={14} />
                   {t("analysis.evidence", { defaultValue: "Evidence" })}
-                  <span className="text-xs font-normal text-violet-600">
+                  <span className="text-xs font-normal text-slate-500">
                     {t("analysis.evidenceCount", {
                       count: evidenceFiles.length,
                       defaultValue: `{{count}} file${evidenceFiles.length > 1 ? "s" : ""}`,
@@ -392,8 +392,8 @@ export default function AnalysisPanel({ analysis }) {
                         onClick={() => setSelectedEvidenceIdx(i)}
                         className={`inline-flex max-w-[180px] items-center gap-1.5 truncate rounded-full border px-2.5 py-1 text-[11px] font-medium transition cursor-pointer ${
                           i === Math.min(selectedEvidenceIdx, evidenceFiles.length - 1)
-                            ? "border-violet-500 bg-violet-600 text-white shadow-sm"
-                            : "border-violet-200 bg-white text-violet-700 hover:bg-violet-50"
+                            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                            : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                         }`}
                       >
                         <span className="truncate">
