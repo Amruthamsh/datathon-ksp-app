@@ -228,11 +228,22 @@ Return valid JSON only.
             else ""
         )
 
+        legal_context = state.get("legal_context") or ""
+        legal_block = (
+            f"\nLegal Codebook references for this turn (the investigator can "
+            f"see these cards in the analysis workspace — cite their exact "
+            f"punishment/bailability values inline, never invent them; do NOT "
+            f"add reference links, they are shown in the workspace):\n{legal_context}\n"
+            if legal_context
+            else ""
+        )
+
         prompt = f"""
 Conversation:
 
 {conversation_str}
 {evidence_block}
+{legal_block}
 SQL Query:
 
 {state['sql_query']}
@@ -257,6 +268,9 @@ Remember:
 - When uploaded evidence is present: cross-reference the crime-database
   findings with the evidence excerpts, mentioning filenames inline where
   relevant.
+- When Legal Codebook references are supplied: cite their exact
+  punishment/bailability values for the sections asked about (one short
+  inline line per section, e.g. "IPC 302 carries ... and is non-bailable").
 
 Return valid JSON only.
 """

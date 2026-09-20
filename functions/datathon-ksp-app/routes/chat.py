@@ -57,6 +57,11 @@ async def generate_response(
     user_query: str = Form(...),
     conversation_id: str | None = Form(None),
     language: str | None = Form(None),
+    use_codebook: str | None = Form(None),
+    use_osint: str | None = Form(None),
+    use_scene_pin: str | None = Form(None),
+    use_location: str | None = Form(None),
+    use_web: str | None = Form(None),
     files: list[UploadFile] = File(default=[]),
     current_user: dict = Depends(get_current_user),
     chat_repo: Optional[ChatRepository] = Depends(get_chat_repository),
@@ -244,6 +249,11 @@ async def generate_response(
         "translated_query": "",
         "evidence_files": evidence_files,
         "evidence_context": "",
+        # Investigator-framed source flags (frontend Form fields; the enriched
+        # query text also carries hint markers for LLM-only paths).
+        "use_codebook": (use_codebook or "").lower() in ("true", "1", "yes", "on"),
+        "legal_references": [],
+        "legal_context": "",
     }
 
     graph_error = None
@@ -276,6 +286,10 @@ async def generate_response(
                     # analysis workspace.
                     "evidence_files": result.get("evidence_files") or evidence_files,
                     "evidence_context": result.get("evidence_context", ""),
+                    # Legal Codebook references — rendered as cards in the
+                    # analysis workspace whenever they grounded the answer.
+                    "legal_references": result.get("legal_references", []),
+                    "legal_context": result.get("legal_context", ""),
                 },
             )
         except Exception as e:
@@ -300,6 +314,8 @@ async def generate_response(
         "charts": result.get("charts", []),
         "evidence_files": result.get("evidence_files") or evidence_files,
         "evidence_context": result.get("evidence_context", ""),
+        "legal_references": result.get("legal_references", []),
+        "legal_context": result.get("legal_context", ""),
         "failed_uploads": failed_uploads,
         "ocr_warnings": ocr_warnings,
     }

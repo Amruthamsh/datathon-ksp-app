@@ -591,6 +591,8 @@ export default function Home() {
         follow_up_questions: data.follow_up_questions,
         evidence_files: evidenceFiles,
         evidence_context: data.evidence_context || "",
+        legal_references: data.legal_references || [],
+        legal_context: data.legal_context || "",
       };
 
       const meta = {
@@ -750,19 +752,35 @@ export default function Home() {
           className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
         >
           {messages.map((m, i) => {
-            // Ensure analysis contains actual data (SQL query or SQL results)
+            // Ensure analysis contains actual data (SQL query/results,
+            // charts, evidence, or legal references)
             const hasAnalysis =
               m.analysis &&
               (m.analysis.sql_query ||
                 (Array.isArray(m.analysis.sql_result) &&
-                  m.analysis.sql_result.length > 0));
+                  m.analysis.sql_result.length > 0) ||
+                (Array.isArray(m.analysis.charts) &&
+                  m.analysis.charts.length > 0) ||
+                (Array.isArray(m.analysis.evidence_files) &&
+                  m.analysis.evidence_files.length > 0) ||
+                (Array.isArray(m.analysis.legal_references) &&
+                  m.analysis.legal_references.length > 0));
 
             // Value-based comparison to accurately detect active item across re-renders
             const isCurrentlyActive =
               activeAnalysis &&
               hasAnalysis &&
               (activeAnalysis === m.analysis ||
-                activeAnalysis.sql_query === m.analysis.sql_query);
+                (m.analysis.sql_query &&
+                  activeAnalysis.sql_query === m.analysis.sql_query) ||
+                (m.analysis.legal_references?.length &&
+                  activeAnalysis.legal_references?.length &&
+                  activeAnalysis.legal_references[0]?.act ===
+                    m.analysis.legal_references[0]?.act &&
+                  activeAnalysis.legal_references[0]?.section ===
+                    m.analysis.legal_references[0]?.section) ||
+                (m.analysis.response &&
+                  activeAnalysis.response === m.analysis.response));
 
             return (
               <div
@@ -946,8 +964,10 @@ export default function Home() {
                       </div>
                     )}
 
-                  {/* Open Investigation button */}
-                  {hasAnalysis && (
+                  {/* Open Investigation button — assistant turns only;
+                      user bubbles carry analysis.evidence_files from the
+                      upload but have no workspace content of their own */}
+                  {m.role === "assistant" && hasAnalysis && (
                     <button
                       onClick={() =>
                         setActiveAnalysis({

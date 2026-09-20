@@ -53,6 +53,15 @@ for THIS turn and the latest user message refers to the attachment
 "matching FIRs", or any substantive non-greeting request), the document must
 be analyzed against the crime database — return {"intent":"sql"}.
 Only a pure greeting with no task (e.g. just "hi" + file) is "chat".
+
+Legal rule: if the conversation contains a "[Legal Codebook]" block and the
+latest user message asks a section-lookup question (section meaning,
+punishment range, bailability, cognizability, IPC/BNS/NDPS/POCSO/Arms/IT
+section — e.g. "What is IPC 302 punishment?"), return {"intent":"chat"}:
+the codebook references already ground the answer and no crime-database
+query is needed. If the same turn ALSO asks for crime statistics, trends,
+or FIR counts, return {"intent":"sql"} so the database is queried and the
+legal references enrich that analysis.
 """
 
     response = llm.generate(

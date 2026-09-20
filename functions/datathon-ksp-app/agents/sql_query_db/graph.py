@@ -14,6 +14,7 @@ from agents.sql_query_db.nodes.finalize_node import finalize_node
 from agents.sql_query_db.nodes.language_detection_node import language_detection_node
 from agents.sql_query_db.nodes.translate_query_node import translate_query_node
 from agents.sql_query_db.nodes.evidence_node import evidence_node
+from agents.sql_query_db.nodes.legal_reference_node import legal_reference_node
 from agents.sql_query_db.nodes.translate_response_node import translate_response_node
 
 builder = StateGraph(SQLAgentState)
@@ -24,6 +25,9 @@ builder.add_node("translate_query", translate_query_node)
 
 # Evidence ingestion (new) — FileStore uploads attached to this turn
 builder.add_node("evidence", evidence_node)
+
+# Legal Reference (new) — deterministic IPC/BNS/NDPS/POCSO/Arms/IT lookup
+builder.add_node("legal_reference", legal_reference_node)
 
 # Existing nodes
 builder.add_node("router", router_node)
@@ -39,11 +43,12 @@ builder.add_node("finalize", finalize_node)
 # Response localization (new)
 builder.add_node("translate_response", translate_response_node)
 
-# Flow: detect language -> translate query -> ingest evidence -> route -> process -> localize response
+# Flow: detect language -> translate query -> ingest evidence -> legal lookup -> route -> process -> localize response
 builder.set_entry_point("language_detection")
 builder.add_edge("language_detection", "translate_query")
 builder.add_edge("translate_query", "evidence")
-builder.add_edge("evidence", "router")
+builder.add_edge("evidence", "legal_reference")
+builder.add_edge("legal_reference", "router")
 
 builder.add_conditional_edges(
     "router",

@@ -13,9 +13,26 @@ _DOC_REF = re.compile(
 )
 
 
+# A pure section-lookup ("IPC 302 punishment? Is it bailable?") must be
+# answered from the codebook, never sent to the SQL planner. Only queries
+# that ALSO ask for database facts (counts, trends, FIRs, districts...)
+# go to the planner.
+_DB_REF = re.compile(
+    r"\b(how many|count|trend|district|station|fir\b|firs\b|top \d+|list .*case|"
+    r"compare|increase|decrease|hotspot|arrest|convict|chargesheet|charge sheet|"
+    r"statistics|analytics|last (week|month|year)|this (week|month|year))\b",
+    re.I,
+)
+
+
 def route_after_router(state: SQLAgentState):
     print("Routing based on intent:", state["intent"])
     if state["intent"] == "sql":
+        if state.get("legal_references"):
+            text = f"{state.get('original_query', '')} {state.get('translated_query', '')}"
+            if not _DB_REF.search(text) and not state.get("evidence_files"):
+                print("Routing override: pure legal lookup -> chat")
+                return "chat"
         return "planner"
 
     if state.get("evidence_files"):

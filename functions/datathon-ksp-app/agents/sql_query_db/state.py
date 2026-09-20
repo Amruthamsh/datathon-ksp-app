@@ -25,3 +25,10 @@ class SQLAgentState(TypedDict):
     #              storage, folder_id, download_url, snippet}
     evidence_files: list[dict]
     evidence_context: str
+    # Legal Reference (Codebook) for this turn.
+    # use_codebook: investigator toggled "Legal Reference" in Home chat.
+    # legal_references: structured cards rendered in the analysis workspace.
+    # legal_context: compact citable block injected into LLM prompts.
+    use_codebook: bool
+    legal_references: list[dict]
+    legal_context: str

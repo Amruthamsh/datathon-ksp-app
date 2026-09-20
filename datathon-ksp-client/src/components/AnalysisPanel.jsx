@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Save, Download, Copy, Check, Paperclip } from "lucide-react";
+import { Save, Download, Copy, Check, Paperclip, BookOpen, Minus, Plus, ExternalLink } from "lucide-react";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx";
@@ -186,6 +186,190 @@ function DataTable({ rows = [], columns = [], filename = "export_data" }) {
   );
 }
 
+// ── Collapsible Section ────────────────────────────────────────────────────
+// Every workspace block (evidence, legal, charts, results, query) uses this
+// so each one can be minimized independently, like the SQL query panel.
+
+function CollapsibleSection({
+  icon,
+  title,
+  subtitle,
+  action,
+  children,
+  defaultOpen = true,
+  bodyClassName = "p-4",
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/60 px-5 py-3">
+        {icon}
+        <h3 className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-slate-800">
+          <span className="truncate">{title}</span>
+          {subtitle && (
+            <span className="shrink-0 text-xs font-normal text-slate-500">
+              {subtitle}
+            </span>
+          )}
+        </h3>
+        {action}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          title={open ? t("analysis.minimize") : t("analysis.expand")}
+          aria-expanded={open}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 cursor-pointer"
+        >
+          {open ? <Minus size={14} /> : <Plus size={14} />}
+        </button>
+      </div>
+      {open && <div className={bodyClassName}>{children}</div>}
+    </div>
+  );
+}
+
+// ── Legal Reference Cards ──────────────────────────────────────────────────
+
+function LegalReferenceCards({ references = [] }) {
+  const { t } = useTranslation();
+  if (!references.length) return null;
+  return (
+    <div className="space-y-3">
+      {references.map((ref, i) => {
+        const missing = ref.source === "codebook-missing";
+        const bailLabel =
+          ref.bailable == null
+            ? "—"
+            : ref.bailable
+              ? t("analysis.bailable")
+              : t("analysis.nonBailable");
+        const cogLabel =
+          ref.cognizable == null
+            ? "—"
+            : ref.cognizable
+              ? t("analysis.cognizable")
+              : t("analysis.nonCognizable");
+        const equiv = ref.bns_equivalent
+          ? `BNS ${ref.bns_equivalent}`
+          : ref.ipc_equivalent
+            ? `IPC ${ref.ipc_equivalent}`
+            : null;
+        return (
+          <div
+            key={`${ref.act}-${ref.section}-${i}`}
+            className="overflow-hidden rounded-lg border border-amber-200/70 bg-amber-50/40"
+          >
+            <div className="flex items-center gap-2 px-4 pt-3">
+              <span className="inline-flex items-center rounded-md bg-slate-900 px-2 py-0.5 text-[11px] font-bold tracking-wide text-white">
+                {ref.act}
+              </span>
+              <span className="text-sm font-bold text-slate-900">
+                {t("analysis.section", { number: ref.section })}
+              </span>
+              {equiv && (
+                <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                  ↔ {equiv}
+                </span>
+              )}
+              {missing ? (
+                <span className="ml-auto rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                  {t("analysis.verifyStatute")}
+                </span>
+              ) : (
+                <span
+                  className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                    ref.bailable
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {bailLabel}
+                </span>
+              )}
+            </div>
+            {ref.title && (
+              <p className="px-4 pt-1 text-[13px] font-semibold text-slate-800">
+                {ref.title}
+              </p>
+            )}
+            {ref.plain_language ? (
+              <p className="px-4 pt-1 text-xs leading-relaxed text-slate-600">
+                {ref.plain_language}
+              </p>
+            ) : (
+              missing && (
+                <p className="px-4 pt-1 text-xs leading-relaxed text-slate-600">
+                  {t("analysis.notInCodebook", {
+                    act: ref.act,
+                    section: ref.section,
+                  })}
+                </p>
+              )
+            )}
+            {!missing && (
+              <dl className="mx-4 mb-1 mt-2 grid grid-cols-1 gap-1.5 rounded-md bg-white/70 p-2.5 text-xs sm:grid-cols-3">
+                <div>
+                  <dt className="font-semibold uppercase tracking-wide text-[10px] text-slate-400">
+                    {t("analysis.punishment")}
+                  </dt>
+                  <dd className="mt-0.5 font-medium text-slate-800">
+                    {ref.punishment || "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-semibold uppercase tracking-wide text-[10px] text-slate-400">
+                    {t("analysis.bailability")}
+                  </dt>
+                  <dd className="mt-0.5 font-medium text-slate-800">
+                    {bailLabel}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-semibold uppercase tracking-wide text-[10px] text-slate-400">
+                    {t("analysis.cognizability")}
+                  </dt>
+                  <dd className="mt-0.5 font-medium text-slate-800">
+                    {cogLabel}
+                  </dd>
+                </div>
+              </dl>
+            )}
+            <div className="flex flex-wrap items-center gap-3 px-4 pb-3 pt-1">
+              {ref.kanoon_url && (
+                <a
+                  href={ref.kanoon_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 underline-offset-2 hover:underline"
+                >
+                  <ExternalLink size={11} />
+                  {t("analysis.indianKanoon")}
+                </a>
+              )}
+              {ref.indiacode_url && (
+                <a
+                  href={ref.indiacode_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 underline-offset-2 hover:underline"
+                >
+                  <ExternalLink size={11} />
+                  {t("analysis.indiaCode")}
+                </a>
+              )}
+              {ref.offence_category && (
+                <span className="ml-auto text-[10px] uppercase tracking-wide text-slate-400">
+                  {ref.offence_category}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function AnalysisPanel({ analysis }) {
@@ -195,6 +379,9 @@ export default function AnalysisPanel({ analysis }) {
   const charts = Array.isArray(analysis?.charts) ? analysis.charts : [];
   const evidenceFiles = Array.isArray(analysis?.evidence_files)
     ? analysis.evidence_files
+    : [];
+  const legalReferences = Array.isArray(analysis?.legal_references)
+    ? analysis.legal_references
     : [];
   const rowCount = rows.length;
 
@@ -311,7 +498,8 @@ export default function AnalysisPanel({ analysis }) {
     !analysis ||
     (analysis.sql_result?.length === 0 &&
       analysis.charts?.length === 0 &&
-      evidenceFiles.length === 0)
+      evidenceFiles.length === 0 &&
+      legalReferences.length === 0)
   ) {
     return (
       <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white/80 px-8 text-center text-slate-500 shadow-sm">
@@ -340,9 +528,13 @@ export default function AnalysisPanel({ analysis }) {
           <div className="flex shrink-0 items-center gap-3">
             <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              {hasCharts
-                ? `${charts.length} chart${charts.length > 1 ? "s" : ""}`
-                : t("analysis.table")}
+              {legalReferences.length > 0 && !hasCharts && rowCount === 0
+                ? t("analysis.sectionsCount", {
+                    count: legalReferences.length,
+                  })
+                : hasCharts
+                  ? `${charts.length} chart${charts.length > 1 ? "s" : ""}`
+                  : t("analysis.table")}
             </div>
             <div className="relative group">
               <button className="flex h-9 items-center gap-2 rounded-md bg-blue-900/90 px-3 text-sm font-medium text-white hover:bg-blue-900 cursor-pointer">
@@ -372,72 +564,76 @@ export default function AnalysisPanel({ analysis }) {
         <section className="space-y-4">
           {/* Evidence — the uploaded document itself, shown above the analysis */}
           {evidenceFiles.length > 0 && selectedEvidence && (
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-100 bg-slate-50/60 px-5 py-3">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                  <Paperclip size={14} />
-                  {t("analysis.evidence", { defaultValue: "Evidence" })}
-                  <span className="text-xs font-normal text-slate-500">
-                    {t("analysis.evidenceCount", {
-                      count: evidenceFiles.length,
-                      defaultValue: `{{count}} file${evidenceFiles.length > 1 ? "s" : ""}`,
-                    })}
-                  </span>
-                </h3>
-                {evidenceFiles.length > 1 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {evidenceFiles.map((f, i) => (
-                      <button
-                        key={f.file_id || i}
-                        onClick={() => setSelectedEvidenceIdx(i)}
-                        className={`inline-flex max-w-[180px] items-center gap-1.5 truncate rounded-full border px-2.5 py-1 text-[11px] font-medium transition cursor-pointer ${
-                          i === Math.min(selectedEvidenceIdx, evidenceFiles.length - 1)
-                            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                            : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                        }`}
-                      >
-                        <span className="truncate">
-                          {f.filename || `Evidence ${i + 1}`}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+            <CollapsibleSection
+              icon={<Paperclip size={14} className="shrink-0 text-slate-500" />}
+              title={t("analysis.evidence", { defaultValue: "Evidence" })}
+              subtitle={t("analysis.evidenceCount", {
+                count: evidenceFiles.length,
+                defaultValue: `{{count}} file${evidenceFiles.length > 1 ? "s" : ""}`,
+              })}
+            >
+              {evidenceFiles.length > 1 && (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {evidenceFiles.map((f, i) => (
+                    <button
+                      key={f.file_id || i}
+                      onClick={() => setSelectedEvidenceIdx(i)}
+                      className={`inline-flex max-w-[180px] items-center gap-1.5 truncate rounded-full border px-2.5 py-1 text-[11px] font-medium transition cursor-pointer ${
+                        i === Math.min(selectedEvidenceIdx, evidenceFiles.length - 1)
+                          ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className="truncate">
+                        {f.filename || `Evidence ${i + 1}`}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <DocumentPreview
                 token={token}
                 ev={selectedEvidence}
                 onOpenImage={() => setLightboxEv(selectedEvidence)}
               />
-            </div>
+            </CollapsibleSection>
+          )}
+          {/* Legal Reference — codebook sections that grounded the answer */}
+          {legalReferences.length > 0 && (
+            <CollapsibleSection
+              icon={<BookOpen size={14} className="shrink-0 text-amber-600" />}
+              title={t("analysis.legalReference")}
+              subtitle={t("analysis.sectionsCount", {
+                count: legalReferences.length,
+              })}
+            >
+              <LegalReferenceCards references={legalReferences} />
+            </CollapsibleSection>
           )}
           {hasCharts &&
             charts.map((chartConfig, idx) => {
               const containerHeight = computeChartHeight(chartConfig, rows);
               return (
-                <div
+                <CollapsibleSection
                   key={idx}
-                  id={`chart-${idx}`}
-                  className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+                  title={chartConfig.title}
+                  action={
+                    <button
+                      onClick={() => handleSaveChart(idx)}
+                      disabled={savingIdx !== null}
+                      className="flex shrink-0 items-center gap-1.5 rounded-md border border-blue-900/90 bg-blue-900/90 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-900 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <Save size={13} className="text-white" />
+                      {savingIdx === idx
+                        ? t("analysis.adding")
+                        : t("analysis.addToReports")}
+                    </button>
+                  }
+                  bodyClassName="p-0"
                 >
-                  <div className="border-b border-slate-200 px-5 py-3.5">
-                    <div className="flex items-center justify-between gap-4">
-                      <h3 className="text-sm font-semibold text-slate-800">
-                        {chartConfig.title}
-                      </h3>
-                      <button
-                        onClick={() => handleSaveChart(idx)}
-                        disabled={savingIdx !== null}
-                        className="flex shrink-0 items-center gap-1.5 rounded-md border border-blue-900/90 bg-blue-900/90 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-900 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <Save size={13} className="text-white" />
-                        {savingIdx === idx
-                          ? t("analysis.adding")
-                          : t("analysis.addToReports")}
-                      </button>
-                    </div>
+                  <div id={`chart-${idx}`}>
                     {(chartConfig.reason || chartConfig.intent) && (
-                      <div className="mt-3 border-t border-slate-100 pt-3">
+                      <div className="border-b border-slate-100 px-5 py-3">
                         <p className="text-xs leading-relaxed text-slate-600">
                           {chartConfig.reason ||
                             t("analysis.aboutThisChartFallback", {
@@ -447,42 +643,36 @@ export default function AnalysisPanel({ analysis }) {
                         </p>
                       </div>
                     )}
+                    <div
+                      style={{ height: containerHeight }}
+                      className="flex flex-col overflow-hidden bg-white p-4 transition-[height] duration-300 ease-out"
+                    >
+                      <ChartRenderer rawConfig={chartConfig} rawRows={rows} />
+                    </div>
                   </div>
-                  <div
-                    style={{ height: containerHeight }}
-                    className="flex flex-col overflow-hidden bg-white p-4 transition-[height] duration-300 ease-out"
-                  >
-                    <ChartRenderer rawConfig={chartConfig} rawRows={rows} />
-                  </div>
-                </div>
+                </CollapsibleSection>
               );
             })}
 
-          <details
-            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
-            open
+          <CollapsibleSection
+            title={t("analysis.sqlResults")}
+            subtitle={
+              rowCount > 0
+                ? t("analysis.rows", { count: rowCount })
+                : undefined
+            }
           >
-            <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900">
-              {t("analysis.sqlResults")}
-              {rowCount > 0 && (
-                <span className="ml-2 text-xs font-normal text-slate-500">
-                  {t("analysis.rows", { count: rowCount })}
-                </span>
-              )}
-            </summary>
-            <div className="mt-4">
-              <DataTable rows={rows} columns={columns} />
-            </div>
-          </details>
+            <DataTable rows={rows} columns={columns} />
+          </CollapsibleSection>
 
-          <details
-            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
-            open
-          >
-            <summary className="flex items-center justify-between cursor-pointer list-none text-sm font-semibold text-slate-900">
-              <span>{t("analysis.sqlQuery")}</span>
+          <CollapsibleSection
+            title={t("analysis.sqlQuery")}
+            action={
               <button
-                onClick={handleCopySql}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopySql();
+                }}
                 disabled={!analysis?.sql_query}
                 className="flex shrink-0 items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -500,13 +690,12 @@ export default function AnalysisPanel({ analysis }) {
                   </>
                 )}
               </button>
-            </summary>
-            <div className="mt-4">
-              <pre className="overflow-x-hidden whitespace-pre-wrap wrap-break-word rounded-lg border border-slate-200 bg-slate-950 px-4 py-4 text-xs leading-6 text-slate-100 shadow-inner">
-                {analysis?.sql_query || t("analysis.noQueryAvailable")}
-              </pre>
-            </div>
-          </details>
+            }
+          >
+            <pre className="overflow-x-hidden whitespace-pre-wrap wrap-break-word rounded-lg border border-slate-200 bg-slate-950 px-4 py-4 text-xs leading-6 text-slate-100 shadow-inner">
+              {analysis?.sql_query || t("analysis.noQueryAvailable")}
+            </pre>
+          </CollapsibleSection>
         </section>
       </div>
       {/* In-app image viewer for evidence (auth-safe, no new-tab 401s) */}
