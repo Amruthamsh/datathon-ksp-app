@@ -281,6 +281,8 @@ def build_rows(raw: list[dict]) -> tuple[list[tuple], Counter, Counter, Counter]
 
 
 def upsert(db_path: str, rows: list[tuple]) -> None:
+    from datetime import datetime, timezone
+
     con = sqlite3.connect(db_path)
     try:
         con.execute("PRAGMA query_only=OFF")
@@ -292,6 +294,19 @@ def upsert(db_path: str, rows: list[tuple]) -> None:
             " Latitude, Longitude, RiskWeight, OSMId, Source, UpdatedAt)"
             " VALUES(?,?,?,?,?,?,?,?,'overture', datetime('now'))",
             rows,
+        )
+        # The map's LIVE INTELLIGENCE header reads IntelligenceMeta, not the
+        # rows — without this it keeps showing the old Overpass-era count.
+        total = con.execute("SELECT COUNT(*) FROM DistrictPOI").fetchone()[0]
+        con.execute(
+            "INSERT OR REPLACE INTO IntelligenceMeta(Key, Value, UpdatedAt)"
+            " VALUES('poi_total', ?, datetime('now'))",
+            (str(total),),
+        )
+        con.execute(
+            "INSERT OR REPLACE INTO IntelligenceMeta(Key, Value, UpdatedAt)"
+            " VALUES('poi_last_refresh', ?, datetime('now'))",
+            (datetime.now(timezone.utc).isoformat(),),
         )
         con.commit()
     finally:
