@@ -209,7 +209,11 @@ export default function CrimeIntelligenceMap() {
   const [mapChatKey, setMapChatKey] = useState(0);
   // Station coverage rings (isochrone proxy) — resource allocation lens
   const [showCoverage, setShowCoverage] = useState(false);
-  const [coverageRings, setCoverageRings] = useState({ 5: true, 10: true, 15: false });
+  const [coverageRings, setCoverageRings] = useState({
+    5: true,
+    10: true,
+    15: false,
+  });
   const [coverageStats, setCoverageStats] = useState(null);
 
   const activeSubType = useMemo(() => {
@@ -684,7 +688,7 @@ export default function CrimeIntelligenceMap() {
 
               {viewMode === "Administrative" && (
                 <div
-                  className="absolute bottom-12 left-4 bg-white/95 backdrop-blur rounded-[8px] border border-[#E2E8F0] px-3 py-2 z-20 flex items-center gap-3"
+                  className="absolute bottom-10 left-4 bg-white/95 backdrop-blur rounded-[8px] border border-[#E2E8F0] px-3 py-2 z-20 flex items-center gap-3"
                   style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
                 >
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
@@ -1335,7 +1339,10 @@ function MapView({
 
   useEffect(() => {
     try {
-      sessionStorage.setItem("ksp-map-annotations", JSON.stringify(annotations));
+      sessionStorage.setItem(
+        "ksp-map-annotations",
+        JSON.stringify(annotations),
+      );
     } catch {
       /* storage unavailable — annotations stay in-memory */
     }
@@ -1673,7 +1680,9 @@ function MapView({
   }, [corridorDraft]);
 
   const updateAnnotationNote = useCallback((id, note) => {
-    setAnnotations((prev) => prev.map((a) => (a.id === id ? { ...a, note } : a)));
+    setAnnotations((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, note } : a)),
+    );
   }, []);
 
   const deleteAnnotation = useCallback((id) => {
@@ -2207,7 +2216,8 @@ function MapView({
       </DeckGL>
 
       {/* ── Annotation toolbar: turns the map into a planning surface ── */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-white/95 backdrop-blur-md rounded-full border border-[#E2E8F0] px-1.5 py-1 max-w-[calc(100%-2rem)] flex-wrap justify-center"
+      <div
+        className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-white/95 backdrop-blur-md rounded-full border border-[#E2E8F0] px-1.5 py-1 max-w-[calc(100%-2rem)] flex-wrap justify-center"
         style={{ boxShadow: "0 4px 16px rgba(15,23,42,0.10)" }}
       >
         <span
@@ -3932,9 +3942,17 @@ function POIPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
             {spot.poi_type === "Fuel_Station" && t("crimeMap.poi.fuel")}
             {spot.poi_type === "Place_of_Worship" && t("crimeMap.poi.worship")}
             {![
-              "Liquor_Store", "ATM", "Bus_Stop", "Bank", "Railway_Station",
-              "Police_Station", "Hotel", "Hospital", "School",
-              "Fuel_Station", "Place_of_Worship",
+              "Liquor_Store",
+              "ATM",
+              "Bus_Stop",
+              "Bank",
+              "Railway_Station",
+              "Police_Station",
+              "Hotel",
+              "Hospital",
+              "School",
+              "Fuel_Station",
+              "Place_of_Worship",
             ].includes(spot.poi_type) && t("crimeMap.poi.generic")}
           </p>
         </div>
@@ -4001,7 +4019,13 @@ POIPanel.propTypes = {
 
 /* ── Station Panel (coverage anchor) ───────────────────────────── */
 
-function StationPanel({ spot, onClose, onOpenPatrol, onAskInMapChat, coverage }) {
+function StationPanel({
+  spot,
+  onClose,
+  onOpenPatrol,
+  onAskInMapChat,
+  coverage,
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   return (
@@ -4027,7 +4051,9 @@ function StationPanel({ spot, onClose, onOpenPatrol, onAskInMapChat, coverage })
             <p className="text-[10px] text-slate-400">in selected range</p>
           </div>
           <div className="p-3 bg-[#F4F6F9] rounded-xl border border-[#E5E7EB]">
-            <p className="text-[10px] font-medium text-slate-500">Coordinates</p>
+            <p className="text-[10px] font-medium text-slate-500">
+              Coordinates
+            </p>
             <p className="text-xs font-bold text-slate-900 mt-1.5">
               {Number(spot.lat).toFixed?.(4)}, {Number(spot.lng).toFixed?.(4)}
             </p>
@@ -4052,8 +4078,8 @@ function StationPanel({ spot, onClose, onOpenPatrol, onAskInMapChat, coverage })
             </span>
           </div>
           <p className="text-[11px] text-slate-500 mt-1.5 leading-snug">
-            Rings ≈ drive time @ 30 km/h urban avg. Hotspots outside the
-            10-min ring
+            Rings ≈ drive time @ 30 km/h urban avg. Hotspots outside the 10-min
+            ring
             {coverage?.uncovered != null ? (
               <>
                 {" "}
