@@ -520,12 +520,8 @@ export default function CrimeIntelligenceMap() {
     setRightTab("chat");
   }, []);
 
-  // Auto-disable network overlay in District Risk view
-  useEffect(() => {
-    if (viewMode === "Administrative" && showNetworks) {
-      setShowNetworks(false);
-    }
-  }, [viewMode, showNetworks]);
+  // NOTE: POI and network overlays stay available in every view, including
+  // District Risk — the district choropleth renders underneath point layers.
 
   return (
     <div className="flex h-full bg-[#F5F7FA] text-slate-900 font-sans">
@@ -801,7 +797,6 @@ function LayerSwitcher({
     },
   ];
 
-  const networkDisabled = viewMode === "Administrative";
   // Layer toggles derive from the shared POI type registry so new indexed
   // types (Overture: police, hotels, hospitals…) appear automatically.
   const poiTypes = POI_TYPE_IDS.map((id) => {
@@ -862,29 +857,18 @@ function LayerSwitcher({
         <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.08em] px-2 mb-1">
           {t("crimeMap.overlays.title")}
         </p>
-        <label
-          className={`flex items-center gap-2 px-2.5 py-1 rounded-[6px] ${networkDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-[#F8FAFC] cursor-pointer"}`}
-        >
+        <label className="flex items-center gap-2 px-2.5 py-1 rounded-[6px] hover:bg-[#F8FAFC] cursor-pointer">
           <input
             type="checkbox"
             checked={showNetworks}
             onChange={onToggleNetworks}
-            disabled={networkDisabled}
-            className="rounded border-slate-300 text-[#17233C] w-3 h-3 disabled:opacity-50 accent-[#17233C] cursor-pointer"
-            title={
-              networkDisabled ? t("crimeMap.overlays.unavailable") : undefined
-            }
+            className="rounded border-slate-300 text-[#17233C] w-3 h-3 accent-[#17233C] cursor-pointer"
           />
           <Users className="h-3 w-3 text-[#334155] shrink-0" />
           <span className="text-[12px] font-medium text-[#334155]">
             {t("crimeMap.layers.networkOverlay")}
           </span>
         </label>
-        {networkDisabled && (
-          <p className="text-[9px] text-slate-400 px-3 pb-1">
-            {t("crimeMap.overlays.unavailableShort")}
-          </p>
-        )}
       </div>
       <div className="h-px bg-[#E2E8F0] my-1" />
       <div>
@@ -1900,8 +1884,7 @@ function MapView({
       );
     }
 
-    const networkVisible =
-      showNetworks && viewMode !== "Administrative" && networkOverlay.length;
+    const networkVisible = showNetworks && networkOverlay.length;
     if (networkVisible) {
       if (networkEdges.length) {
         activeLayers.push(
@@ -1942,8 +1925,8 @@ function MapView({
       );
     }
 
-    // POI overlays — indexed places (OSM Overpass + Overture bulk), visible in Heatmap/Cluster modes
-    if (poiData.length && viewMode !== "Administrative") {
+    // POI overlays — indexed places (OSM Overpass + Overture bulk), visible in every view
+    if (poiData.length) {
       const grouped = {};
       poiData.forEach((p) => {
         (grouped[p.POIType] = grouped[p.POIType] || []).push(p);
