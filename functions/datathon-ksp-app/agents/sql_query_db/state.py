@@ -32,3 +32,15 @@ class SQLAgentState(TypedDict):
     use_codebook: bool
     legal_references: list[dict]
     legal_context: str
+    # Scene Intel (Location Query) for this turn.
+    # use_scene_pin: investigator toggled Location Query in Home chat.
+    # scene_lat/lng/radius_km: dropped pin + fixed 10 km radius.
+    # scene_cards: structured workup (crime mix, repeat offenders, POIs)
+    #   rendered in the analysis workspace.
+    # scene_context: compact citable block injected into LLM prompts.
+    use_scene_pin: bool
+    scene_lat: float | None
+    scene_lng: float | None
+    scene_radius_km: float | None
+    scene_cards: dict
+    scene_context: str

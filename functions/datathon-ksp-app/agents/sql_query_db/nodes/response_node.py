@@ -238,12 +238,22 @@ Return valid JSON only.
             else ""
         )
 
+        scene_context = state.get("scene_context") or ""
+        scene_block = (
+            f"\nScene Intel radius workup for this turn (the investigator can "
+            f"see these cards in the analysis workspace — cite the exact "
+            f"nearby counts inline, never invent them; do NOT add links):\n{scene_context}\n"
+            if scene_context
+            else ""
+        )
+
         prompt = f"""
 Conversation:
 
 {conversation_str}
 {evidence_block}
 {legal_block}
+{scene_block}
 SQL Query:
 
 {state['sql_query']}
@@ -271,6 +281,10 @@ Remember:
 - When Legal Codebook references are supplied: cite their exact
   punishment/bailability values for the sections asked about (one short
   inline line per section, e.g. "IPC 302 carries ... and is non-bailable").
+- When a Scene Intel workup is supplied: ground area-specific claims in its
+  exact counts (FIRs by type, repeat offenders, POIs). If the scene pin was
+  enabled but no workup is present (no pin dropped), ask the user to drop
+  the pin instead of inventing nearby counts.
 
 Return valid JSON only.
 """

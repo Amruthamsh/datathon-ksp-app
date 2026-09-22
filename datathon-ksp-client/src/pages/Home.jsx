@@ -593,6 +593,8 @@ export default function Home() {
         evidence_context: data.evidence_context || "",
         legal_references: data.legal_references || [],
         legal_context: data.legal_context || "",
+        scene_cards: data.scene_cards || {},
+        scene_context: data.scene_context || "",
       };
 
       const meta = {
@@ -753,7 +755,7 @@ export default function Home() {
         >
           {messages.map((m, i) => {
             // Ensure analysis contains actual data (SQL query/results,
-            // charts, evidence, or legal references)
+            // charts, evidence, legal references, or scene workup)
             const hasAnalysis =
               m.analysis &&
               (m.analysis.sql_query ||
@@ -764,7 +766,8 @@ export default function Home() {
                 (Array.isArray(m.analysis.evidence_files) &&
                   m.analysis.evidence_files.length > 0) ||
                 (Array.isArray(m.analysis.legal_references) &&
-                  m.analysis.legal_references.length > 0));
+                  m.analysis.legal_references.length > 0) ||
+                Boolean(m.analysis.scene_cards?.pin));
 
             // Value-based comparison to accurately detect active item across re-renders
             const isCurrentlyActive =

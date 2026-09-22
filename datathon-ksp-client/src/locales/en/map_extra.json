@@ -33,6 +33,12 @@
       "busStops": "Bus Stops",
       "banks": "Banks",
       "railway": "Railway",
+      "policeStations": "Police Stations",
+      "hotels": "Hotels & Lodges",
+      "hospitals": "Hospitals",
+      "schools": "Schools",
+      "fuelStations": "Fuel Stations",
+      "worship": "Worship Places",
       "socioTint": "Socio-Economic tint"
     },
     "socioLegend": {
@@ -133,6 +139,15 @@
       "bus": "Transit hubs see chain snatching & theft — align patrol with peak commute.",
       "bank": "Banks are economic-offence hotspots — coordinate with EOW.",
       "railway": "Stations funnel inter-district movement — check repeat offender transit.",
+      "police": "Nearby police presence supports fast response — coordinate jurisdiction before deployment.",
+      "hotel": "Lodges and hotels need visitor-register checks — common transit cover for offenders.",
+      "hospital": "Hospitals matter for medico-legal coordination and casualty response, not patrol priority.",
+      "school": "Schools are vulnerable zones — prioritize opening/closing-hour beats and traffic control.",
+      "fuel": "Fuel stations attract night robbery — include in night patrol routes with CCTV checks.",
+      "worship": "Worship places draw crowds on festival days — plan crowd control around the calendar.",
+      "generic": "Assess this POI against nearby crime mix before tasking patrols.",
+      "viaOsm": "Live data via OpenStreetMap Overpass · OSM ID {{id}}",
+      "viaOverture": "Overture Maps bulk index (monthly) · {{id}}",
       "riskWeightSub": "Risk weight {{value}}"
     },
     "panelTypes": {

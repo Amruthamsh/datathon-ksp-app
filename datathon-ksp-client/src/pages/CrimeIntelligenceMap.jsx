@@ -23,8 +23,6 @@ import {
   MapPin,
   Building2,
   Beer,
-  Landmark,
-  Bus,
   CloudRain,
   Database,
   RefreshCw,
@@ -45,6 +43,7 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import * as XLSX from "xlsx";
 import MapChatPanel from "../components/crimeMap/MapChatPanel";
+import { POI_TYPE_IDS, poiMeta } from "../data/poiTypes";
 
 function formatNumber(num) {
   if (num === null || num === undefined) return "—";
@@ -197,13 +196,9 @@ export default function CrimeIntelligenceMap() {
     bearing: 0,
   });
   // Intelligence overlays
-  const [poiFilters, setPoiFilters] = useState({
-    ATM: true,
-    Bank: true,
-    Liquor_Store: true,
-    Bus_Stop: true,
-    Railway_Station: true,
-  });
+  const [poiFilters, setPoiFilters] = useState(() =>
+    Object.fromEntries(POI_TYPE_IDS.map((id) => [id, true])),
+  );
   const [showSocioOverlay, setShowSocioOverlay] = useState(false);
   const [enhancedRisk, setEnhancedRisk] = useState([]);
   const [intelligenceStatus, setIntelligenceStatus] = useState(null);
@@ -835,43 +830,18 @@ function LayerSwitcher({
   ];
 
   const networkDisabled = viewMode === "Administrative";
-  const poiTypes = [
-    {
-      id: "Liquor_Store",
-      label: t("crimeMap.overlays.liquorShops"),
-      icon: Beer,
-      weight: 5,
-      color: "#b45309",
-    },
-    {
-      id: "ATM",
-      label: t("crimeMap.overlays.atms"),
-      icon: Landmark,
-      weight: 3,
-      color: "#2563eb",
-    },
-    {
-      id: "Bus_Stop",
-      label: t("crimeMap.overlays.busStops"),
-      icon: Bus,
-      weight: 2,
-      color: "#16a34a",
-    },
-    {
-      id: "Bank",
-      label: t("crimeMap.overlays.banks"),
-      icon: Building2,
-      weight: 2,
-      color: "#1e3a8a",
-    },
-    {
-      id: "Railway_Station",
-      label: t("crimeMap.overlays.railway"),
-      icon: MapPin,
-      weight: 2,
-      color: "#dc2626",
-    },
-  ];
+  // Layer toggles derive from the shared POI type registry so new indexed
+  // types (Overture: police, hotels, hospitals…) appear automatically.
+  const poiTypes = POI_TYPE_IDS.map((id) => {
+    const meta = poiMeta(id);
+    return {
+      id,
+      label: meta.labelKey ? t(meta.labelKey) : id.replace(/_/g, " "),
+      icon: meta.Icon,
+      weight: meta.weight,
+      color: meta.color,
+    };
+  });
   const intelReady =
     intelligenceStatus?.poi_total && Number(intelligenceStatus.poi_total) > 0;
 
@@ -1456,15 +1426,29 @@ function MapView({
       setPoiData([]);
       return;
     }
-    // fetch all then filter client-side for speed (single request) — limit 20000 covers 31 districts at higher density
-    crimeMapApi
-      .getPOIs(token, { limit: 20000 })
-      .then((r) => {
-        const all = r.data || [];
-        const filtered = all.filter((d) => activeTypes.includes(d.POIType));
-        setPoiData(filtered);
-      })
-      .catch(() => {});
+    // Per-type parallel fetches: one 50k-row payload (~10MB) blows past
+    // Catalyst function response limits and renders zero markers. Small
+    // per-type payloads stay well under the ceiling; a type that fails
+    // only loses its own markers, never the whole overlay.
+    let cancelled = false;
+    (async () => {
+      try {
+        const parts = await Promise.all(
+          activeTypes.map((t) =>
+            crimeMapApi
+              .getPOIs(token, { poi_type: t, limit: 4000 })
+              .then((r) => r.data || [])
+              .catch(() => []),
+          ),
+        );
+        if (!cancelled) setPoiData(parts.flat());
+      } catch {
+        if (!cancelled) setPoiData([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [token, poiFilters]);
 
   // Police-station centroids for coverage rings (scoped to current date range)
@@ -2026,15 +2010,8 @@ function MapView({
       );
     }
 
-    // POI overlays — live OSM data, visible in Heatmap/Cluster modes
+    // POI overlays — indexed places (OSM Overpass + Overture bulk), visible in Heatmap/Cluster modes
     if (poiData.length && viewMode !== "Administrative") {
-      const poiColors = {
-        Liquor_Store: [180, 83, 9, 200],
-        ATM: [37, 99, 235, 200],
-        Bus_Stop: [22, 163, 74, 200],
-        Bank: [124, 58, 237, 200],
-        Railway_Station: [220, 38, 38, 200],
-      };
       const grouped = {};
       poiData.forEach((p) => {
         (grouped[p.POIType] = grouped[p.POIType] || []).push(p);
@@ -2048,7 +2025,7 @@ function MapView({
             getRadius: type === "Liquor_Store" ? 6 : 5,
             radiusMinPixels: type === "Liquor_Store" ? 5 : 4,
             radiusMaxPixels: 9,
-            getFillColor: poiColors[type] || [100, 116, 139, 180],
+            getFillColor: poiMeta(type).deck,
             getLineColor: [255, 255, 255, 220],
             stroked: true,
             lineWidthMinPixels: 1,
@@ -2066,6 +2043,7 @@ function MapView({
                   lat: d.lat,
                   lng: d.lng,
                   district: d.DistrictName,
+                  source: d.Source,
                 });
               }
             },
@@ -3977,14 +3955,8 @@ RiskBar.propTypes = {
 function POIPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const typeColor =
-    {
-      Liquor_Store: "bg-amber-50 text-amber-800 border-amber-200",
-      ATM: "bg-blue-50 text-blue-700 border-blue-200",
-      Bank: "bg-slate-50 text-slate-700 border-slate-200",
-      Bus_Stop: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      Railway_Station: "bg-red-50 text-red-700 border-red-200",
-    }[spot.poi_type] || "bg-slate-50 text-slate-700 border-slate-200";
+  const meta = poiMeta(spot.poi_type);
+  const typeColor = meta.chip;
   const riskNoteKey =
     spot.risk_weight >= 5
       ? "crimeMap.poi.high"
@@ -4009,7 +3981,9 @@ function POIPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
           </p>
           <p className="text-sm font-bold mt-1">{t(riskNoteKey)}</p>
           <p className="text-[11px] mt-1 opacity-80">
-            Live data via OpenStreetMap Overpass · OSM ID {spot.id}
+            {spot.source === "overture"
+              ? t("crimeMap.poi.viaOverture", { id: spot.id })
+              : t("crimeMap.poi.viaOsm", { id: spot.id })}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -4038,6 +4012,17 @@ function POIPanel({ spot, onClose, onOpenPatrol, onAskInMapChat }) {
             {spot.poi_type === "Bus_Stop" && t("crimeMap.poi.bus")}
             {spot.poi_type === "Bank" && t("crimeMap.poi.bank")}
             {spot.poi_type === "Railway_Station" && t("crimeMap.poi.railway")}
+            {spot.poi_type === "Police_Station" && t("crimeMap.poi.police")}
+            {spot.poi_type === "Hotel" && t("crimeMap.poi.hotel")}
+            {spot.poi_type === "Hospital" && t("crimeMap.poi.hospital")}
+            {spot.poi_type === "School" && t("crimeMap.poi.school")}
+            {spot.poi_type === "Fuel_Station" && t("crimeMap.poi.fuel")}
+            {spot.poi_type === "Place_of_Worship" && t("crimeMap.poi.worship")}
+            {![
+              "Liquor_Store", "ATM", "Bus_Stop", "Bank", "Railway_Station",
+              "Police_Station", "Hotel", "Hospital", "School",
+              "Fuel_Station", "Place_of_Worship",
+            ].includes(spot.poi_type) && t("crimeMap.poi.generic")}
           </p>
         </div>
         <button

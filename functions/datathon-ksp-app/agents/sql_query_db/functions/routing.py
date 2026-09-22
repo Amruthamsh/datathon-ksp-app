@@ -25,6 +25,17 @@ _DB_REF = re.compile(
 )
 
 
+# A purely local scene question ("what's around this pin?") is answered
+# from the deterministic radius workup, never sent to the SQL planner.
+# Only queries that ALSO reach beyond the pin radius go to the planner.
+_LOCAL_ONLY = re.compile(
+    r"\b(around here|nearby|near (this|the) (pin|scene|area|location)|"
+    r"this area|this radius|within (the )?radius|within \d+\s*km|"
+    r"is this area safe|around the pin|close by|neighbourhood|neighborhood)\b",
+    re.I,
+)
+
+
 def route_after_router(state: SQLAgentState):
     print("Routing based on intent:", state["intent"])
     if state["intent"] == "sql":
@@ -32,6 +43,11 @@ def route_after_router(state: SQLAgentState):
             text = f"{state.get('original_query', '')} {state.get('translated_query', '')}"
             if not _DB_REF.search(text) and not state.get("evidence_files"):
                 print("Routing override: pure legal lookup -> chat")
+                return "chat"
+        if state.get("scene_cards"):
+            text = f"{state.get('original_query', '')} {state.get('translated_query', '')}"
+            if _LOCAL_ONLY.search(text) and not _DB_REF.search(text):
+                print("Routing override: local scene question -> chat")
                 return "chat"
         return "planner"
 

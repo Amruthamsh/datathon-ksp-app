@@ -4,63 +4,26 @@ from agents.sql_query_db.state import SQLAgentState
 from llm.catalyst_llm_service import catalyst_llm_service as llm
 
 
-def chat_node(state: SQLAgentState):
-    # Legal Reference answers — the codebook block grounds the response.
-    # No crime-database query is needed for pure section lookups.
+def _visible_conversation(state: SQLAgentState) -> str:
+    """Transcript without the injected grounding blocks (passed separately)."""
+    conversation = []
+    for m in state.get("messages", []):
+        role = "User" if getattr(m, "type", "") == "human" else "Assistant"
+        content = str(getattr(m, "content", ""))
+        if content.startswith("[Legal Codebook]") or content.startswith(
+            "[Evidence attached]"
+        ) or content.startswith("[Scene Context]"):
+            continue
+        conversation.append(f"{role}: {content}")
+    return "\n".join(conversation)
+
+
+def _deterministic_fallback(state: SQLAgentState) -> str:
+    """No-LLM template covering legal and/or scene grounding."""
+    lines = []
     legal_refs: list = state.get("legal_references") or []
-    legal_context: str = state.get("legal_context") or ""
-    if legal_refs or legal_context:
-        system_prompt = """You are a Legal Reference assistant for Karnataka State Police (KSP) investigators.
-
-Answer the user's section-lookup question using ONLY the Legal Codebook
-references supplied below. For each section state: Act + section + title,
-plain-language meaning, punishment range, and bailability/cognizability.
-Mention IPC↔BNS equivalents where given.
-
-Rules:
-- Cite the exact codebook values — never invent punishment or bailability.
-- If a reference is marked NOT in the local codebook, answer from statute
-- knowledge but explicitly flag it as needing verification via IndiaCode /
-- Indian Kanoon, with the link provided.
-- Keep it concise (150-250 words), valid GitHub Markdown, no follow-up
-- questions section (those are generated separately).
-- Never add file links or an "Evidence Referenced" section."""
-
-        conversation = []
-        for m in state.get("messages", []):
-            role = "User" if getattr(m, "type", "") == "human" else "Assistant"
-            # Skip the injected grounding blocks in the visible transcript —
-            # they are passed separately as the codebook context.
-            content = str(getattr(m, "content", ""))
-            if content.startswith("[Legal Codebook]") or content.startswith("[Evidence attached]"):
-                continue
-            conversation.append(f"{role}: {content}")
-        conversation_str = "\n".join(conversation)
-        evidence_context = state.get("evidence_context") or ""
-        evidence_block = f"\nUploaded Evidence:\n{evidence_context}\n" if evidence_context else ""
-
-        try:
-            answer = llm.generate(
-                system_prompt=system_prompt,
-                user_prompt=(
-                    f"Conversation:\n{conversation_str}\n"
-                    f"{evidence_block}\nLegal Codebook:\n{legal_context}\n\n"
-                    "Answer the latest user question now."
-                ),
-            ).strip()
-            if not answer:
-                raise ValueError("empty legal answer")
-            return {
-                "messages": [AIMessage(content=answer)],
-                "follow_up_questions": [],
-                "response": answer,
-            }
-        except Exception as e:
-            print("Error during legal chat generation:", e)
-            # Fall through to the deterministic template below.
-
-        # Deterministic fallback — no LLM needed for in-codebook sections.
-        lines = ["## Legal Reference", ""]
+    if legal_refs:
+        lines += ["## Legal Reference", ""]
         for r in legal_refs:
             if r.get("source") == "codebook-missing":
                 lines.append(
@@ -82,7 +45,77 @@ Rules:
             lines.append(f"- **Punishment:** {r.get('punishment', '—')}")
             lines.append(f"- **Bailability:** {bail} · **Cognizability:** {cog}")
             lines.append("")
-        fallback = "\n".join(lines).strip()
+    scene_cards: dict = state.get("scene_cards") or {}
+    if scene_cards and scene_cards.get("pin"):
+        from services.scene_service import build_scene_context
+
+        lines += ["## Scene Intel", ""]
+        lines.append(build_scene_context(scene_cards))
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
+def chat_node(state: SQLAgentState):
+    # Grounded answers — the codebook and/or scene workup answer the turn
+    # without a crime-database query.
+    legal_refs: list = state.get("legal_references") or []
+    legal_context: str = state.get("legal_context") or ""
+    scene_cards: dict = state.get("scene_cards") or {}
+    scene_context: str = state.get("scene_context") or ""
+
+    if legal_refs or legal_context or scene_cards or scene_context:
+        system_prompt = """You are an investigative analyst for Karnataka State Police (KSP).
+
+Answer the user's question using ONLY the grounded references supplied
+below (Legal Codebook and/or Scene Intel radius workup). For legal
+sections state: Act + section + title, plain-language meaning, punishment
+range, and bailability/cognizability, with IPC↔BNS equivalents where
+given. For scene questions state the exact nearby counts: FIRs by type,
+covering stations, repeat offenders, POIs.
+
+Rules:
+- Cite the exact reference values — never invent punishment, bailability,
+  or nearby counts.
+- If a legal reference is marked NOT in the local codebook, answer from
+  statute knowledge but explicitly flag it as needing verification via
+  IndiaCode / Indian Kanoon, with the link provided.
+- If the scene pin was enabled but no workup is supplied (no pin dropped),
+  do NOT invent nearby counts — ask the user to drop the pin on the map.
+- Keep it concise (150-250 words), valid GitHub Markdown, no follow-up
+  questions section (those are generated separately).
+- Never add file links or an "Evidence Referenced" section."""
+
+        evidence_context = state.get("evidence_context") or ""
+        evidence_block = f"\nUploaded Evidence:\n{evidence_context}\n" if evidence_context else ""
+        legal_block = f"\nLegal Codebook:\n{legal_context}\n" if legal_context else ""
+        scene_block = f"\nScene Intel:\n{scene_context}\n" if scene_context else ""
+
+        try:
+            answer = llm.generate(
+                system_prompt=system_prompt,
+                user_prompt=(
+                    f"Conversation:\n{_visible_conversation(state)}\n"
+                    f"{evidence_block}{legal_block}{scene_block}\n"
+                    "Answer the latest user question now."
+                ),
+            ).strip()
+            if not answer:
+                raise ValueError("empty grounded answer")
+            return {
+                "messages": [AIMessage(content=answer)],
+                "follow_up_questions": [],
+                "response": answer,
+            }
+        except Exception as e:
+            print("Error during grounded chat generation:", e)
+            # Fall through to the deterministic template below.
+
+        fallback = _deterministic_fallback(state)
+        if not fallback:
+            fallback = (
+                "I couldn't ground this question in the available references. "
+                "Please try again."
+            )
         return {
             "messages": [AIMessage(content=fallback)],
             "follow_up_questions": [],

@@ -62,6 +62,9 @@ async def generate_response(
     use_scene_pin: str | None = Form(None),
     use_location: str | None = Form(None),
     use_web: str | None = Form(None),
+    location_lat: str | None = Form(None),
+    location_lng: str | None = Form(None),
+    location_radius_km: str | None = Form(None),
     files: list[UploadFile] = File(default=[]),
     current_user: dict = Depends(get_current_user),
     chat_repo: Optional[ChatRepository] = Depends(get_chat_repository),
@@ -242,6 +245,13 @@ async def generate_response(
         except Exception as e:
             logger.warning(f"Failed to save user message (non-fatal): {e}")
 
+    def _to_float(raw: str | None) -> float | None:
+        try:
+            v = float(raw) if raw not in (None, "") else None
+        except (TypeError, ValueError):
+            return None
+        return v
+
     state = {
         "messages": _build_state_messages(history, user_query),
         "language": language or "en",
@@ -254,6 +264,16 @@ async def generate_response(
         "use_codebook": (use_codebook or "").lower() in ("true", "1", "yes", "on"),
         "legal_references": [],
         "legal_context": "",
+        # Location Query: dropped scene pin + fixed 10 km radius. Previously
+        # these fields were accepted but ignored — only the text hint reached
+        # the LLM, so nearby counts were improvised. Now scene_node runs real
+        # radius queries (crime mix, repeat offenders, cached OSM POIs).
+        "use_scene_pin": (use_scene_pin or use_location or "").lower() in ("true", "1", "yes", "on"),
+        "scene_lat": _to_float(location_lat),
+        "scene_lng": _to_float(location_lng),
+        "scene_radius_km": _to_float(location_radius_km) or 10.0,
+        "scene_cards": {},
+        "scene_context": "",
     }
 
     graph_error = None
@@ -290,6 +310,10 @@ async def generate_response(
                     # analysis workspace whenever they grounded the answer.
                     "legal_references": result.get("legal_references", []),
                     "legal_context": result.get("legal_context", ""),
+                    # Scene Intel workup — rendered in the analysis workspace
+                    # whenever the pin grounded the answer.
+                    "scene_cards": result.get("scene_cards", {}),
+                    "scene_context": result.get("scene_context", ""),
                 },
             )
         except Exception as e:
@@ -316,6 +340,8 @@ async def generate_response(
         "evidence_context": result.get("evidence_context", ""),
         "legal_references": result.get("legal_references", []),
         "legal_context": result.get("legal_context", ""),
+        "scene_cards": result.get("scene_cards", {}),
+        "scene_context": result.get("scene_context", ""),
         "failed_uploads": failed_uploads,
         "ocr_warnings": ocr_warnings,
     }

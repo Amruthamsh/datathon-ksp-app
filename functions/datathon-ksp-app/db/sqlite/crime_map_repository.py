@@ -1700,7 +1700,24 @@ class CrimeMapRepository:
         self._ensure_intel()
         with get_connection() as conn:
             try:
-                sql = "SELECT PoiID, DistrictID, DistrictName, POIType, POIName, Latitude as lat, Longitude as lng, RiskWeight, Source FROM DistrictPOI WHERE 1=1"
+                # Highest-risk first: when the client limit truncates a large
+                # index (Overture bulk ≈200k rows), the markers that survive
+                # are the most policing-relevant, not arbitrary row order.
+                # Coords rounded to 4dp (~11m): plenty for markers, slimmer
+                # JSON for Catalyst response limits.
+                # District round-robin: without it, LIMIT truncates in
+                # insertion order, which clusters geographically (one end of
+                # the state only). Every district gets a fair share.
+                if district:
+                    per_district = limit
+                else:
+                    per_district = max(25, limit // 31)
+                sql = ("SELECT PoiID, DistrictID, DistrictName, POIType, POIName, lat, lng, RiskWeight, Source FROM ("
+                       "SELECT PoiID, DistrictID, DistrictName, POIType, POIName,"
+                       " ROUND(Latitude,4) as lat, ROUND(Longitude,4) as lng, RiskWeight, Source,"
+                       " ROW_NUMBER() OVER (PARTITION BY DistrictName ORDER BY RiskWeight DESC, PoiID ASC) AS rn"
+                       " FROM DistrictPOI WHERE 1=1"
+                       )
                 params=[]
                 if district:
                     sql += " AND DistrictName=?"
@@ -1708,8 +1725,8 @@ class CrimeMapRepository:
                 if poi_type:
                     sql += " AND POIType=?"
                     params.append(poi_type)
-                sql += " LIMIT ?"
-                params.append(limit)
+                sql += ") WHERE rn <= ? ORDER BY RiskWeight DESC, PoiID ASC LIMIT ?"
+                params.extend([per_district, limit])
                 rows = conn.execute(sql, params).fetchall()
                 return [dict(r) for r in rows]
             except Exception:

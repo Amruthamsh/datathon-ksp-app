@@ -62,6 +62,14 @@ the codebook references already ground the answer and no crime-database
 query is needed. If the same turn ALSO asks for crime statistics, trends,
 or FIR counts, return {"intent":"sql"} so the database is queried and the
 legal references enrich that analysis.
+
+Scene rule: if the conversation contains a "[Scene Context]" block with a
+radius workup (FIR counts, repeat offenders, POIs around a dropped pin)
+and the latest user message asks about THAT area ("around here", "nearby",
+"this area", "is this area safe", "what happened near the pin"), return
+{"intent":"chat"}: the scene workup already grounds the answer. If the
+same turn ALSO asks for district-wide statistics, trends over time, or
+comparisons beyond the pin radius, return {"intent":"sql"}.
 """
 
     response = llm.generate(

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Save, Download, Copy, Check, Paperclip, BookOpen, Minus, Plus, ExternalLink } from "lucide-react";
+import { Save, Download, Copy, Check, Paperclip, BookOpen, Minus, Plus, ExternalLink, Crosshair, Users, MapPin } from "lucide-react";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx";
@@ -370,6 +370,255 @@ function LegalReferenceCards({ references = [] }) {
   );
 }
 
+// ── Scene Intel Cards ──────────────────────────────────────────────────────
+
+function SceneIntelCards({ cards = {} }) {
+  const { t } = useTranslation();
+  const pin = cards.pin || {};
+  const crime = cards.crime || {};
+  const MapLink = ({ url, label }) =>
+    url ? (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        title={t("analysis.viewOnMap")}
+        className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-blue-700 transition hover:bg-blue-50"
+      >
+        <MapPin size={10} />
+        {label || t("analysis.viewOnMap")}
+      </a>
+    ) : null;
+  const offenders = Array.isArray(cards.repeat_offenders)
+    ? cards.repeat_offenders
+    : [];
+  const pois = cards.pois || {};
+  const poiTypes = Array.isArray(pois.by_type) ? pois.by_type : [];
+  const poiItems = Array.isArray(pois.items) ? pois.items : [];
+  const byType = Array.isArray(crime.by_type) ? crime.by_type : [];
+  const stations = Array.isArray(crime.stations) ? crime.stations : [];
+  const recent = Array.isArray(crime.recent) ? crime.recent : [];
+  const maxType = Math.max(1, ...byType.map((x) => x.count || 0));
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200/70 bg-emerald-50/60 px-4 py-2.5 text-xs">
+        <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-900">
+          <MapPin size={13} />
+          {pin.lat?.toFixed(4)}, {pin.lng?.toFixed(4)}
+        </span>
+        <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+          {t("analysis.radiusKm", { radius: pin.radius_km ?? 10 })}
+        </span>
+        <MapLink url={pin.maps_url} />
+        <span className="ml-auto text-lg font-bold leading-none text-emerald-900">
+          {crime.total ?? 0}
+          <span className="ml-1 text-[10px] font-medium uppercase tracking-wide text-emerald-700">
+            {t("analysis.firsInRadius")}
+          </span>
+        </span>
+      </div>
+
+      {byType.length > 0 && (
+        <div className="overflow-hidden rounded-lg border border-slate-200">
+          <p className="border-b border-slate-100 bg-slate-50/60 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            {t("analysis.crimeMix")}
+          </p>
+          <ul className="divide-y divide-slate-100">
+            {byType.slice(0, 8).map((x) => (
+              <li key={x.type} className="px-4 py-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-slate-700">{x.type}</span>
+                  <span className="font-bold text-slate-900">{x.count}</span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-emerald-500"
+                    style={{ width: `${Math.round((100 * (x.count || 0)) / maxType)}%` }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {stations.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            {t("analysis.coveringStations")}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {stations.map((s) => (
+              <span
+                key={s.station}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700"
+              >
+                {s.station}
+                <span className="font-bold text-slate-900">{s.count}</span>
+                {s.maps_url && (
+                  <a
+                    href={s.maps_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={t("analysis.viewOnMap")}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    <MapPin size={11} />
+                  </a>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-hidden rounded-lg border border-slate-200">
+        <p className="flex items-center gap-1.5 border-b border-slate-100 bg-slate-50/60 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          <Users size={12} />
+          {t("analysis.repeatOffenders")}
+          <span className="ml-auto rounded-full bg-slate-900 px-1.5 py-px text-[10px] font-bold text-white">
+            {offenders.length}
+          </span>
+        </p>
+        {offenders.length > 0 ? (
+          <ul className="divide-y divide-slate-100">
+            {offenders.slice(0, 6).map((o) => (
+              <li key={o.name} className="flex items-center gap-2 px-4 py-2 text-xs">
+                <span className="min-w-0 flex-1 truncate font-medium text-slate-800">
+                  {o.name}
+                </span>
+                <span className="shrink-0 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-bold text-red-700">
+                  {t("analysis.firCount", {
+                    near: o.fir_in_radius ?? 0,
+                    total: o.fir_total ?? 0,
+                  })}
+                </span>
+                {o.last_seen && (
+                  <span className="hidden shrink-0 text-[10px] text-slate-400 sm:inline">
+                    {o.last_seen}
+                  </span>
+                )}
+                {o.maps_url && (
+                  <a
+                    href={o.maps_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={t("analysis.viewActiveArea")}
+                    className="shrink-0 text-blue-600 hover:text-blue-800"
+                  >
+                    <MapPin size={12} />
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="px-4 py-3 text-xs text-slate-500">
+            {t("analysis.noOffendersInRadius")}
+          </p>
+        )}
+      </div>
+
+      <div className="overflow-hidden rounded-lg border border-slate-200">
+        <p className="border-b border-slate-100 bg-slate-50/60 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          {t("analysis.nearbyPois")}
+          {pois.total != null && (
+            <span className="ml-1 font-normal normal-case">
+              ({t("analysis.poiTotal", { count: pois.total })})
+            </span>
+          )}
+        </p>
+        {pois.unavailable ? (
+          <p className="px-4 py-3 text-xs text-slate-500">
+            {t("analysis.poiUnavailable")}
+          </p>
+        ) : poiTypes.length > 0 ? (
+          <div className="space-y-2 px-4 py-3">
+            <div className="flex flex-wrap gap-1.5">
+              {poiTypes.map((p) => (
+                <span
+                  key={p.type}
+                  className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-900"
+                >
+                  {String(p.type).replace(/_/g, " ")}
+                  <span className="font-bold">{p.count}</span>
+                </span>
+              ))}
+            </div>
+            {poiItems.length > 0 && (
+              <ul className="divide-y divide-slate-100 rounded-md border border-slate-100">
+                {poiItems.slice(0, 8).map((p, i) => (
+                  <li key={`${p.name}-${i}`} className="flex items-center gap-2 px-3 py-1.5 text-xs">
+                    <span className="min-w-0 flex-1 truncate text-slate-700">
+                      {p.name || String(p.type).replace(/_/g, " ")}
+                    </span>
+                    <span className="shrink-0 text-[10px] uppercase tracking-wide text-slate-400">
+                      {String(p.type).replace(/_/g, " ")}
+                    </span>
+                    {p.risk >= 4 && (
+                      <span className="shrink-0 rounded-full bg-red-100 px-1.5 py-px text-[10px] font-bold text-red-700">
+                        {t("analysis.highRisk")}
+                      </span>
+                    )}
+                    {p.maps_url && (
+                      <a
+                        href={p.maps_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={t("analysis.viewOnMap")}
+                        className="shrink-0 text-blue-600 hover:text-blue-800"
+                      >
+                        <MapPin size={12} />
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <p className="px-4 py-3 text-xs text-slate-500">
+            {t("analysis.noPoisInRadius")}
+          </p>
+        )}
+      </div>
+
+      {recent.length > 0 && (
+        <div className="overflow-hidden rounded-lg border border-slate-200">
+          <p className="border-b border-slate-100 bg-slate-50/60 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            {t("analysis.recentCases")}
+          </p>
+          <ul className="divide-y divide-slate-100">
+            {recent.map((c, i) => (
+              <li key={`${c.crime_no}-${i}`} className="flex items-center gap-2 px-4 py-1.5 text-xs">
+                <span className="shrink-0 font-mono font-semibold text-slate-800">
+                  {c.crime_no}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-slate-600">
+                  {c.type} · {c.station}
+                </span>
+                <span className="shrink-0 text-[10px] text-slate-400">{c.date}</span>
+                {c.maps_url && (
+                  <a
+                    href={c.maps_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={t("analysis.viewOnMap")}
+                    className="shrink-0 text-blue-600 hover:text-blue-800"
+                  >
+                    <MapPin size={12} />
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function AnalysisPanel({ analysis }) {
@@ -383,6 +632,11 @@ export default function AnalysisPanel({ analysis }) {
   const legalReferences = Array.isArray(analysis?.legal_references)
     ? analysis.legal_references
     : [];
+  const sceneCards =
+    analysis?.scene_cards && typeof analysis.scene_cards === "object"
+      ? analysis.scene_cards
+      : {};
+  const hasScene = Boolean(sceneCards.pin);
   const rowCount = rows.length;
 
   const [savingIdx, setSavingIdx] = useState(null);
@@ -499,7 +753,8 @@ export default function AnalysisPanel({ analysis }) {
     (analysis.sql_result?.length === 0 &&
       analysis.charts?.length === 0 &&
       evidenceFiles.length === 0 &&
-      legalReferences.length === 0)
+      legalReferences.length === 0 &&
+      !hasScene)
   ) {
     return (
       <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white/80 px-8 text-center text-slate-500 shadow-sm">
@@ -528,13 +783,15 @@ export default function AnalysisPanel({ analysis }) {
           <div className="flex shrink-0 items-center gap-3">
             <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              {legalReferences.length > 0 && !hasCharts && rowCount === 0
-                ? t("analysis.sectionsCount", {
-                    count: legalReferences.length,
-                  })
-                : hasCharts
-                  ? `${charts.length} chart${charts.length > 1 ? "s" : ""}`
-                  : t("analysis.table")}
+              {hasScene && !hasCharts && rowCount === 0 && legalReferences.length === 0
+                ? t("analysis.sceneIntel")
+                : legalReferences.length > 0 && !hasCharts && rowCount === 0
+                  ? t("analysis.sectionsCount", {
+                      count: legalReferences.length,
+                    })
+                  : hasCharts
+                    ? `${charts.length} chart${charts.length > 1 ? "s" : ""}`
+                    : t("analysis.table")}
             </div>
             <div className="relative group">
               <button className="flex h-9 items-center gap-2 rounded-md bg-blue-900/90 px-3 text-sm font-medium text-white hover:bg-blue-900 cursor-pointer">
@@ -596,6 +853,18 @@ export default function AnalysisPanel({ analysis }) {
                 ev={selectedEvidence}
                 onOpenImage={() => setLightboxEv(selectedEvidence)}
               />
+            </CollapsibleSection>
+          )}
+          {/* Scene Intel — radius workup around the dropped pin */}
+          {hasScene && (
+            <CollapsibleSection
+              icon={<Crosshair size={14} className="shrink-0 text-emerald-600" />}
+              title={t("analysis.sceneIntel")}
+              subtitle={t("analysis.radiusKm", {
+                radius: sceneCards.pin?.radius_km ?? 10,
+              })}
+            >
+              <SceneIntelCards cards={sceneCards} />
             </CollapsibleSection>
           )}
           {/* Legal Reference — codebook sections that grounded the answer */}

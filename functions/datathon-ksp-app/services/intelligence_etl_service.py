@@ -14,6 +14,7 @@ from typing import List, Dict
 
 import requests
 import urllib.request
+import urllib.error
 import urllib.parse
 
 from db.sqlite.sqlite import SQLITE_DATABASE_PATH
@@ -47,66 +48,134 @@ _DISTRICT_IDS = {
 
 POI_DEFS = [
     # (osm query fragment, poi_type, risk_weight)
-    ('node["amenity"="atm"]', "ATM", 3),
-    ('node["amenity"="bank"]', "Bank", 2),
-    ('node["amenity"="bar"]', "Liquor_Store", 5),
-    ('node["shop"="alcohol"]', "Liquor_Store", 5),
-    ('node["amenity"="pub"]', "Liquor_Store", 5),
-    ('node["highway"="bus_stop"]', "Bus_Stop", 2),
-    ('node["amenity"="bus_station"]', "Bus_Stop", 2),
-    ('node["railway"="station"]', "Railway_Station", 2),
+    # nwr = nodes + ways + relations: banks/stations are often mapped as
+    # building outlines (ways), which a node-only query misses entirely.
+    ('nwr["amenity"="atm"]', "ATM", 3),
+    ('nwr["amenity"="bank"]', "Bank", 2),
+    ('nwr["amenity"="bar"]', "Liquor_Store", 5),
+    ('nwr["shop"="alcohol"]', "Liquor_Store", 5),
+    ('nwr["amenity"="pub"]', "Liquor_Store", 5),
+    ('nwr["highway"="bus_stop"]', "Bus_Stop", 2),
+    ('nwr["amenity"="bus_station"]', "Bus_Stop", 2),
+    ('nwr["railway"="station"]', "Railway_Station", 2),
 ]
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+# Mirror landscape (2026): main overpass-api.de is chronically overloaded;
+# z/lz4 are its healthier frontends; private.coffee (ex-kumi) is unlimited;
+# osm.jp is Japan-based (good latency from India); mail.ru is a strong
+# no-limits VK mirror; nchc is dead (DNS fails globally) and stays out.
 OVERPASS_URLS = [
+    "https://z.overpass-api.de/api/interpreter",
     "https://overpass-api.de/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
-    "https://overpass.nchc.org.tw/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ]
 
-def _overpass_query(district: str, lat: float, lng: float, radius_m: int = 35000) -> List[Dict]:
-    """Fetch POIs around district centroid via bbox (avoids around syntax 406 issues). Use bbox delta ~0.32deg ~35km"""
+# Operator override: point at any mirror (or self-hosted instance) without
+# a code change, e.g. OVERPASS_PRIMARY_URL=https://overpass.osm.jp/api/interpreter
+_OVERPASS_PRIMARY = os.getenv("OVERPASS_PRIMARY_URL", "").strip()
+
+
+def _endpoint_list():
+    if _OVERPASS_PRIMARY:
+        return [_OVERPASS_PRIMARY] + [u for u in OVERPASS_URLS if u != _OVERPASS_PRIMARY]
+    return list(OVERPASS_URLS)
+
+
+def probe_overpass(timeout_s: int = 25) -> Dict:
+    """30-second diagnostic: tiny query against every mirror.
+
+    Run this first when refreshes fail — it shows whether the problem is
+    your network path or Overpass itself:
+        python3 -c "from services.intelligence_etl_service import probe_overpass; import json; print(json.dumps(probe_overpass(), indent=1))"
+    """
+    q = ('[out:json][timeout:15];(nwr["amenity"="bank"]'
+         '(12.95,77.58,12.99,77.62););out center 3;')
+    results = {}
+    for url in _endpoint_list():
+        t0 = time.time()
+        try:
+            req = urllib.request.Request(
+                url, data=q.encode("utf-8"),
+                headers={"Content-Type": "text/plain", "User-Agent": "KSP-Intel-ETL/1.0"},
+            )
+            with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+                n = len(json.loads(resp.read().decode("utf-8")).get("elements", []))
+            results[url] = {"ok": True, "rows": n, "secs": round(time.time() - t0, 1)}
+        except Exception as e:
+            results[url] = {"ok": False, "error": f"{type(e).__name__}: {str(e)[:100]}",
+                            "secs": round(time.time() - t0, 1)}
+        time.sleep(0.3)
+    return results
+
+def _overpass_query(district: str, lat: float, lng: float, radius_m: int = 35000) -> tuple:
+    """Fetch POIs around district centroid via bbox (avoids around syntax 406 issues). Use bbox delta ~0.32deg ~35km.
+
+    Returns (elements, mirrors_used) so callers can log which mirror
+    actually served each district.
+    """
     delta = radius_m / 111000.0
     min_lat, max_lat = lat - delta, lat + delta
     min_lng, max_lng = lng - delta, lng + delta
-    # Build queries split to avoid bus_stop crowding out liquor/ATM (bus_stops are 70% of nodes)
-    high_clauses = []
-    bus_clauses = []
-    for frag, poi_type, _ in POI_DEFS:
-        target = bus_clauses if poi_type == "Bus_Stop" else high_clauses
-        target.append(f'  {frag}({min_lat:.4f},{min_lng:.4f},{max_lat:.4f},{max_lng:.4f});')
-    def run(clauses, limit):
-        if not clauses:
-            return []
-        q = f'[out:json][timeout:40];\n(\n' + "\n".join(clauses) + f'\n);\nout body {limit};'
+    mirrors_used: list = []
+    # One light query per POI type instead of two big unions: small queries
+    # time out far less, and a failure loses one type — not the district.
+    def run(frag, limit, area):
+        q = (f'[out:json][timeout:60];\n(\n'
+             f'  {frag}({area[0]:.4f},{area[1]:.4f},{area[2]:.4f},{area[3]:.4f});\n'
+             f');\nout center {limit};')
         last_err = None
-        for url in OVERPASS_URLS:
+        for url in _endpoint_list():
             try:
                 req = urllib.request.Request(url, data=q.encode("utf-8"), headers={"Content-Type":"text/plain", "User-Agent":"KSP-Intel-ETL/1.0"})
-                with urllib.request.urlopen(req, timeout=45) as resp:
+                with urllib.request.urlopen(req, timeout=100) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
+                    if url not in mirrors_used:
+                        mirrors_used.append(url)
                     return data.get("elements", [])
+            except urllib.error.HTTPError as e:
+                last_err = e
+                # Wiki guidance: 429/504 → back off. 429 (throttled) needs
+                # a long pause; hammering the next mirror just spreads the ban.
+                wait = 60 if e.code == 429 else 20 if e.code == 504 else 2
+                logger.warning("Overpass %s HTTP %s for %s, waiting %ss", url, e.code, district, wait)
+                time.sleep(wait)
+                continue
             except Exception as e:
                 last_err = e
                 logger.warning("Overpass %s failed for %s: %s", url, district, e)
-                time.sleep(0.5)
+                time.sleep(2)
                 continue
-        logger.warning("All Overpass endpoints failed for %s: %s", district, last_err)
+        logger.warning("All Overpass endpoints failed for %s (%s): %s", district, frag, last_err)
         return []
-    # Fetch groups independently so one group's failure doesn't wipe the other.
-    # Fall back to smaller bbox/limit if the large query returns nothing (timeout protection).
-    high = run(high_clauses, 1500)
-    time.sleep(0.4)  # be nice to Overpass
-    bus = run(bus_clauses, 1500)
-    combined = (high or []) + (bus or [])
+    full = (min_lat, min_lng, max_lat, max_lng)
+    per_type_ok: dict = {}
+    combined = []
+    for frag, poi_type, _ in POI_DEFS:
+        els = run(frag, 500, full) or []
+        per_type_ok[frag] = bool(els)
+        combined += els
+        time.sleep(1.5)  # be nice to Overpass
     if not combined:
-        logger.info("Overpass empty for %s at %dm, retrying at 20km/400", district, radius_m)
-        time.sleep(0.5)
-        high = run(high_clauses, 400) if not high else high
-        time.sleep(0.4)
-        bus = run(bus_clauses, 400) if not bus else bus
-        combined = (high or []) + (bus or [])
-    return combined
+        # Full-bbox timeout: retry failed types as 2x2 tiles.
+        logger.info("Overpass empty for %s at %dm, retrying tiled", district, radius_m)
+        mid_lat, mid_lng = (min_lat + max_lat) / 2, (min_lng + max_lng) / 2
+        tiles = [
+            (min_lat, min_lng, mid_lat, mid_lng),
+            (min_lat, mid_lng, mid_lat, max_lng),
+            (mid_lat, min_lng, max_lat, mid_lng),
+            (mid_lat, mid_lng, max_lat, max_lng),
+        ]
+        combined = []
+        for frag, poi_type, _ in POI_DEFS:
+            if per_type_ok.get(frag):
+                continue  # already have this type; don't re-hammer
+            for t in tiles:
+                combined += run(frag, 150, t) or []
+                time.sleep(1.0)
+    return combined, mirrors_used
 
 def _classify_osm_element(el: Dict) -> tuple:
     tags = el.get("tags", {})
@@ -122,7 +191,7 @@ def _classify_osm_element(el: Dict) -> tuple:
         return "Railway_Station", 2
     return "Other", 1
 
-def fetch_live_pois(limit_districts: List[str] = None, radius_m: int = 35000, delay_s: float = 1.2) -> Dict:
+def fetch_live_pois(limit_districts: List[str] = None, radius_m: int = 35000, delay_s: float = 3.0) -> Dict:
     ensure_intelligence_tables()
     districts = limit_districts or list(_KARNATAKA_CENTERS.keys())
     per_district = {}
@@ -131,18 +200,25 @@ def fetch_live_pois(limit_districts: List[str] = None, radius_m: int = 35000, de
     for d in districts:
         lat, lng = _KARNATAKA_CENTERS[d]
         did = _DISTRICT_IDS.get(d)
-        els = _overpass_query(d, lat, lng, radius_m)
-        # deduplicate by osm id
+        els, mirrors = _overpass_query(d, lat, lng, radius_m)
+        via = "+".join(u.split("//")[1].split("/")[0] for u in mirrors) or "none"
+        # deduplicate by element (a node and a way can share a numeric id —
+        # prefix with the element type so they never collide).
         seen=set()
         rows=[]
         for el in els:
-            oid = el.get("id")
-            if oid in seen:
+            key = f"{el.get('type', 'node')}/{el.get('id')}"
+            if key in seen:
                 continue
-            seen.add(oid)
+            seen.add(key)
             poi_type, rw = _classify_osm_element(el)
-            name = el.get("tags", {}).get("name") or el.get("tags", {}).get("brand") or f"{poi_type} {oid}"
-            rows.append((did, d, poi_type, name, el.get("lat"), el.get("lon"), rw, str(oid)))
+            name = el.get("tags", {}).get("name") or el.get("tags", {}).get("brand") or f"{poi_type} {el.get('id')}"
+            center = el.get("center") or {}
+            plat = el.get("lat", center.get("lat"))
+            plon = el.get("lon", center.get("lon"))
+            if plat is None or plon is None:
+                continue
+            rows.append((did, d, poi_type, name, plat, plon, rw, key))
         if rows:
             con = sqlite3.connect(SQLITE_DATABASE_PATH)
             try:
@@ -154,7 +230,7 @@ def fetch_live_pois(limit_districts: List[str] = None, radius_m: int = 35000, de
             finally:
                 con.close()
             per_district[d]=len(rows)
-            logger.info("POI %s: %d", d, len(rows))
+            logger.info("POI %s: %d via %s", d, len(rows), via)
         else:
             # Keep old rows on empty/failed fetch; record existing count
             try:
@@ -168,7 +244,7 @@ def fetch_live_pois(limit_districts: List[str] = None, radius_m: int = 35000, de
                     con.close()
                 except Exception:
                     pass
-            logger.warning("POI %s: empty fetch, kept %s existing", d, per_district[d])
+            logger.warning("POI %s: empty fetch via %s, kept %s existing", d, via, per_district[d])
         time.sleep(delay_s)
     # Global total across all districts (not just this batch) so quick 8-district
     # refreshes never shrink the header count.
