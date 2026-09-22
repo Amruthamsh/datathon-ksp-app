@@ -25,7 +25,6 @@ import {
   Beer,
   CloudRain,
   Database,
-  RefreshCw,
   Eye,
   EyeOff,
   Layers,
@@ -202,7 +201,6 @@ export default function CrimeIntelligenceMap() {
   const [showSocioOverlay, setShowSocioOverlay] = useState(false);
   const [enhancedRisk, setEnhancedRisk] = useState([]);
   const [intelligenceStatus, setIntelligenceStatus] = useState(null);
-  const [refreshingIntel, setRefreshingIntel] = useState(false);
   const [showLayerPanel, setShowLayerPanel] = useState(true);
   const [showCrimeTypesPanel, setShowCrimeTypesPanel] = useState(true);
   const [rightTab, setRightTab] = useState("details");
@@ -345,21 +343,6 @@ export default function CrimeIntelligenceMap() {
       .then((r) => setIntelligenceStatus(r.data))
       .catch(() => {});
   }, [token]);
-
-  const handleRefreshIntel = useCallback(async () => {
-    if (!token || refreshingIntel) return;
-    setRefreshingIntel(true);
-    try {
-      const r = await crimeMapApi.refreshIntelligence(token);
-      if (r.data?.status) setIntelligenceStatus(r.data.status);
-      // reload enhanced risk after refresh
-      const er = await crimeMapApi.getDistrictRiskEnhanced(token);
-      setEnhancedRisk(er.data || []);
-    } catch (e) {
-      console.error("intel refresh failed", e);
-    }
-    setRefreshingIntel(false);
-  }, [token, refreshingIntel]);
 
   const headOptions = useMemo(() => {
     const seen = {};
@@ -607,17 +590,6 @@ export default function CrimeIntelligenceMap() {
                   </span>
                 )}
               </div>
-              <button
-                onClick={handleRefreshIntel}
-                disabled={refreshingIntel}
-                className="flex items-center justify-center h-7 w-7 rounded-full border border-[#E2E8F0] bg-white text-[#334155] hover:bg-[#F8FAFC] hover:border-[#CBD5E1] hover:text-[#17233C] disabled:opacity-50 transition-colors shrink-0 cursor-pointer"
-                title={t("crimeMap.actions.refreshLiveData")}
-                aria-label={t("crimeMap.actions.refreshLiveData")}
-              >
-                <RefreshCw
-                  className={`h-3.5 w-3.5 ${refreshingIntel ? "animate-spin" : ""}`}
-                />
-              </button>
             </div>
           </div>
 
