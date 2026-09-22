@@ -198,7 +198,8 @@ export default function CrimeIntelligenceMap() {
   const [poiFilters, setPoiFilters] = useState(() =>
     Object.fromEntries(POI_TYPE_IDS.map((id) => [id, true])),
   );
-  const [showSocioOverlay, setShowSocioOverlay] = useState(false);
+  // Socio-economic context is folded into the District Risk view (single
+  // district choropleth) — no separate tint toggle.
   const [enhancedRisk, setEnhancedRisk] = useState([]);
   const [intelligenceStatus, setIntelligenceStatus] = useState(null);
   const [showLayerPanel, setShowLayerPanel] = useState(true);
@@ -407,7 +408,6 @@ export default function CrimeIntelligenceMap() {
       dateTo,
       activeSubTypes,
       poiFilters,
-      showSocioOverlay,
       showNetworks,
       crimesCount: crimesData?.length ?? 0,
       filteredCount: filteredCrimesData?.length ?? 0,
@@ -424,7 +424,6 @@ export default function CrimeIntelligenceMap() {
       dateTo,
       activeSubTypes,
       poiFilters,
-      showSocioOverlay,
       showNetworks,
       crimesData,
       filteredCrimesData,
@@ -612,7 +611,6 @@ export default function CrimeIntelligenceMap() {
                 dateTo={dateTo}
                 poiFilters={poiFilters}
                 enhancedRisk={enhancedRisk}
-                showSocioOverlay={showSocioOverlay}
                 showCoverage={showCoverage}
                 coverageRings={coverageRings}
                 onCoverageStats={setCoverageStats}
@@ -660,8 +658,11 @@ export default function CrimeIntelligenceMap() {
                   onTogglePoi={(k) =>
                     setPoiFilters((p) => ({ ...p, [k]: !p[k] }))
                   }
-                  showSocioOverlay={showSocioOverlay}
-                  onToggleSocio={() => setShowSocioOverlay((v) => !v)}
+                  onSetAllPoi={(v) =>
+                    setPoiFilters(
+                      Object.fromEntries(POI_TYPE_IDS.map((id) => [id, v])),
+                    )
+                  }
                   intelligenceStatus={intelligenceStatus}
                   onHide={() => setShowLayerPanel(false)}
                   showCoverage={showCoverage}
@@ -685,7 +686,7 @@ export default function CrimeIntelligenceMap() {
                 </button>
               )}
 
-              {showSocioOverlay && (
+              {viewMode === "Administrative" && (
                 <div
                   className="absolute bottom-12 left-4 bg-white/95 backdrop-blur rounded-[8px] border border-[#E2E8F0] px-3 py-2 z-20 flex items-center gap-3"
                   style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.08)" }}
@@ -776,8 +777,7 @@ function LayerSwitcher({
   onToggleNetworks,
   poiFilters,
   onTogglePoi,
-  showSocioOverlay,
-  onToggleSocio,
+  onSetAllPoi,
   intelligenceStatus,
   onHide,
   showCoverage,
@@ -816,6 +816,7 @@ function LayerSwitcher({
   });
   const intelReady =
     intelligenceStatus?.poi_total && Number(intelligenceStatus.poi_total) > 0;
+  const activePoiCount = poiTypes.filter((p) => poiFilters?.[p.id]).length;
 
   return (
     <div
@@ -902,6 +903,30 @@ function LayerSwitcher({
             />
           )}
         </span>
+        {onSetAllPoi && (
+          <div className="flex items-center gap-1 px-2.5 pb-1">
+            <span className="text-[9px] font-semibold text-[#94A3B8] tabular-nums">
+              {activePoiCount}/{poiTypes.length}
+            </span>
+            <span className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => onSetAllPoi(true)}
+                disabled={activePoiCount === poiTypes.length}
+                className="text-[10px] font-bold text-[#334155] hover:text-[#17233C] hover:underline disabled:opacity-30 disabled:no-underline disabled:cursor-default cursor-pointer"
+              >
+                {t("crimeMap.overlays.selectAll", { defaultValue: "All" })}
+              </button>
+              <span className="text-[10px] text-[#CBD5E1]">·</span>
+              <button
+                onClick={() => onSetAllPoi(false)}
+                disabled={activePoiCount === 0}
+                className="text-[10px] font-bold text-[#334155] hover:text-[#17233C] hover:underline disabled:opacity-30 disabled:no-underline disabled:cursor-default cursor-pointer"
+              >
+                {t("crimeMap.overlays.clearAll", { defaultValue: "None" })}
+              </button>
+            </span>
+          </div>
+        )}
         {poiTypes.map((p) => (
           <label
             key={p.id}
@@ -925,18 +950,6 @@ function LayerSwitcher({
             </span>
           </label>
         ))}
-        <label className="flex items-center gap-2 px-2.5 py-1 rounded-[6px] hover:bg-[#F8FAFC] cursor-pointer mt-1">
-          <input
-            type="checkbox"
-            checked={!!showSocioOverlay}
-            onChange={onToggleSocio}
-            className="rounded border-slate-300 text-[#17233C] w-3 h-3 accent-[#17233C] cursor-pointer"
-          />
-          <CloudRain className="h-3 w-3 text-[#334155]" />
-          <span className="text-[12px] font-medium text-[#334155]">
-            {t("crimeMap.overlays.socioTint")}
-          </span>
-        </label>
       </div>
       <div className="h-px bg-[#E2E8F0] my-1" />
       <div>
@@ -997,8 +1010,7 @@ LayerSwitcher.propTypes = {
   onToggleNetworks: PropTypes.func.isRequired,
   poiFilters: PropTypes.object,
   onTogglePoi: PropTypes.func,
-  showSocioOverlay: PropTypes.bool,
-  onToggleSocio: PropTypes.func,
+  onSetAllPoi: PropTypes.func,
   intelligenceStatus: PropTypes.object,
   onHide: PropTypes.func,
   showCoverage: PropTypes.bool,
@@ -1311,7 +1323,6 @@ function MapView({
   dateTo,
   poiFilters,
   enhancedRisk,
-  showSocioOverlay,
   showCoverage,
   coverageRings,
   onCoverageStats,
@@ -1791,55 +1802,8 @@ function MapView({
       }
     }
 
-    // Socio-economic tint overlay — visible in ANY view when toggled (heat + cluster get choropleth underlay)
-    if (showSocioOverlay && districtGeoJson) {
-      activeLayers.unshift(
-        new GeoJsonLayer({
-          id: "socio-choropleth",
-          data: districtGeoJson,
-          pickable: viewMode !== "Administrative",
-          stroked: true,
-          filled: true,
-          lineWidthMinPixels: viewMode === "Administrative" ? 0 : 1,
-          getFillColor: (d) => {
-            const u = d.properties.unemployment_rate ?? 7;
-            // unemployment choropleth: 5% navy → 10% red, plus literacy wash (consistent with top-cards palette)
-            const lit = d.properties.literacy_rate ?? 75;
-            // interpolate unemployment 5-10% to color ramp
-            const t = Math.max(0, Math.min(1, (u - 5) / 5));
-            // low unemp navy, mid amber, high red — highly visible
-            if (t < 0.33)
-              return [30, 58, 138, viewMode === "Administrative" ? 0 : 45]; // navy (~5-6.6%)
-            if (t < 0.66)
-              return [245, 158, 11, viewMode === "Administrative" ? 0 : 55]; // amber (~6.6-8.3%)
-            // high unemployment: red with literacy alpha boost (lower literacy = more opaque)
-            const alpha =
-              viewMode === "Administrative"
-                ? 0
-                : Math.round(55 + (75 - lit) * 1.2);
-            return [220, 38, 38, Math.max(50, Math.min(95, alpha))];
-          },
-          getLineColor: [220, 38, 38, 50],
-          getLineWidth: 1,
-          // show socio tooltip even in Administrative (district click still works via next layer)
-          onClick:
-            viewMode !== "Administrative"
-              ? (info) => {
-                  if (info.object) {
-                    const p = info.object.properties;
-                    onSelectSpot({
-                      id: p.name,
-                      name: p.name,
-                      type: "District",
-                      ...p,
-                    });
-                  }
-                }
-              : undefined,
-        }),
-      );
-    }
-
+    // District Risk view — single district choropleth combining crime risk
+    // with unemployment context (previously a separate "Socio-Economic tint").
     if (viewMode === "Administrative" && districtGeoJson) {
       activeLayers.push(
         new GeoJsonLayer({
@@ -1848,7 +1812,7 @@ function MapView({
           pickable: true,
           stroked: true,
           filled: true,
-          lineWidthMinPixels: showSocioOverlay ? 2.5 : 2,
+          lineWidthMinPixels: 2.5,
           getFillColor: (d) => {
             const score = d.properties.risk_score || 0;
             const u = d.properties.unemployment_rate ?? 7;
@@ -1857,8 +1821,7 @@ function MapView({
             else if (score >= 50) base = [245, 158, 11, 50];
             else if (score >= 25) base = [59, 130, 246, 40];
             else base = [34, 197, 94, 30];
-            if (!showSocioOverlay) return base;
-            // Socio tint: blend red haze proportional to unemployment premium over 7% (consistent palette)
+            // Unemployment premium over 7% blends a red haze into the risk fill
             const premium = Math.max(0, u - 7); // 0-~4
             const redTint = [
               220,
@@ -1876,13 +1839,12 @@ function MapView({
                 Math.round(base[3] + redTint[3] * 0.55),
               ];
             }
-            // also show hatched border for high-unemp districts
             return base;
           },
           getLineColor: (d) => {
             const u = d.properties.unemployment_rate ?? 7;
-            if (showSocioOverlay && u >= 9) return [185, 28, 28, 255]; // red border for critical unemp
-            if (showSocioOverlay && u >= 8) return [180, 83, 9, 255];
+            if (u >= 9) return [185, 28, 28, 255]; // red border for critical unemp
+            if (u >= 8) return [180, 83, 9, 255];
             const score = d.properties.risk_score || 0;
             if (score >= 75) return [185, 28, 28, 255];
             if (score >= 50) return [180, 83, 9, 255];
@@ -1890,11 +1852,9 @@ function MapView({
             return [21, 128, 61, 255];
           },
           getLineWidth: (d) => {
-            if (showSocioOverlay) {
-              const u = d.properties.unemployment_rate ?? 7;
-              if (u >= 9) return 3.5;
-              if (u >= 8) return 2.8;
-            }
+            const u = d.properties.unemployment_rate ?? 7;
+            if (u >= 9) return 3.5;
+            if (u >= 8) return 2.8;
             return 2;
           },
           onClick: (info) => {
@@ -2211,7 +2171,6 @@ function MapView({
     onClusterClick,
     subTypeColorMap,
     poiData,
-    showSocioOverlay,
     karnatakaGeo,
     karnatakaMask,
     pick,
@@ -2452,7 +2411,6 @@ MapView.propTypes = {
   dateTo: PropTypes.string,
   poiFilters: PropTypes.object,
   enhancedRisk: PropTypes.array,
-  showSocioOverlay: PropTypes.bool,
   showCoverage: PropTypes.bool,
   coverageRings: PropTypes.object,
   onCoverageStats: PropTypes.func,

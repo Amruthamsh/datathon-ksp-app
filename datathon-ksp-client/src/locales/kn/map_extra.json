@@ -39,7 +39,9 @@
       "schools": "ಶಾಲೆಗಳು",
       "fuelStations": "ಇಂಧನ ನಿಲ್ದಾಣಗಳು",
       "worship": "ಪೂಜಾ ಸ್ಥಳಗಳು",
-      "socioTint": "ಸಾಮಾಜಿಕ-ಆರ್ಥಿಕ ಬಣ್ಣ"
+      "socioTint": "ಸಾಮಾಜಿಕ-ಆರ್ಥಿಕ ಬಣ್ಣ",
+      "selectAll": "ಎಲ್ಲಾ",
+      "clearAll": "ಯಾವುದೂ ಇಲ್ಲ"
     },
     "socioLegend": {
       "unemployment": "ನಿರುದ್ಯೋಗ",

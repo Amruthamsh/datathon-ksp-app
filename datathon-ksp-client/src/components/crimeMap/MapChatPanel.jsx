@@ -137,7 +137,8 @@ function buildMapContextBlock(mapContext) {
         .map(([k]) => k.replace("_", " "))
     : [];
   if (poiActive.length) parts.push(`POI overlays active: ${poiActive.join(", ")}`);
-  if (mapContext.showSocioOverlay) parts.push(`Socio-economic tint: ON`);
+  if (mapContext.viewMode === "Administrative")
+    parts.push(`District Risk view: crime risk + unemployment context combined`);
   if (mapContext.showNetworks) parts.push(`Criminal network overlay: ON`);
   if (mapContext.crimesCount != null) parts.push(`Crimes visible on map: ${mapContext.crimesCount}`);
   if (mapContext.filteredCount != null && mapContext.filteredCount !== mapContext.crimesCount)

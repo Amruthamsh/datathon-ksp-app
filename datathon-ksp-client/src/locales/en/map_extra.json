@@ -39,7 +39,9 @@
       "schools": "Schools",
       "fuelStations": "Fuel Stations",
       "worship": "Worship Places",
-      "socioTint": "Socio-Economic tint"
+      "socioTint": "Socio-Economic tint",
+      "selectAll": "All",
+      "clearAll": "None"
     },
     "socioLegend": {
       "unemployment": "Unemployment",
