@@ -256,6 +256,12 @@ function getRiskBadge(firs, stations, districts, t) {
   };
 }
 
+// Composite risk score — mirrors getRiskBadge weighting so tab rankings
+// can be ordered by severity, not just volume or connectivity.
+function riskScore(b) {
+  return (b.fir_count || 0) * 1.2 + (b.stations_covered || 0) * 1.5 + (b.districts_covered || 0) * 1.8;
+}
+
 // ── Main
 export default function CriminalNetworks() {
   const { t } = useTranslation();
@@ -368,7 +374,10 @@ export default function CriminalNetworks() {
       const [sRes, cRes, bRes] = await Promise.allSettled([
         networkApi.getNetworkSummary(token),
         networkApi.getCommunities(token),
-        networkApi.getBridgeIndividuals(token, 12),
+        // Wide pool (ranked by connectivity): each tab re-ranks/filters it
+        // by its own criterion — volume (repeat), connectivity (bridges),
+        // extreme recidivism (high-risk) — so no two tabs share a list.
+        networkApi.getBridgeIndividuals(token, 50),
       ]);
       if (sRes.status === "fulfilled") setSummary(sRes.value.data);
       else console.error("Failed to load network summary", sRes.reason);
@@ -616,7 +625,10 @@ export default function CriminalNetworks() {
     [kpiMeta, activeKpi],
   );
 
-  // Filtered views for landing
+  // Filtered views for landing — each KPI re-ranks the pool by its own
+  // criterion, so every tab shows a distinct list:
+  // repeat = FIR volume · bridges = connectivity · highRisk = extreme tip (FIR≥6)
+  // (groups has its own communities table below, not individuals).
   const filteredCommunities = useMemo(() => {
     if (activeKpi === "highRisk")
       return communities.filter((c) =>
@@ -630,13 +642,28 @@ export default function CriminalNetworks() {
       return [...bridgeIndividuals]
         .sort((a, b) => b.fir_count - a.fir_count)
         .slice(0, 8);
-    if (activeKpi === "bridges") return bridgeIndividuals;
+    if (activeKpi === "bridges")
+      return [...bridgeIndividuals]
+        .sort(
+          (a, b) =>
+            b.unique_associates - a.unique_associates ||
+            b.fir_count - a.fir_count,
+        )
+        .slice(0, 12);
     if (activeKpi === "highRisk")
-      return bridgeIndividuals.filter(
-        (b) => b.fir_count >= 4 || b.districts_covered >= 2,
-      );
+      return bridgeIndividuals
+        .filter((b) => b.fir_count >= 6)
+        .sort((a, b) => riskScore(b) - riskScore(a));
     return bridgeIndividuals.slice(0, 8);
   }, [bridgeIndividuals, activeKpi]);
+
+  // Criminal Groups tab ranks co-offending clusters (backend pre-sorts by
+  // total FIR volume) — a structurally different list from any persons tab.
+  const isGroupsTab = activeKpi === "groups";
+  const filteredNetworks = useMemo(
+    () => [...communities].sort((a, b) => b.total_firs - a.total_firs).slice(0, 8),
+    [communities],
+  );
 
   if (view === "landing") {
     return (
@@ -930,14 +957,20 @@ export default function CriminalNetworks() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-[#E2E8F0] bg-[#FAFBFC]">
                 <div>
                   <h2 className="text-[13px] font-bold tracking-tight text-[#17233C] flex items-center gap-2">
-                    <GitBranch size={14} className="text-purple-600" />
+                    {isGroupsTab ? (
+                      <Network size={14} className="text-purple-600" />
+                    ) : (
+                      <GitBranch size={14} className="text-purple-600" />
+                    )}
                     {activeKpi === "repeat"
                       ? t("networks.landing.repeatTop")
-                      : activeKpi === "highRisk"
-                        ? t("networks.landing.highRiskInd")
-                        : t("networks.bridgeIndividuals")}
+                      : activeKpi === "groups"
+                        ? t("networks.landing.groupsTop")
+                        : activeKpi === "highRisk"
+                          ? t("networks.landing.highRiskInd")
+                          : t("networks.bridgeIndividuals")}
                     <span className="inline-flex items-center rounded-full bg-white border border-[#E2E8F0] px-2 py-0.5 text-[11px] font-bold text-[#475569] tabular-nums">
-                      {filteredBridges.length}
+                      {isGroupsTab ? filteredNetworks.length : filteredBridges.length}
                     </span>
                   </h2>
                   <p className="text-xs text-[#64748B] mt-1">
@@ -945,11 +978,13 @@ export default function CriminalNetworks() {
                       ? t("networks.landing.descBridges")
                       : activeKpi === "repeat"
                         ? t("networks.landing.descRepeat")
-                        : activeKpi === "highRisk"
-                          ? t("networks.landing.descHighRisk")
-                          : t("networks.landing.descViewing", {
-                              label: activeKpiLabel.toLowerCase(),
-                            })}
+                        : activeKpi === "groups"
+                          ? t("networks.landing.descGroupsView")
+                          : activeKpi === "highRisk"
+                            ? t("networks.landing.descHighRisk")
+                            : t("networks.landing.descViewing", {
+                                label: activeKpiLabel.toLowerCase(),
+                              })}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -959,7 +994,105 @@ export default function CriminalNetworks() {
                 </div>
               </div>
 
-              {filteredBridges.length > 0 ? (
+              {isGroupsTab ? (
+                filteredNetworks.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[10px] font-bold tracking-[0.08em] uppercase text-[#64748B]">
+                          <th className="text-left px-5 py-3 font-bold">
+                            {t("networks.landing.networkCol")}
+                          </th>
+                          <th className="text-right px-4 py-3 font-bold">
+                            {t("networks.landing.riskCol")}
+                          </th>
+                          <th className="text-right px-4 py-3 font-bold">
+                            {t("networks.columns.members")}
+                          </th>
+                          <th className="text-right px-4 py-3 font-bold">
+                            {t("networks.columns.firs")}
+                          </th>
+                          <th className="text-right px-4 py-3 font-bold">
+                            {t("networks.columns.stations")}
+                          </th>
+                          <th className="text-right px-5 py-3 font-bold w-[190px]"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#F1F5F9]">
+                        {filteredNetworks.map((net, i) => {
+                          const tone =
+                            net.risk === "Very High"
+                              ? "bg-red-100 text-red-700 border-red-200"
+                              : net.risk === "High"
+                                ? "bg-amber-100 text-amber-700 border-amber-200"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                          return (
+                            <tr
+                              key={i}
+                              onClick={() => openPreviewForNetwork(net)}
+                              className="group hover:bg-[#FFFBEB]/70 cursor-pointer transition-colors"
+                            >
+                              <td className="px-5 py-3.5">
+                                <div className="flex items-center gap-3">
+                                  <span className="h-8 w-8 rounded-full bg-blue-900/90 text-white flex items-center justify-center shrink-0">
+                                    <Network size={14} />
+                                  </span>
+                                  <div className="min-w-0">
+                                    <p className="font-semibold text-blue-950 leading-snug line-clamp-2">
+                                      {net.members?.slice(0, 3).join(", ")}
+                                      {net.member_count > 3 ? "…" : ""}
+                                    </p>
+                                    <p className="text-[11px] text-[#64748B] mt-0.5 hidden sm:block">
+                                      {t("networks.landing.clickForPreview")}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3.5 text-right">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${tone}`}
+                                >
+                                  {net.risk}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-right tabular-nums font-semibold text-blue-950">
+                                {net.member_count}
+                              </td>
+                              <td className="px-4 py-3.5 text-right tabular-nums text-blue-900/70">
+                                {net.total_firs}
+                              </td>
+                              <td className="px-4 py-3.5 text-right tabular-nums text-blue-900/70">
+                                {net.stations_covered}
+                              </td>
+                              <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                                <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-blue-900/90 border border-blue-900/90 text-white text-xs font-semibold min-w-[152px] px-6 py-2.5 transition shadow-sm group-hover:bg-blue-900 group-hover:border-blue-900">
+                                  {t("networks.landing.previewBtn")}{" "}
+                                  <ChevronRight
+                                    size={12}
+                                    className="group-hover:translate-x-0.5 transition-transform shrink-0"
+                                  />
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="px-5 py-10 text-center">
+                    <div className="mx-auto h-10 w-10 rounded-full bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center text-[#94A3B8]">
+                      <Network size={18} />
+                    </div>
+                    <p className="text-sm font-semibold text-[#334155] mt-3">
+                      {t("networks.landing.noNetworks")}
+                    </p>
+                    <p className="text-xs text-[#64748B] mt-1">
+                      {t("networks.landing.switchKpi")}
+                    </p>
+                  </div>
+                )
+              ) : filteredBridges.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -1075,7 +1208,9 @@ export default function CriminalNetworks() {
               </div>
             </div>
 
-            {/* Top Networks — grid with explicit actions */}
+            {/* Top Networks — grid with explicit actions (hidden on the
+                groups tab: the table above already lists the networks) */}
+            {!isGroupsTab && (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-[11px] font-bold tracking-[0.12em] uppercase text-[#64748B] flex items-center gap-1.5">
@@ -1153,6 +1288,7 @@ export default function CriminalNetworks() {
                 )}
               </div>
             </div>
+            )}
 
             {/* Footer helper */}
             <div className="pb-6" />

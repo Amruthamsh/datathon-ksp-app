@@ -242,8 +242,9 @@ export default function InvestigationsQueue() {
           sort: "priority",
           sortDir: sortAscending ? "asc" : "desc",
           onlyOverdue: activeStat === "overdue",
-          onlyChargesheetPending: activeStat === "chargesheet_pending",
           onlyArrestPending: activeStat === "arrests_pending",
+          onlyUnderInvestigation: activeStat === "under_investigation",
+          onlyPendingTrial: activeStat === "pending_trial",
         });
         if (cancelled) return;
         setCases(Array.isArray(res?.data) ? res.data : []);
@@ -302,8 +303,8 @@ export default function InvestigationsQueue() {
   // across the officer's whole scope) — never from the loaded page or mocks.
   const statCounts = {
     overdue: summary?.chargesheet_overdue ?? 0,
-    chargesheetPending: summary?.chargesheet_pending ?? 0,
     arrestsPending: summary?.arrests_pending ?? 0,
+    pendingTrial: summary?.pending_trial ?? 0,
   };
 
   // Rows arrive already filtered + sorted from the server (scope-aware).
@@ -366,8 +367,8 @@ export default function InvestigationsQueue() {
   const greetingName =
     authOfficer?.full_name?.split(" ")[0] ||
     authOfficer?.FirstName || t("investigations.queue.defaultOfficer");
-  // Scope-wide critical count (Heinous) from the backend summary — not the page.
-  const criticalCount = summary?.critical ?? 0;
+  // Scope-wide heinous count from the backend summary — not the page.
+  const heinousCount = summary?.critical ?? 0;
   const totalCount = pagination?.total ?? filteredCases.length;
 
   if (loading) {
@@ -399,11 +400,11 @@ export default function InvestigationsQueue() {
               {t("investigations.queue.needAttention", {
                 count: totalCount,
               })}
-              {criticalCount > 0 && (
+              {heinousCount > 0 && (
                 <span className="ml-2 inline-flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D62828] inline-block" />
-                  {t("investigations.queue.criticalSuffix", {
-                    count: criticalCount,
+                  {t("investigations.queue.heinousSuffix", {
+                    count: heinousCount,
                   })}
                 </span>
               )}
@@ -478,16 +479,16 @@ export default function InvestigationsQueue() {
               subKey: "investigations.queue.subAwaitingArrest",
             },
             {
-              id: "chargesheet_pending",
-              labelKey: "investigations.queue.statChargesheet",
-              value: statCounts.chargesheetPending,
+              id: "pending_trial",
+              labelKey: "investigations.queue.statPendingTrial",
+              value: statCounts.pendingTrial,
               bg: "bg-blue-900/90",
               valueColor: "text-white",
               dot: "bg-white",
               labelColor: "text-white/85",
               subColor: "text-white/80",
               badgeColor: "text-[#2563EB]",
-              subKey: "investigations.queue.subNotFiled",
+              subKey: "investigations.queue.subAwaitingTrial",
             },
           ].map((m) => {
             const active = activeStat === m.id;

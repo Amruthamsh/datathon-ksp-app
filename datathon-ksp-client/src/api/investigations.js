@@ -71,6 +71,12 @@ export async function getInvestigations(token, params = {}) {
         : undefined,
     only_arrest_pending:
       params.onlyArrestPending ?? params.only_arrest_pending ? true : undefined,
+    only_under_investigation:
+      params.onlyUnderInvestigation ?? params.only_under_investigation
+        ? true
+        : undefined,
+    only_pending_trial:
+      params.onlyPendingTrial ?? params.only_pending_trial ? true : undefined,
   };
 
   const queryString = buildQueryString(queryParams);

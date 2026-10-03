@@ -215,6 +215,25 @@ export default function CrimeIntelligenceMap() {
     15: false,
   });
   const [coverageStats, setCoverageStats] = useState(null);
+  // Officer planning marks (pins / watch zones / corridors) — own overlay
+  // section like Network Overlay; notes live in the right-side Plan tab.
+  const [showAnnotations, setShowAnnotations] = useState(true);
+  const [annotateMode, setAnnotateMode] = useState("off"); // off|pin|watch|corridor
+  const [annotations, setAnnotations] = useState(() => {
+    try {
+      const raw =
+        localStorage.getItem("ksp-map-annotations") ||
+        // Migrate marks saved under the old per-session key
+        sessionStorage.getItem("ksp-map-annotations") ||
+        "[]";
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [corridorDraft, setCorridorDraft] = useState([]);
+  const [watchRadiusKm, setWatchRadiusKm] = useState(1);
 
   const activeSubType = useMemo(() => {
     if (selectedHeads && selectedHeads.size === 1) {
@@ -420,6 +439,15 @@ export default function CrimeIntelligenceMap() {
       summary,
       enhancedRisk,
       coverage: coverageStats,
+      planningMarks: (annotations || []).map((a) => ({
+        label: a.label,
+        kind: a.kind,
+        note: a.note,
+        lng: a.lng,
+        lat: a.lat,
+        radiusKm: a.radiusKm,
+        pathLength: a.path?.length,
+      })),
     }),
     [
       viewMode,
@@ -436,6 +464,7 @@ export default function CrimeIntelligenceMap() {
       summary,
       enhancedRisk,
       coverageStats,
+      annotations,
     ],
   );
 
@@ -522,6 +551,114 @@ export default function CrimeIntelligenceMap() {
     setMapChatPrefill(query);
     setMapChatKey((k) => k + 1);
     setRightTab("chat");
+  }, []);
+
+  // Persist planning marks (pins, watch zones, corridors + notes) on this
+  // device so they survive reloads and new sessions
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "ksp-map-annotations",
+        JSON.stringify(annotations),
+      );
+    } catch {
+      /* storage unavailable (e.g. private mode) — annotations stay in-memory */
+    }
+  }, [annotations]);
+
+  // Map click → create planning mark (notes edited in right-side Plan tab)
+  const handleAnnotateClick = useCallback(
+    (info) => {
+      if (annotateMode === "off" || !info?.coordinate) return false;
+      const [lng, lat] = info.coordinate;
+      if (annotateMode === "pin") {
+        const id = `ann-${Date.now()}`;
+        setAnnotations((prev) => [
+          ...prev,
+          {
+            id,
+            kind: "pin",
+            label: `Pin ${prev.filter((a) => a.kind === "pin").length + 1}`,
+            note: "",
+            lng,
+            lat,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+        setRightTab("plan");
+      } else if (annotateMode === "watch") {
+        const id = `ann-${Date.now()}`;
+        setAnnotations((prev) => [
+          ...prev,
+          {
+            id,
+            kind: "watch",
+            label: `Watch zone ${prev.filter((a) => a.kind === "watch").length + 1}`,
+            note: "",
+            lng,
+            lat,
+            radiusKm: watchRadiusKm,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+        setRightTab("plan");
+      } else if (annotateMode === "corridor") {
+        setCorridorDraft((prev) => [...prev, [lng, lat]]);
+      }
+      return true;
+    },
+    [annotateMode, watchRadiusKm],
+  );
+
+  const finishCorridor = useCallback(() => {
+    if (corridorDraft.length < 2) return;
+    setAnnotations((prev) => [
+      ...prev,
+      {
+        id: `ann-${Date.now()}`,
+        kind: "corridor",
+        label: `Corridor ${prev.filter((a) => a.kind === "corridor").length + 1}`,
+        note: "",
+        path: corridorDraft,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    setCorridorDraft([]);
+    setAnnotateMode("off");
+    setRightTab("plan");
+  }, [corridorDraft]);
+
+  const updateAnnotationNote = useCallback((id, note) => {
+    setAnnotations((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, note } : a)),
+    );
+  }, []);
+
+  const deleteAnnotation = useCallback((id) => {
+    setAnnotations((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  const clearAnnotations = useCallback(() => {
+    setAnnotations([]);
+    setCorridorDraft([]);
+  }, []);
+
+  const handleAnnotateModeChange = useCallback((mode) => {
+    setAnnotateMode((m) => (m === mode ? "off" : mode));
+    if (mode !== "corridor") setCorridorDraft([]);
+  }, []);
+
+  const handleFocusAnnotation = useCallback((a) => {
+    const lng = a?.lng ?? a?.path?.[0]?.[0];
+    const lat = a?.lat ?? a?.path?.[0]?.[1];
+    if (lng == null || lat == null) return;
+    setViewState((prev) => ({
+      ...prev,
+      longitude: lng,
+      latitude: lat,
+      zoom: Math.max(prev.zoom || 7.5, 11),
+      pitch: 0,
+    }));
   }, []);
 
   // NOTE: POI and network overlays stay available in every view, including
@@ -614,6 +751,15 @@ export default function CrimeIntelligenceMap() {
                 showCoverage={showCoverage}
                 coverageRings={coverageRings}
                 onCoverageStats={setCoverageStats}
+                showAnnotations={showAnnotations}
+                annotateMode={annotateMode}
+                onAnnotateModeChange={handleAnnotateModeChange}
+                annotations={annotations}
+                corridorDraft={corridorDraft}
+                onCorridorDraftChange={setCorridorDraft}
+                watchRadiusKm={watchRadiusKm}
+                onAnnotateClick={handleAnnotateClick}
+                onFinishCorridor={finishCorridor}
               />
 
               {viewMode === "Heatmap" &&
@@ -672,6 +818,20 @@ export default function CrimeIntelligenceMap() {
                     setCoverageRings((r) => ({ ...r, [mins]: !r[mins] }))
                   }
                   coverageStats={coverageStats}
+                  showAnnotations={showAnnotations}
+                  onToggleAnnotations={() => setShowAnnotations((v) => !v)}
+                  annotateMode={annotateMode}
+                  onAnnotateModeChange={handleAnnotateModeChange}
+                  annotationsCount={annotations.length}
+                  onClearAnnotations={clearAnnotations}
+                  watchRadiusKm={watchRadiusKm}
+                  onWatchRadiusChange={setWatchRadiusKm}
+                  corridorDraftCount={corridorDraft.length}
+                  onFinishCorridor={finishCorridor}
+                  onCancelCorridor={() => {
+                    setCorridorDraft([]);
+                    setAnnotateMode("off");
+                  }}
                 />
               ) : (
                 <button
@@ -748,6 +908,11 @@ export default function CrimeIntelligenceMap() {
               chatPrefill={mapChatPrefill}
               chatKey={mapChatKey}
               onAskInMapChat={handleAskInMapChat}
+              annotations={annotations}
+              onUpdateAnnotationNote={updateAnnotationNote}
+              onDeleteAnnotation={deleteAnnotation}
+              onClearAnnotations={clearAnnotations}
+              onFocusAnnotation={handleFocusAnnotation}
             />
           </div>
         </div>
@@ -785,6 +950,17 @@ function LayerSwitcher({
   coverageRings,
   onToggleRing,
   coverageStats,
+  showAnnotations,
+  onToggleAnnotations,
+  annotateMode,
+  onAnnotateModeChange,
+  annotationsCount,
+  onClearAnnotations,
+  watchRadiusKm,
+  onWatchRadiusChange,
+  corridorDraftCount,
+  onFinishCorridor,
+  onCancelCorridor,
 }) {
   const { t } = useTranslation();
   const modes = [
@@ -861,6 +1037,143 @@ function LayerSwitcher({
         <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.08em] px-2 mb-1">
           {t("crimeMap.overlays.title")}
         </p>
+      </div>
+      <div>
+        <label className="flex items-center gap-2 px-2.5 py-1 rounded-[6px] hover:bg-[#F8FAFC] cursor-pointer">
+          <input
+            type="checkbox"
+            checked={!!showAnnotations}
+            onChange={onToggleAnnotations}
+            className="rounded border-slate-300 text-[#17233C] w-3 h-3 accent-[#17233C] cursor-pointer"
+          />
+          <Pencil className="h-3 w-3 text-[#334155] shrink-0" />
+          <span className="text-[12px] font-medium text-[#334155] flex-1">
+            {t("crimeMap.overlays.planning", {
+              defaultValue: "Planning overlay",
+            })}
+          </span>
+          {(annotationsCount || 0) > 0 && (
+            <span className="rounded-full bg-[#F1F5F9] border border-[#E2E8F0] px-1.5 py-px text-[10px] font-bold text-[#334155] tabular-nums">
+              {annotationsCount}
+            </span>
+          )}
+        </label>
+        {showAnnotations && (
+          <div className="px-2 pb-1 pt-0.5">
+            <div className="flex gap-1">
+              {[
+                {
+                  mode: "pin",
+                  Icon: MapPin,
+                  label: t("crimeMap.planning.pin", { defaultValue: "Pin" }),
+                  title: t("crimeMap.planning.dropPin", {
+                    defaultValue: "Drop a pin with a note",
+                  }),
+                },
+                {
+                  mode: "watch",
+                  Icon: CircleDot,
+                  label: t("crimeMap.planning.watch", {
+                    defaultValue: "Watch",
+                  }),
+                  title: t("crimeMap.planning.markWatch", {
+                    defaultValue: "Mark a zone as under watch",
+                  }),
+                },
+                {
+                  mode: "corridor",
+                  Icon: Route,
+                  label: t("crimeMap.planning.corridor", {
+                    defaultValue: "Corridor",
+                  }),
+                  title: t("crimeMap.planning.drawCorridor", {
+                    defaultValue: "Draw a patrol corridor",
+                  }),
+                },
+              ].map(({ mode, Icon, label, title }) => (
+                <button
+                  key={mode}
+                  onClick={() => onAnnotateModeChange?.(mode)}
+                  className={`flex-1 flex items-center justify-center gap-1 rounded-md border px-1 py-1.5 text-[10px] font-bold transition-colors cursor-pointer ${
+                    annotateMode === mode
+                      ? "border-[#17233C] bg-[#17233C] text-white"
+                      : "border-[#E2E8F0] bg-white text-[#475569] hover:bg-[#F8FAFC]"
+                  }`}
+                  title={title}
+                >
+                  <Icon className="h-3 w-3" />
+                  {label}
+                </button>
+              ))}
+            </div>
+            {annotateMode === "watch" && (
+              <div className="mt-1.5 flex items-center gap-1">
+                <span className="text-[9px] font-semibold text-[#94A3B8] uppercase tracking-wide">
+                  {t("crimeMap.planning.radius", { defaultValue: "Radius" })}
+                </span>
+                {[0.5, 1, 2].map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => onWatchRadiusChange?.(r)}
+                    className={`flex-1 rounded-md border px-1 py-0.5 text-[10px] font-bold tabular-nums cursor-pointer ${
+                      watchRadiusKm === r
+                        ? "border-amber-500 bg-amber-500 text-white"
+                        : "border-[#E2E8F0] bg-white text-[#94A3B8] hover:text-[#475569]"
+                    }`}
+                  >
+                    {r}k
+                  </button>
+                ))}
+              </div>
+            )}
+            {annotateMode === "corridor" && (
+              <div className="mt-1.5 flex items-center gap-1">
+                <span className="text-[10px] font-semibold text-[#64748B] tabular-nums flex-1">
+                  {t("crimeMap.planning.traceCount", {
+                    count: corridorDraftCount || 0,
+                    defaultValue: `${corridorDraftCount || 0} pts — click map to trace`,
+                  })}
+                </span>
+                <button
+                  onClick={onFinishCorridor}
+                  disabled={!corridorDraftCount || corridorDraftCount < 2}
+                  className="flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-[10px] font-bold text-white disabled:opacity-40 cursor-pointer"
+                >
+                  <Check className="h-3 w-3" />{" "}
+                  {t("crimeMap.planning.finish", { defaultValue: "Finish" })}
+                </button>
+                <button
+                  onClick={onCancelCorridor}
+                  className="rounded-md px-1.5 py-1 text-[10px] font-bold text-[#94A3B8] hover:text-[#475569] cursor-pointer"
+                >
+                  {t("crimeMap.planning.cancel", { defaultValue: "Cancel" })}
+                </button>
+              </div>
+            )}
+            {annotateMode !== "off" && annotateMode !== "corridor" && (
+              <p className="mt-1.5 text-[9px] leading-snug text-[#94A3B8]">
+                {t("crimeMap.planning.placeHint", {
+                  defaultValue:
+                    "Click anywhere on the map to place · notes go to the Plan tab",
+                })}
+              </p>
+            )}
+            {(annotationsCount || 0) > 0 && (
+              <button
+                onClick={onClearAnnotations}
+                className="mt-1.5 flex w-full items-center justify-center gap-1 rounded-md border border-[#E2E8F0] px-2 py-1 text-[10px] font-bold text-[#94A3B8] hover:text-[#D92D20] hover:bg-red-50 transition-colors cursor-pointer"
+              >
+                <Trash2 className="h-3 w-3" />{" "}
+                {t("crimeMap.planning.clearMarks", {
+                  defaultValue: "Clear all marks",
+                })}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="h-px bg-[#E2E8F0] my-1" />
+      <div>
         <label className="flex items-center gap-2 px-2.5 py-1 rounded-[6px] hover:bg-[#F8FAFC] cursor-pointer">
           <input
             type="checkbox"
@@ -1006,6 +1319,17 @@ LayerSwitcher.propTypes = {
   coverageRings: PropTypes.object,
   onToggleRing: PropTypes.func,
   coverageStats: PropTypes.object,
+  showAnnotations: PropTypes.bool,
+  onToggleAnnotations: PropTypes.func,
+  annotateMode: PropTypes.string,
+  onAnnotateModeChange: PropTypes.func,
+  annotationsCount: PropTypes.number,
+  onClearAnnotations: PropTypes.func,
+  watchRadiusKm: PropTypes.number,
+  onWatchRadiusChange: PropTypes.func,
+  corridorDraftCount: PropTypes.number,
+  onFinishCorridor: PropTypes.func,
+  onCancelCorridor: PropTypes.func,
 };
 
 /* ── Crime Category Legend ─────────────────────────────────────── */
@@ -1314,7 +1638,17 @@ function MapView({
   showCoverage,
   coverageRings,
   onCoverageStats,
+  showAnnotations,
+  annotateMode,
+  onAnnotateModeChange,
+  annotations,
+  corridorDraft,
+  onCorridorDraftChange,
+  watchRadiusKm,
+  onAnnotateClick,
+  onFinishCorridor,
 }) {
+  const { t } = useTranslation();
   const [clusterData, setClusterData] = useState([]);
   const [districtRisk, setDistrictRisk] = useState([]);
   const [networkOverlay, setNetworkOverlay] = useState([]);
@@ -1322,31 +1656,12 @@ function MapView({
   const [karnatakaGeo, setKarnatakaGeo] = useState(null);
   // Station coverage (response rings)
   const [stations, setStations] = useState([]);
-  // Map annotations — active planning surface, per-session (sessionStorage)
-  const [annotateMode, setAnnotateMode] = useState("off"); // off|pin|watch|corridor
-  const [annotations, setAnnotations] = useState(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem("ksp-map-annotations") || "[]");
-    } catch {
-      return [];
-    }
-  });
-  const [corridorDraft, setCorridorDraft] = useState([]);
-  const [watchRadiusKm, setWatchRadiusKm] = useState(1);
-  const [showAnnotateList, setShowAnnotateList] = useState(false);
-  const annotating = annotateMode !== "off";
+  // Planning marks come from the parent overlay (toggleable like Network
+  // Overlay); notes are edited in the right-side Plan tab.
+  const setAnnotateMode = onAnnotateModeChange || (() => {});
+  const setCorridorDraft = onCorridorDraftChange || (() => {});
+  const annotating = (annotateMode || "off") !== "off";
   const pick = !annotating;
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(
-        "ksp-map-annotations",
-        JSON.stringify(annotations),
-      );
-    } catch {
-      /* storage unavailable — annotations stay in-memory */
-    }
-  }, [annotations]);
 
   useEffect(() => {
     if (!token) return;
@@ -1617,87 +1932,23 @@ function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coverageGap, stations.length]);
 
-  // ── Map annotations (officer planning marks, per-session) ──
+  // ── Map annotations (delegated to parent overlay) ──
   const handleAnnotateClick = useCallback(
     (info) => {
-      if (annotateMode === "off" || !info?.coordinate) return false;
-      const [lng, lat] = info.coordinate;
-      if (annotateMode === "pin") {
-        const id = `ann-${Date.now()}`;
-        setAnnotations((prev) => [
-          ...prev,
-          {
-            id,
-            kind: "pin",
-            label: `Pin ${prev.filter((a) => a.kind === "pin").length + 1}`,
-            note: "",
-            lng,
-            lat,
-            createdAt: new Date().toISOString(),
-          },
-        ]);
-        setShowAnnotateList(true);
-      } else if (annotateMode === "watch") {
-        const id = `ann-${Date.now()}`;
-        setAnnotations((prev) => [
-          ...prev,
-          {
-            id,
-            kind: "watch",
-            label: `Watch zone ${prev.filter((a) => a.kind === "watch").length + 1}`,
-            note: "",
-            lng,
-            lat,
-            radiusKm: watchRadiusKm,
-            createdAt: new Date().toISOString(),
-          },
-        ]);
-        setShowAnnotateList(true);
-      } else if (annotateMode === "corridor") {
-        setCorridorDraft((prev) => [...prev, [lng, lat]]);
-      }
-      return true;
+      if (typeof onAnnotateClick === "function") return onAnnotateClick(info);
+      return false;
     },
-    [annotateMode, watchRadiusKm],
+    [onAnnotateClick],
   );
 
   const finishCorridor = useCallback(() => {
-    if (corridorDraft.length < 2) return;
-    setAnnotations((prev) => [
-      ...prev,
-      {
-        id: `ann-${Date.now()}`,
-        kind: "corridor",
-        label: `Corridor ${prev.filter((a) => a.kind === "corridor").length + 1}`,
-        note: "",
-        path: corridorDraft,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
-    setCorridorDraft([]);
-    setAnnotateMode("off");
-    setShowAnnotateList(true);
-  }, [corridorDraft]);
-
-  const updateAnnotationNote = useCallback((id, note) => {
-    setAnnotations((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, note } : a)),
-    );
-  }, []);
-
-  const deleteAnnotation = useCallback((id) => {
-    setAnnotations((prev) => prev.filter((a) => a.id !== id));
-  }, []);
-
-  const clearAnnotations = useCallback(() => {
-    setAnnotations([]);
-    setCorridorDraft([]);
-  }, []);
+    if (typeof onFinishCorridor === "function") onFinishCorridor();
+  }, [onFinishCorridor]);
 
   const watchZonesGeo = useMemo(
     () => ({
       type: "FeatureCollection",
-      features: annotations
+      features: (annotations || [])
         .filter((a) => a.kind === "watch")
         .map((a) => {
           const f = buffer(point([a.lng, a.lat]), a.radiusKm || 1, {
@@ -1718,10 +1969,11 @@ function MapView({
         segs.push({ id: `${id}-${i}`, source: path[i], target: path[i + 1] });
       }
     };
-    annotations
+    (annotations || [])
       .filter((a) => a.kind === "corridor" && a.path?.length >= 2)
       .forEach((a) => pushPath(a.path, a.id));
-    if (corridorDraft.length >= 2) pushPath(corridorDraft, "draft");
+    if ((corridorDraft || []).length >= 2)
+      pushPath(corridorDraft, "draft");
     return segs;
   }, [annotations, corridorDraft]);
 
@@ -1735,7 +1987,7 @@ function MapView({
   );
 
   const pinData = useMemo(
-    () => annotations.filter((a) => a.kind === "pin"),
+    () => (annotations || []).filter((a) => a.kind === "pin"),
     [annotations],
   );
 
@@ -2071,67 +2323,70 @@ function MapView({
     }
 
     // ── Annotations: pins, watch zones, patrol corridors ──
-    if (pinData.length) {
-      activeLayers.push(
-        new ScatterplotLayer({
-          id: "annotation-pins",
-          data: pinData,
-          getPosition: (d) => [d.lng, d.lat],
-          getRadius: 8,
-          radiusMinPixels: 9,
-          radiusMaxPixels: 13,
-          getFillColor: [217, 119, 6, 235],
-          getLineColor: [255, 255, 255, 255],
-          stroked: true,
-          lineWidthMinPixels: 2,
-          pickable: false,
-        }),
-      );
-    }
-    if (watchZonesGeo.features.length) {
-      activeLayers.push(
-        new GeoJsonLayer({
-          id: "annotation-watch",
-          data: watchZonesGeo,
-          pickable: false,
-          stroked: true,
-          filled: true,
-          getFillColor: [217, 119, 6, 36],
-          getLineColor: [180, 83, 9, 230],
-          getLineWidth: 2,
-          lineWidthMinPixels: 2,
-        }),
-      );
-    }
-    if (corridorSegments.length) {
-      activeLayers.push(
-        new LineLayer({
-          id: "annotation-corridors",
-          data: corridorSegments,
-          getSourcePosition: (d) => d.source,
-          getTargetPosition: (d) => d.target,
-          getColor: [79, 70, 229, 235],
-          getWidth: 4,
-          widthMinPixels: 3,
-        }),
-      );
-    }
-    if (corridorVertices.length) {
-      activeLayers.push(
-        new ScatterplotLayer({
-          id: "annotation-draft-vertices",
-          data: corridorVertices,
-          getPosition: (d) => d.coordinates,
-          getRadius: 5,
-          radiusMinPixels: 5,
-          radiusMaxPixels: 8,
-          getFillColor: [79, 70, 229, 235],
-          getLineColor: [255, 255, 255, 255],
-          stroked: true,
-          lineWidthMinPixels: 1.5,
-          pickable: false,
-        }),
-      );
+    // Toggleable overlay (same pattern as Network Overlay).
+    if (showAnnotations) {
+      if (pinData.length) {
+        activeLayers.push(
+          new ScatterplotLayer({
+            id: "annotation-pins",
+            data: pinData,
+            getPosition: (d) => [d.lng, d.lat],
+            getRadius: 8,
+            radiusMinPixels: 9,
+            radiusMaxPixels: 13,
+            getFillColor: [217, 119, 6, 235],
+            getLineColor: [255, 255, 255, 255],
+            stroked: true,
+            lineWidthMinPixels: 2,
+            pickable: false,
+          }),
+        );
+      }
+      if (watchZonesGeo.features.length) {
+        activeLayers.push(
+          new GeoJsonLayer({
+            id: "annotation-watch",
+            data: watchZonesGeo,
+            pickable: false,
+            stroked: true,
+            filled: true,
+            getFillColor: [217, 119, 6, 36],
+            getLineColor: [180, 83, 9, 230],
+            getLineWidth: 2,
+            lineWidthMinPixels: 2,
+          }),
+        );
+      }
+      if (corridorSegments.length) {
+        activeLayers.push(
+          new LineLayer({
+            id: "annotation-corridors",
+            data: corridorSegments,
+            getSourcePosition: (d) => d.source,
+            getTargetPosition: (d) => d.target,
+            getColor: [79, 70, 229, 235],
+            getWidth: 4,
+            widthMinPixels: 3,
+          }),
+        );
+      }
+      if (corridorVertices.length) {
+        activeLayers.push(
+          new ScatterplotLayer({
+            id: "annotation-draft-vertices",
+            data: corridorVertices,
+            getPosition: (d) => d.coordinates,
+            getRadius: 5,
+            radiusMinPixels: 5,
+            radiusMaxPixels: 8,
+            getFillColor: [79, 70, 229, 235],
+            getLineColor: [255, 255, 255, 255],
+            stroked: true,
+            lineWidthMinPixels: 1.5,
+            pickable: false,
+          }),
+        );
+      }
     }
 
     // Karnataka state outline — always on top
@@ -2170,30 +2425,12 @@ function MapView({
     stations,
     coverageRingsGeo,
     coverageGap,
+    showAnnotations,
     pinData,
     watchZonesGeo,
     corridorSegments,
     corridorVertices,
   ]);
-
-  const annotateBtn = (mode, Icon, label, title) => (
-    <button
-      key={mode}
-      onClick={() => {
-        setAnnotateMode((m) => (m === mode ? "off" : mode));
-        if (mode !== "corridor") setCorridorDraft([]);
-      }}
-      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${
-        annotateMode === mode
-          ? "bg-[#17233C] text-white"
-          : "text-[#475569] hover:bg-[#F1F5F9]"
-      }`}
-      title={title}
-    >
-      <Icon className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">{label}</span>
-    </button>
-  );
 
   return (
     <>
@@ -2215,137 +2452,54 @@ function MapView({
         />
       </DeckGL>
 
-      {/* ── Annotation toolbar: turns the map into a planning surface ── */}
-      <div
-        className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-white/95 backdrop-blur-md rounded-full border border-[#E2E8F0] px-1.5 py-1 max-w-[calc(100%-2rem)] flex-wrap justify-center"
-        style={{ boxShadow: "0 4px 16px rgba(15,23,42,0.10)" }}
-      >
-        <span
-          className={`flex items-center gap-1 pl-1.5 pr-1 text-[10px] font-bold uppercase tracking-[0.08em] ${
-            annotating ? "text-[#D92D20]" : "text-[#94A3B8]"
-          }`}
-          title="Officer planning marks — stored for this session only"
-        >
-          <Pencil className="h-3 w-3" />
-          <span className="hidden md:inline">Plan</span>
-        </span>
-        {annotateBtn("pin", MapPin, "Pin", "Drop a pin with a note")}
-        {annotateBtn("watch", CircleDot, "Watch", "Mark a zone as under watch")}
-        {annotateBtn("corridor", Route, "Corridor", "Draw a patrol corridor")}
-        {annotateMode === "watch" && (
-          <span className="flex items-center gap-1 pl-1">
-            {[0.5, 1, 2].map((r) => (
-              <button
-                key={r}
-                onClick={() => setWatchRadiusKm(r)}
-                className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums cursor-pointer ${
-                  watchRadiusKm === r
-                    ? "bg-amber-500 text-white"
-                    : "text-[#94A3B8] hover:text-[#475569]"
-                }`}
-              >
-                {r}k
-              </button>
-            ))}
-          </span>
-        )}
-        {annotateMode === "corridor" && (
-          <span className="flex items-center gap-1 pl-1">
-            <span className="text-[10px] font-semibold text-[#64748B] tabular-nums">
-              {corridorDraft.length} pts
-            </span>
-            <button
-              onClick={finishCorridor}
-              disabled={corridorDraft.length < 2}
-              className="flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white disabled:opacity-40 cursor-pointer"
-            >
-              <Check className="h-3 w-3" /> Finish
-            </button>
-            <button
-              onClick={() => {
-                setCorridorDraft([]);
-                setAnnotateMode("off");
-              }}
-              className="rounded-full px-1.5 py-0.5 text-[10px] font-bold text-[#94A3B8] hover:text-[#475569] cursor-pointer"
-            >
-              Cancel
-            </button>
-          </span>
-        )}
-        {annotations.length > 0 && (
-          <>
-            <button
-              onClick={() => setShowAnnotateList((v) => !v)}
-              className="rounded-full bg-[#F1F5F9] border border-[#E2E8F0] px-2 py-0.5 text-[10px] font-bold text-[#334155] tabular-nums cursor-pointer"
-              title="Show planning marks"
-            >
-              {annotations.length}
-            </button>
-            <button
-              onClick={clearAnnotations}
-              className="flex h-6 w-6 items-center justify-center rounded-full text-[#94A3B8] hover:text-[#D92D20] hover:bg-red-50 transition-colors cursor-pointer"
-              title="Clear all planning marks (this session)"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </>
-        )}
-      </div>
+      {/* ── Planning draw hint — tools live in Layers → Planning overlay,
+          notes live in the right-side Plan tab (map stays uncluttered) ── */}
       {annotating && (
-        <p className="absolute top-[4.25rem] left-1/2 -translate-x-1/2 z-20 bg-[#17233C]/90 text-white text-[11px] font-medium rounded-full px-3 py-1 pointer-events-none whitespace-nowrap">
-          {annotateMode === "pin" && "Click anywhere on the map to drop a pin"}
-          {annotateMode === "watch" &&
-            `Click to mark a ${watchRadiusKm} km watch zone`}
-          {annotateMode === "corridor" &&
-            "Click to trace the corridor, then Finish"}
-        </p>
-      )}
-
-      {/* ── Annotation list: notes editable inline, per-session ── */}
-      {showAnnotateList && annotations.length > 0 && (
-        <div
-          className="absolute top-[6.5rem] left-1/2 -translate-x-1/2 z-20 w-[300px] max-w-[calc(100%-2rem)] max-h-[220px] overflow-y-auto bg-white/95 backdrop-blur-md rounded-[10px] border border-[#E2E8F0] p-2 space-y-1.5"
-          style={{ boxShadow: "0 4px 16px rgba(15,23,42,0.10)" }}
-        >
-          {annotations.map((a) => (
-            <div
-              key={a.id}
-              className="rounded-[8px] border border-[#E2E8F0] bg-white px-2 py-1.5"
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-[#17233C]/90 text-white rounded-full pl-3 pr-1.5 py-1 backdrop-blur-md whitespace-nowrap max-w-[calc(100%-2rem)]">
+          <span className="text-[11px] font-medium truncate">
+            {annotateMode === "pin" &&
+              t("crimeMap.planning.drawPin", {
+                defaultValue: "Click anywhere on the map to drop a pin",
+              })}
+            {annotateMode === "watch" &&
+              t("crimeMap.planning.drawWatch", {
+                radius: watchRadiusKm,
+                defaultValue: `Click to mark a ${watchRadiusKm} km watch zone`,
+              })}
+            {annotateMode === "corridor" &&
+              t("crimeMap.planning.drawCorridor", {
+                count: (corridorDraft || []).length,
+                defaultValue: `Click to trace the corridor (${(corridorDraft || []).length} pts)`,
+              })}
+          </span>
+          {annotateMode === "corridor" ? (
+            <span className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={finishCorridor}
+                disabled={(corridorDraft || []).length < 2}
+                className="flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[#17233C] disabled:opacity-40 cursor-pointer"
+              >
+                <Check className="h-3 w-3" />{" "}
+                {t("crimeMap.planning.finish", { defaultValue: "Finish" })}
+              </button>
+              <button
+                onClick={() => {
+                  setCorridorDraft([]);
+                  setAnnotateMode("off");
+                }}
+                className="rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white/70 hover:text-white cursor-pointer"
+              >
+                {t("crimeMap.planning.cancel", { defaultValue: "Cancel" })}
+              </button>
+            </span>
+          ) : (
+            <button
+              onClick={() => setAnnotateMode("off")}
+              className="rounded-full bg-white/15 hover:bg-white/25 px-2 py-0.5 text-[10px] font-bold shrink-0 cursor-pointer"
             >
-              <div className="flex items-center gap-1.5">
-                {a.kind === "pin" && (
-                  <MapPin className="h-3 w-3 text-amber-600 shrink-0" />
-                )}
-                {a.kind === "watch" && (
-                  <CircleDot className="h-3 w-3 text-amber-600 shrink-0" />
-                )}
-                {a.kind === "corridor" && (
-                  <Route className="h-3 w-3 text-indigo-600 shrink-0" />
-                )}
-                <span className="text-[11px] font-bold text-[#17233C] flex-1 truncate">
-                  {a.label}
-                </span>
-                {a.kind === "watch" && (
-                  <span className="text-[9px] font-semibold text-[#94A3B8] tabular-nums">
-                    {a.radiusKm} km
-                  </span>
-                )}
-                <button
-                  onClick={() => deleteAnnotation(a.id)}
-                  className="flex h-5 w-5 items-center justify-center rounded-full text-[#94A3B8] hover:text-[#D92D20] hover:bg-red-50 cursor-pointer"
-                  title="Delete mark"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-              <input
-                value={a.note || ""}
-                onChange={(e) => updateAnnotationNote(a.id, e.target.value)}
-                placeholder="Add a note…"
-                className="mt-1 w-full rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1 text-[11px] text-[#334155] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-blue-900"
-              />
-            </div>
-          ))}
+              {t("crimeMap.planning.done", { defaultValue: "Done" })}
+            </button>
+          )}
         </div>
       )}
 
@@ -2407,6 +2561,15 @@ MapView.propTypes = {
   showCoverage: PropTypes.bool,
   coverageRings: PropTypes.object,
   onCoverageStats: PropTypes.func,
+  showAnnotations: PropTypes.bool,
+  annotateMode: PropTypes.string,
+  onAnnotateModeChange: PropTypes.func,
+  annotations: PropTypes.array,
+  corridorDraft: PropTypes.array,
+  onCorridorDraftChange: PropTypes.func,
+  watchRadiusKm: PropTypes.number,
+  onAnnotateClick: PropTypes.func,
+  onFinishCorridor: PropTypes.func,
 };
 
 /* ── Right Panel (Contextual) ───────────────────────────────────── */
@@ -2426,12 +2589,18 @@ function RightPanel({
   chatPrefill,
   chatKey,
   onAskInMapChat,
+  annotations,
+  onUpdateAnnotationNote,
+  onDeleteAnnotation,
+  onClearAnnotations,
+  onFocusAnnotation,
 }) {
   const { t } = useTranslation();
   const panelWrap =
     "w-[380px] xl:w-[400px] bg-white rounded-[12px] border border-[#E2E8F0] flex flex-col min-h-0 overflow-hidden shrink-0";
   const panelStyle = { boxShadow: "0 1px 3px rgba(15,23,42,0.08)" };
   const hasSelection = !!selectedSpot;
+  const planCount = (annotations || []).length;
 
   const renderDetails = () => {
     if (!selectedSpot) {
@@ -2515,35 +2684,58 @@ function RightPanel({
         <div className="flex items-center gap-1 p-1 bg-[#F1F5F9] rounded-full border border-[#E2E8F0]">
           <button
             onClick={() => onTabChange("details")}
-            className={`flex-1 flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition cursor-pointer ${
+            className={`flex-1 min-w-0 flex items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[11px] font-bold tracking-wide transition cursor-pointer ${
               activeTab === "details"
                 ? "bg-white text-[#17233C] shadow-sm border border-[#E2E8F0]"
                 : "text-[#64748B] hover:text-[#334155]"
             }`}
           >
-            <Layers className="h-3.5 w-3.5" /> {t("crimeMap.tabs.details")}
+            <Layers className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{t("crimeMap.tabs.details")}</span>
             {hasSelection && activeTab !== "details" && (
-              <span className="ml-1 h-1.5 w-1.5 rounded-full bg-[#D92D20] animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#D92D20] animate-pulse shrink-0" />
             )}
           </button>
           <button
             onClick={() => onTabChange("chat")}
-            className={`flex-1 flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition cursor-pointer ${
+            className={`flex-[1.6] min-w-0 flex items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[11px] font-bold tracking-wide transition cursor-pointer ${
               activeTab === "chat"
                 ? "bg-[#17233C] text-white shadow-sm"
                 : "text-[#64748B] hover:text-[#334155]"
             }`}
           >
             <MessageSquare
-              className={`h-3.5 w-3.5 ${activeTab === "chat" ? "text-white" : "text-slate-400"}`}
+              className={`h-3.5 w-3.5 shrink-0 ${activeTab === "chat" ? "text-white" : "text-slate-400"}`}
             />
-            <span className="hidden sm:inline">{t("crimeMap.tabs.askAI")}</span>
-            <span className="sm:hidden">{t("crimeMap.tabs.chat")}</span>
+            <span className="truncate whitespace-nowrap">
+              {t("crimeMap.tabs.askAI")}
+            </span>
             <span
-              className={`ml-1 flex h-4 items-center rounded-full px-1.5 text-[10px] font-bold ${activeTab === "chat" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700 border border-emerald-200"}`}
+              className={`shrink-0 whitespace-nowrap flex h-4 items-center rounded-full px-1 text-[9px] font-bold ${activeTab === "chat" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700 border border-emerald-200"}`}
             >
               {t("crimeMap.tabs.mapAware")}
             </span>
+          </button>
+          <button
+            onClick={() => onTabChange("plan")}
+            className={`flex-1 min-w-0 flex items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[11px] font-bold tracking-wide transition cursor-pointer ${
+              activeTab === "plan"
+                ? "bg-white text-[#17233C] shadow-sm border border-[#E2E8F0]"
+                : "text-[#64748B] hover:text-[#334155]"
+            }`}
+            title={t("crimeMap.planning.title", {
+              defaultValue: "Planning marks & notes (saved on this device)",
+            })}
+          >
+            <Pencil className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {t("crimeMap.tabs.plan", { defaultValue: "Plan" })}
+            </span>
+            {planCount > 0 && (
+              <span className="shrink-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white tabular-nums">
+                {planCount}
+              </span>
+            )}
           </button>
         </div>
         {activeTab === "details" && hasSelection && (
@@ -2561,6 +2753,14 @@ function RightPanel({
             onMapAction={onMapAction}
             initialQuery={chatPrefill}
             initialQueryKey={chatKey}
+          />
+        ) : activeTab === "plan" ? (
+          <PlansPanel
+            annotations={annotations}
+            onUpdateNote={onUpdateAnnotationNote}
+            onDelete={onDeleteAnnotation}
+            onClear={onClearAnnotations}
+            onFocus={onFocusAnnotation}
           />
         ) : (
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -2587,6 +2787,150 @@ RightPanel.propTypes = {
   chatPrefill: PropTypes.string,
   chatKey: PropTypes.number,
   onAskInMapChat: PropTypes.func,
+  annotations: PropTypes.array,
+  onUpdateAnnotationNote: PropTypes.func,
+  onDeleteAnnotation: PropTypes.func,
+  onClearAnnotations: PropTypes.func,
+  onFocusAnnotation: PropTypes.func,
+};
+
+/* ── Plans Panel (right-side notes for the Pin overlay) ─────────── */
+
+function PlansPanel({ annotations, onUpdateNote, onDelete, onClear, onFocus }) {
+  const { t } = useTranslation();
+  const marks = annotations || [];
+  return (
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div className="px-4 pt-4 pb-3 shrink-0 flex items-center justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-[#64748B]">
+            {t("crimeMap.planning.title", {
+              defaultValue: "Planning marks · saved on this device",
+            })}
+          </p>
+          <p className="text-xs text-[#64748B] mt-0.5">
+            {marks.length
+              ? t("crimeMap.planning.subtitleCount", {
+                  count: marks.length,
+                  defaultValue: `${marks.length} mark${marks.length === 1 ? "" : "s"} — pick Pin / Watch / Corridor in Layers`,
+                })
+              : t("crimeMap.planning.subtitleEmpty", {
+                  defaultValue:
+                    "No marks yet — pick Pin / Watch / Corridor in Layers → Planning overlay",
+                })}
+          </p>
+        </div>
+        {marks.length > 0 && (
+          <button
+            onClick={onClear}
+            className="flex items-center gap-1 rounded-full border border-[#E2E8F0] px-2 py-1 text-[10px] font-bold text-[#94A3B8] hover:text-[#D92D20] hover:bg-red-50 transition-colors shrink-0 cursor-pointer"
+            title={t("crimeMap.planning.clearMarks", {
+              defaultValue: "Clear all planning marks",
+            })}
+          >
+            <Trash2 className="h-3 w-3" />{" "}
+            {t("crimeMap.planning.clear", { defaultValue: "Clear" })}
+          </button>
+        )}
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-2 overscroll-contain">
+        {marks.length === 0 && (
+          <div className="rounded-[10px] border border-dashed border-[#E2E8F0] bg-[#F8FAFC] p-4 text-center">
+            <p className="text-xs font-semibold text-[#334155] flex items-center justify-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-amber-600" />{" "}
+              {t("crimeMap.planning.uncluttered", {
+                defaultValue: "Map is uncluttered",
+              })}
+            </p>
+            <p className="text-[11px] text-[#64748B] mt-1 leading-relaxed">
+              {t("crimeMap.planning.emptyHint", {
+                defaultValue:
+                  "Toggle the Planning overlay in the Layers panel, choose a tool, then click the map. Your notes land here.",
+              })}
+            </p>
+          </div>
+        )}
+        {marks.map((a) => (
+          <div
+            key={a.id}
+            className="rounded-[10px] border border-[#E2E8F0] bg-white px-3 py-2.5"
+            style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.06)" }}
+          >
+            <div className="flex items-center gap-1.5">
+              {a.kind === "pin" && (
+                <MapPin className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+              )}
+              {a.kind === "watch" && (
+                <CircleDot className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+              )}
+              {a.kind === "corridor" && (
+                <Route className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+              )}
+              <button
+                onClick={() => onFocus?.(a)}
+                className="text-[12px] font-bold text-[#17233C] flex-1 truncate text-left hover:underline cursor-pointer"
+                title={t("crimeMap.planning.flyToMark", {
+                  defaultValue: "Fly to this mark",
+                })}
+              >
+                {a.label}
+              </button>
+              {a.kind === "watch" && (
+                <span className="text-[9px] font-semibold text-[#94A3B8] tabular-nums shrink-0">
+                  {a.radiusKm} km
+                </span>
+              )}
+              {a.kind === "corridor" && a.path && (
+                <span className="text-[9px] font-semibold text-[#94A3B8] tabular-nums shrink-0">
+                  {t("crimeMap.planning.ptsSuffix", {
+                    count: a.path.length,
+                    defaultValue: `${a.path.length} pts`,
+                  })}
+                </span>
+              )}
+              <button
+                onClick={() => onDelete?.(a.id)}
+                className="flex h-6 w-6 items-center justify-center rounded-full text-[#94A3B8] hover:text-[#D92D20] hover:bg-red-50 cursor-pointer shrink-0"
+                title={t("crimeMap.planning.deleteMark", {
+                  defaultValue: "Delete mark",
+                })}
+              >
+                <X size={13} />
+              </button>
+            </div>
+            <p className="mt-0.5 text-[10px] text-[#94A3B8] tabular-nums">
+              {a.lat != null && a.lng != null
+                ? `${Number(a.lat).toFixed(4)}, ${Number(a.lng).toFixed(4)}`
+                : a.path?.[0]
+                  ? `${Number(a.path[0][1]).toFixed(4)}, ${Number(a.path[0][0]).toFixed(4)} · ${a.path.length} pts`
+                  : ""}
+              {a.createdAt
+                ? ` · ${new Date(a.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                : ""}
+            </p>
+            <textarea
+              value={a.note || ""}
+              onChange={(e) => onUpdateNote?.(a.id, e.target.value)}
+              placeholder={t("crimeMap.planning.notePlaceholder", {
+                defaultValue:
+                  "Add a note… (e.g. post constable here 8–11 PM)",
+              })}
+              rows={2}
+              className="mt-1.5 w-full resize-y rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-1.5 text-[12px] text-[#334155] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-blue-900"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+PlansPanel.propTypes = {
+  annotations: PropTypes.array,
+  onUpdateNote: PropTypes.func,
+  onDelete: PropTypes.func,
+  onClear: PropTypes.func,
+  onFocus: PropTypes.func,
 };
 
 /* ── Default Panel (nothing selected) ──────────────────────────── */

@@ -169,11 +169,37 @@ class SQLiteInvestigationRepository:
                 scope_params,
             ).fetchone()["cnt"]
 
+            under_investigation = conn.execute(
+                f"""
+                SELECT COUNT(*) cnt
+                FROM CaseMaster cm
+                LEFT JOIN CaseStatusMaster csm
+                    ON cm.CaseStatusID = csm.CaseStatusID
+                WHERE csm.CaseStatusName = 'Under Investigation'
+                {scope_sql}
+                """,
+                scope_params,
+            ).fetchone()["cnt"]
+
+            pending_trial = conn.execute(
+                f"""
+                SELECT COUNT(*) cnt
+                FROM CaseMaster cm
+                LEFT JOIN CaseStatusMaster csm
+                    ON cm.CaseStatusID = csm.CaseStatusID
+                WHERE csm.CaseStatusName = 'Pending Trial'
+                {scope_sql}
+                """,
+                scope_params,
+            ).fetchone()["cnt"]
+
             return {
                 "assigned": assigned,
                 "chargesheet_pending": chargesheet_pending,
                 "chargesheet_overdue": chargesheet_overdue,
                 "critical": critical,
+                "under_investigation": under_investigation,
+                "pending_trial": pending_trial,
                 "repeat_offenders": repeat_offenders,
                 "arrests_pending": arrest_pending,
                 "review_today": review_today,
@@ -270,6 +296,8 @@ class SQLiteInvestigationRepository:
         only_overdue=False,
         only_chargesheet_pending=False,
         only_arrest_pending=False,
+        only_under_investigation=False,
+        only_pending_trial=False,
     ) -> tuple[str, list]:
         """Shared WHERE fragment (after 'WHERE 1 = 1') for COUNT + SELECT."""
         scope_sql, scope_params = self._scope_clause(scope, "cm")
@@ -315,6 +343,10 @@ class SQLiteInvestigationRepository:
                 " WHERE ars.CaseMasterID = cm.CaseMasterID)",
                 [],
             )
+        if only_under_investigation:
+            add("csm.CaseStatusName = ?", ["Under Investigation"])
+        if only_pending_trial:
+            add("csm.CaseStatusName = ?", ["Pending Trial"])
         if search:
             like = f"%{search}%"
             add(
@@ -369,6 +401,8 @@ class SQLiteInvestigationRepository:
         only_overdue=False,
         only_chargesheet_pending=False,
         only_arrest_pending=False,
+        only_under_investigation=False,
+        only_pending_trial=False,
         sort_dir="desc",
     ):
         if scope is None:
@@ -389,6 +423,8 @@ class SQLiteInvestigationRepository:
                 only_overdue=only_overdue,
                 only_chargesheet_pending=only_chargesheet_pending,
                 only_arrest_pending=only_arrest_pending,
+                only_under_investigation=only_under_investigation,
+                only_pending_trial=only_pending_trial,
             )
 
             total = conn.execute(

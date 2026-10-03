@@ -1,6 +1,6 @@
 from typing import Optional
 from datetime import datetime, timedelta
-from collections import Counter, defaultdict
+from collections import Counter
 
 from db.sqlite.sqlite import get_connection
 
@@ -470,102 +470,111 @@ class NetworkRepository:
     # ------------------------------------------------------------------
     # Networks (Connected Components)
     # ------------------------------------------------------------------
-    def get_communities(self, scope: dict | None = None):
+    def get_communities(self, scope: dict | None = None, limit: int = 100):
+        """Co-offending groups: sets of accused charged in the same FIR.
+
+        The previous repeat-pair formulation (same name-pair co-occurring in
+        2+ FIRs) yields zero groups on realistic data where accused names
+        rarely repeat across cases, leaving the Criminal Groups /
+        High-Risk Networks views permanently empty. A per-case co-accused
+        set is the atomic co-offending cluster; groups are ranked by total
+        FIR volume across members so the most active clusters surface first.
+
+        Return shape is unchanged: members / member_count / total_firs /
+        stations_covered / risk. Only the top `limit` groups are enriched
+        and returned (callers render a handful of rows/cards).
+        """
         scope_sql, scope_params = self._scope_filter(scope, "cm")
-        scope_exists = (
-            " AND EXISTS (SELECT 1 FROM CaseMaster cm"
-            f" WHERE cm.CaseMasterID = a1.CaseMasterID{scope_sql})"
-            if (scope_sql or scope) else ""
-        )
         with get_connection() as conn:
-            co_accused_pairs = conn.execute(
+            # 1) Co-accused sets per in-scope case (2+ accused).
+            rows = conn.execute(
                 f"""
-                SELECT a1.AccusedName AS name1, a2.AccusedName AS name2,
-                       COUNT(DISTINCT a1.CaseMasterID) AS weight
-                FROM Accused a1
-                JOIN Accused a2 ON a1.CaseMasterID = a2.CaseMasterID
-                WHERE a1.AccusedName < a2.AccusedName
-                  AND a1.AccusedName IS NOT NULL
-                  AND a2.AccusedName IS NOT NULL
-                {scope_exists}
-                GROUP BY a1.AccusedName, a2.AccusedName
-                HAVING weight >= 2
-                ORDER BY weight DESC
+                SELECT cm.CaseMasterID AS cid,
+                       GROUP_CONCAT(a.AccusedName, char(31)) AS names
+                FROM Accused a
+                JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
+                WHERE a.AccusedName IS NOT NULL
+                {scope_sql}
+                GROUP BY cm.CaseMasterID
+                HAVING COUNT(*) >= 2
                 """,
-                (scope_params if scope_exists else []),
+                scope_params,
             ).fetchall()
+            if not rows:
+                return []
 
-            pairs = [(r["name1"], r["name2"], r["weight"]) for r in co_accused_pairs]
+            # 2) Scoped FIR volume per accused name (single aggregate).
+            fir_counts = {
+                r["name"]: r["c"]
+                for r in conn.execute(
+                    f"""
+                    SELECT a.AccusedName AS name,
+                           COUNT(DISTINCT a.CaseMasterID) AS c
+                    FROM Accused a
+                    JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
+                    WHERE a.AccusedName IS NOT NULL
+                    {scope_sql}
+                    GROUP BY a.AccusedName
+                    """,
+                    scope_params,
+                ).fetchall()
+            }
 
-            adj = defaultdict(set)
-            for n1, n2, _ in pairs:
-                adj[n1].add(n2)
-                adj[n2].add(n1)
-
-            all_names = set()
-            for n1, n2, _ in pairs:
-                all_names.add(n1)
-                all_names.add(n2)
-
-            visited = set()
-            communities = []
-
-            for name in all_names:
-                if name in visited:
+            groups = []
+            for r in rows:
+                members = (r["names"] or "").split(chr(31))
+                members = [m for m in members if m]
+                if len(members) < 2:
                     continue
-                stack = [name]
-                component = set()
-                while stack:
-                    cur = stack.pop()
-                    if cur in visited:
-                        continue
-                    visited.add(cur)
-                    component.add(cur)
-                    for neighbor in adj[cur]:
-                        if neighbor not in visited:
-                            stack.append(neighbor)
-                if len(component) >= 2:
-                    communities.append(list(component))
+                groups.append({
+                    "cid": r["cid"],
+                    "members": members,
+                    "member_count": len(members),
+                    "total_firs": sum(fir_counts.get(m, 0) for m in members),
+                })
+            # Most active clusters first; deterministic tie-breaks.
+            groups.sort(
+                key=lambda g: (-g["total_firs"], -g["member_count"], g["cid"]),
+            )
+            top = groups[:limit]
+            if not top:
+                return []
+
+            # 3) Stations covered per top group (one batched lookup).
+            member_names = list({m for g in top for m in g["members"]})
+            station_map: dict[str, set] = {}
+            for i in range(0, len(member_names), 500):
+                chunk = member_names[i:i + 500]
+                placeholders = ",".join("?" * len(chunk))
+                for nr in conn.execute(
+                    f"""
+                    SELECT a.AccusedName AS name,
+                           cm.PoliceStationID AS st
+                    FROM Accused a
+                    JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
+                    WHERE a.AccusedName IN ({placeholders})
+                    {scope_sql}
+                    GROUP BY a.AccusedName, cm.PoliceStationID
+                    """,
+                    (chunk + scope_params),
+                ).fetchall():
+                    station_map.setdefault(nr["name"], set()).add(nr["st"])
 
             result = []
-            for comp in communities:
-                member_count = len(comp)
-                fir_counts = []
-                station_set = set()
-                for m in comp:
-                    row = conn.execute(
-                        f"""SELECT COUNT(*) AS cnt
-                        FROM Accused a
-                        JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
-                        WHERE a.AccusedName = ?
-                        {scope_sql}""",
-                        ([m] + scope_params),
-                    ).fetchone()
-                    fir_counts.append(row["cnt"])
-                    station_rows = conn.execute(
-                        f"""
-                        SELECT DISTINCT cm.PoliceStationID
-                        FROM Accused a
-                        JOIN CaseMaster cm ON a.CaseMasterID = cm.CaseMasterID
-                        WHERE a.AccusedName = ?
-                        {scope_sql}
-                        """,
-                        ([m] + scope_params),
-                    ).fetchall()
-                    for sr in station_rows:
-                        station_set.add(sr["PoliceStationID"])
-
+            for g in top:
+                stations: set = set()
+                for m in g["members"]:
+                    stations |= station_map.get(m, set())
+                mc, tf = g["member_count"], g["total_firs"]
                 result.append({
-                    "members": comp,
-                    "member_count": member_count,
-                    "total_firs": sum(fir_counts),
-                    "stations_covered": len(station_set),
-                    "risk": "Very High" if member_count >= 10 or sum(fir_counts) >= 30
-                            else "High" if member_count >= 5 or sum(fir_counts) >= 15
+                    "members": g["members"],
+                    "member_count": mc,
+                    "total_firs": tf,
+                    "stations_covered": len(stations),
+                    "risk": "Very High" if mc >= 10 or tf >= 30
+                            else "High" if mc >= 5 or tf >= 15
                             else "Medium",
                 })
-
-            result.sort(key=lambda x: x["total_firs"], reverse=True)
             return result
 
     # ------------------------------------------------------------------

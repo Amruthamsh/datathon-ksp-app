@@ -104,6 +104,8 @@ async def get_investigations(
     only_overdue: bool = Query(False),
     only_chargesheet_pending: bool = Query(False),
     only_arrest_pending: bool = Query(False),
+    only_under_investigation: bool = Query(False),
+    only_pending_trial: bool = Query(False),
 
     current_user: dict = Depends(get_current_user),
     repo: SQLiteInvestigationRepository = Depends(
@@ -137,6 +139,8 @@ async def get_investigations(
             only_overdue=only_overdue,
             only_chargesheet_pending=only_chargesheet_pending,
             only_arrest_pending=only_arrest_pending,
+            only_under_investigation=only_under_investigation,
+            only_pending_trial=only_pending_trial,
         )
 
         total = result["total"]
