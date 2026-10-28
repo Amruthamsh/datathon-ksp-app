@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import DeckGL from "@deck.gl/react";
 import { Map } from "react-map-gl/maplibre";
 import { ScatterplotLayer, GeoJsonLayer, LineLayer } from "@deck.gl/layers";
@@ -545,6 +545,28 @@ export default function CrimeIntelligenceMap() {
     },
     [enhancedRisk, headOptions],
   );
+
+  // Deep links from chat answers: ?district=Kalaburagi&crime=Robbery.
+  // Each part applies once, as soon as its own data has loaded (crime types
+  // arrive much later than district risk, so they must not block the fly-to).
+  const [searchParams] = useSearchParams();
+  const deepLinkDistrictDone = useRef(false);
+  const deepLinkCrimeDone = useRef(false);
+  useEffect(() => {
+    const district = searchParams.get("district");
+    if (!district || deepLinkDistrictDone.current || !(enhancedRisk || []).length) return;
+    deepLinkDistrictDone.current = true;
+    const match = enhancedRisk.find(
+      (d) => String(d.district).toLowerCase() === district.toLowerCase(),
+    );
+    if (match) handleMapAction({ type: "flyToDistrict", district: match.district });
+  }, [searchParams, enhancedRisk, handleMapAction]);
+  useEffect(() => {
+    const crime = searchParams.get("crime");
+    if (!crime || deepLinkCrimeDone.current || !headOptions.length) return;
+    deepLinkCrimeDone.current = true;
+    handleMapAction({ type: "filterCrime", crime });
+  }, [searchParams, headOptions, handleMapAction]);
 
   const handleAskInMapChat = useCallback((query) => {
     if (!query) return;

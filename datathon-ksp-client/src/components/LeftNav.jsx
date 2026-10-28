@@ -176,12 +176,14 @@ const LeftNav = ({
 
   const menuKeys = [
     "investigations",
+    "compliance",
     "crimeIntelligenceMap",
     "criminalNetworks",
     "reports",
   ];
   const routeMap = {
     [t("nav.investigations")]: "/investigations",
+    [t("nav.compliance")]: "/compliance",
     [t("nav.crimeIntelligenceMap")]: "/crime-intelligence-map",
     [t("nav.criminalNetworks")]: "/networks",
     [t("nav.reports")]: "/reports",

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Search, ChevronDown, LogOut, KeyRound, X } from "lucide-react";
+import { Search, ChevronDown, LogOut, KeyRound, X, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import logo from "../assets/Seal_of_Karnataka.svg";
@@ -7,6 +7,14 @@ import profile from "../assets/profile.svg";
 import LanguageSelector from "./LanguageSelector";
 import { useAuth } from "../auth/AuthContext";
 import { changePassword } from "../api/auth";
+import { getOfficerTier, TIERS } from "../utils/role";
+
+const TIER_KEYS = {
+  [TIERS.STATE]: "state",
+  [TIERS.DISTRICT]: "district",
+  [TIERS.STATION]: "station",
+  [TIERS.FIELD]: "field",
+};
 
 const Header = ({ hideSearch = true }) => {
   const { officer, token, signOut } = useAuth();
@@ -107,6 +115,19 @@ const Header = ({ hideSearch = true }) => {
               "
             />
           </div>
+        )}
+
+        {officer && (
+          <span
+            title={t(`briefing.jurisdiction.${TIER_KEYS[getOfficerTier(officer)] || "field"}`, {
+              district: officer.district_name || officer.district || "",
+              station: officer.unit_name || "",
+            })}
+            className="hidden md:inline-flex items-center gap-1.5 rounded-pill border border-navy/15 bg-navy-soft px-2.5 py-1 text-[11.5px] font-semibold text-navy"
+          >
+            <ShieldCheck size={13} />
+            {t(`briefing.tier.${TIER_KEYS[getOfficerTier(officer)] || "field"}`)}
+          </span>
         )}
 
         <LanguageSelector />

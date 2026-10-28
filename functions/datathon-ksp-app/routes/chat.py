@@ -38,6 +38,72 @@ def _get_graph():
     return _graph
 
 
+def _trace_detail(node: str, update: dict) -> dict:
+    """Compact, display-safe summary of what a node contributed."""
+    u = update or {}
+    if node == "language_detection":
+        return {"language": u.get("language")}
+    if node == "translate_query":
+        return {"translated": u.get("translated_query") if "messages" in u else None}
+    if node == "evidence":
+        return {"skipped": not u.get("evidence_context")}
+    if node == "legal_reference":
+        refs = u.get("legal_references") or []
+        return {"skipped": not refs, "sections": len(refs)}
+    if node == "scene":
+        return {"skipped": not u.get("scene_cards")}
+    if node == "router":
+        return {"intent": u.get("intent")}
+    if node == "planner":
+        return {"tables": u.get("selected_tables") or []}
+    if node == "fetch_column_values":
+        return {"columns": len(u.get("distinct_values") or {})}
+    if node == "generate_sql":
+        return {"chars": len(u.get("sql_query") or "")}
+    if node == "execute_sql":
+        guard = u.get("sql_guard") or {}
+        return {
+            "rows": len(u.get("sql_result") or []),
+            "guard": guard.get("passed"),
+            "error": bool(u.get("error")),
+        }
+    if node == "chart":
+        return {"charts": [c.get("type") or c.get("intent") for c in u.get("charts") or []]}
+    if node == "response":
+        return {"follow_ups": len(u.get("follow_up_questions") or [])}
+    if node == "translate_response":
+        return {"skipped": not u}
+    if node == "finalize":
+        return {"skipped": True}
+    return {}
+
+
+def _run_graph_with_trace(state: dict) -> tuple[dict, list]:
+    """Invoke the agent graph, recording per-node wall time for the audit trail.
+
+    The graph is linear per turn, so the gap between consecutive update
+    events is the node's own execution time.
+    """
+    import time
+
+    trace: list[dict] = []
+    final: dict = {}
+    t_prev = time.perf_counter()
+    for mode, chunk in _get_graph().stream(state, stream_mode=["updates", "values"]):
+        if mode == "values":
+            final = chunk
+            continue
+        now = time.perf_counter()
+        for node, update in (chunk or {}).items():
+            trace.append({
+                "node": node,
+                "ms": round((now - t_prev) * 1000),
+                "detail": _trace_detail(node, update if isinstance(update, dict) else {}),
+            })
+        t_prev = now
+    return final, trace
+
+
 def _build_state_messages(history: list, current_query: str) -> list:
     from langchain_core.messages import HumanMessage, AIMessage
 
@@ -277,12 +343,25 @@ async def generate_response(
     }
 
     graph_error = None
+    trace: list[dict] = []
     try:
-        result = _get_graph().invoke(state)
+        result, trace = _run_graph_with_trace(state)
     except Exception:
         traceback.print_exc()
         graph_error = True
         result = {}
+
+    audit = {
+        "trace": trace,
+        "sql_guard": result.get("sql_guard") or None,
+        "officer": {
+            "kgid": user_id,
+            "rank": current_user.get("rank"),
+            "tier": current_user.get("tier"),
+            "scope": (current_user.get("scope") or {}).get("level"),
+        },
+        "language": result.get("language") or language or "en",
+    }
 
     response_text = result.get("response") or (
         "I encountered an error while processing your request. Please try again."
@@ -314,6 +393,8 @@ async def generate_response(
                     # whenever the pin grounded the answer.
                     "scene_cards": result.get("scene_cards", {}),
                     "scene_context": result.get("scene_context", ""),
+                    # Explainability: node trace + SQL guard verdict.
+                    "audit": audit,
                 },
             )
         except Exception as e:
@@ -342,6 +423,7 @@ async def generate_response(
         "legal_context": result.get("legal_context", ""),
         "scene_cards": result.get("scene_cards", {}),
         "scene_context": result.get("scene_context", ""),
+        "audit": audit,
         "failed_uploads": failed_uploads,
         "ocr_warnings": ocr_warnings,
     }

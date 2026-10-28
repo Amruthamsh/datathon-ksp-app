@@ -19,6 +19,7 @@ import {
   BookOpen,
   ScanSearch,
   Crosshair,
+  FileDown,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import useSpeechRecognition from "../hooks/useSpeechRecognition";
@@ -33,6 +34,10 @@ import {
   useOutletContext,
 } from "react-router-dom";
 import AnalysisPanel from "../components/AnalysisPanel";
+import CommandBriefing from "../components/CommandBriefing";
+import { AgentPipelineLoader, TraceChip } from "../components/AgentTrace";
+import IntelActions from "../components/IntelActions";
+import { exportConversationPdf } from "../utils/conversationPdf";
 import {
   EvidenceLightbox,
   isViewableImage,
@@ -43,6 +48,10 @@ import { generateResponse, getConversation, sendFeedback, openEvidence } from ".
 const CHAT_WIDTH_DEFAULT = 47;
 const CHAT_WIDTH_MIN = 25;
 const CHAT_WIDTH_MAX = 75;
+
+// OSINT has no backend search connected yet: the toggle would only add a
+// text hint and invite the model to invent results. Kept visible, disabled.
+const OSINT_CONNECTED = false;
 
 // Fixed scene-context radius — no UI control, always a 10km query.
 const SCENE_RADIUS_KM = 10;
@@ -57,7 +66,7 @@ export default function Home() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { token } = useAuth();
+  const { token, officer } = useAuth();
   const { refreshConversations } = useOutletContext();
   const { t, i18n } = useTranslation();
 
@@ -69,6 +78,8 @@ export default function Home() {
   const [messages, setMessages] = useState([GREETING]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  // Sources active for the in-flight turn — drives the live pipeline stages.
+  const [pendingSources, setPendingSources] = useState({});
   const [isStreaming, setIsStreaming] = useState(false);
   const [followUps, setFollowUps] = useState([]);
   const [activeAnalysis, setActiveAnalysis] = useState(null);
@@ -100,7 +111,9 @@ export default function Home() {
 
   const layoutRef = useRef(null);
   const [chatWidth, setChatWidth] = useState(() => {
-    const saved = Number(localStorage.getItem("ksp-chat-width"));
+    // Number(null) is 0, which clamped fresh/incognito sessions to the minimum width.
+    const raw = localStorage.getItem("ksp-chat-width");
+    const saved = raw === null ? NaN : Number(raw);
     return Number.isFinite(saved) ? clampChatWidth(saved) : CHAT_WIDTH_DEFAULT;
   });
   const [isResizing, setIsResizing] = useState(false);
@@ -184,7 +197,7 @@ export default function Home() {
   );
 
   const handleToggleOsint = useCallback(() => {
-    setOsintEnabled((v) => !v);
+    if (OSINT_CONNECTED) setOsintEnabled((v) => !v);
   }, []);
 
   useEffect(() => {
@@ -552,6 +565,11 @@ export default function Home() {
 
     setInput("");
     setAttachedFiles([]);
+    setPendingSources({
+      evidence: filesToSend.length > 0,
+      codebook: codebookEnabled,
+      scene: hasSceneCoords,
+    });
     setLoading(true);
     setFollowUps([]);
 
@@ -595,6 +613,7 @@ export default function Home() {
         legal_context: data.legal_context || "",
         scene_cards: data.scene_cards || {},
         scene_context: data.scene_context || "",
+        audit: data.audit || null,
       };
 
       const meta = {
@@ -737,6 +756,39 @@ export default function Home() {
     sendMessage(userMsg.content);
   };
 
+  // Conversation → PDF (client-side; renders Kannada via the browser).
+  const [exporting, setExporting] = useState(false);
+  const askedCount = messages.filter((m) => m.role === "user").length;
+  const handleExportConversation = async () => {
+    if (exporting || !askedCount) return;
+    setExporting(true);
+    try {
+      await exportConversationPdf({
+        messages: messages
+          .map((msg, index) => ({ msg, index }))
+          .filter(({ msg }) => msg !== GREETING && msg.content !== GREETING.content),
+        getBubble: (index) =>
+          chatScrollRef.current?.querySelector(`[data-pdf-msg="${index}"]`),
+        officer,
+        conversationId,
+        labels: t("pdf", { returnObjects: true }),
+      });
+    } catch (err) {
+      console.error("Conversation export failed:", err);
+      alert(t("pdf.failed"));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const openAudit = (analysis, content) => {
+    setActiveAnalysis({ ...analysis, response: analysis.response || content || "" });
+    setTimeout(
+      () => document.getElementById("audit-trail")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      120,
+    );
+  };
+
   return (
     <div
       ref={layoutRef}
@@ -749,6 +801,21 @@ export default function Home() {
         className="flex flex-col min-w-0"
         style={{ width: `${chatWidth}%` }}
       >
+        {askedCount > 0 && (
+          <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2">
+            <span className="truncate text-[11.5px] font-medium text-slate-500">
+              {t("pdf.sessionLabel", { count: askedCount })}
+            </span>
+            <button
+              onClick={handleExportConversation}
+              disabled={exporting || loading || isStreaming}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-[12px] font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
+            >
+              {exporting ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
+              {exporting ? t("pdf.exporting") : t("pdf.button")}
+            </button>
+          </div>
+        )}
         <div
           ref={chatScrollRef}
           className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
@@ -793,6 +860,7 @@ export default function Home() {
                 }`}
               >
                 <div
+                  data-pdf-msg={i}
                   className={`rounded-2xl px-4 py-2.5 shadow-sm text-[14px] leading-6 ${
                     m.role === "user"
                       ? "bg-red-50 max-w-[85%]"
@@ -970,6 +1038,17 @@ export default function Home() {
                   {/* Open Investigation button — assistant turns only;
                       user bubbles carry analysis.evidence_files from the
                       upload but have no workspace content of their own */}
+                  {m.role === "assistant" &&
+                    !(isStreaming && i === messages.length - 1) && (
+                      <div>
+                        <TraceChip
+                          audit={m.analysis?.audit}
+                          onClick={() => openAudit(m.analysis, m.content)}
+                        />
+                        {m.analysis && <IntelActions analysis={m.analysis} />}
+                      </div>
+                    )}
+
                   {m.role === "assistant" && hasAnalysis && (
                     <button
                       onClick={() =>
@@ -1016,7 +1095,9 @@ export default function Home() {
                               setSpeakingIndex(null);
                             } else {
                               stop();
-                              speak(m.content);
+                              speak(m.content, {
+                                onEnd: () => setSpeakingIndex((cur) => (cur === i ? null : cur)),
+                              });
                               setSpeakingIndex(i);
                             }
                           }}
@@ -1074,19 +1155,7 @@ export default function Home() {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="rounded-2xl bg-slate-100 px-4 py-3 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce" />
-                  <span
-                    className="h-2 w-2 rounded-full bg-slate-500 animate-bounce"
-                    style={{ animationDelay: ".15s" }}
-                  />
-                  <span
-                    className="h-2 w-2 rounded-full bg-slate-500 animate-bounce"
-                    style={{ animationDelay: ".3s" }}
-                  />
-                </div>
-              </div>
+              <AgentPipelineLoader sources={pendingSources} />
             </div>
           )}
 
@@ -1428,7 +1497,9 @@ export default function Home() {
                     {/* OSINT Lookup row — plain toggle, entities come from the query */}
                     <button
                       onClick={handleToggleOsint}
-                      className={`mx-2 mt-1.5 flex w-[calc(100%-16px)] items-start gap-2.5 rounded-card border px-2.5 py-2.5 text-left transition cursor-pointer ${
+                      disabled={!OSINT_CONNECTED}
+                      title={OSINT_CONNECTED ? undefined : t("sources.osintNotConnected")}
+                      className={`mx-2 mt-1.5 flex w-[calc(100%-16px)] items-start gap-2.5 rounded-card border px-2.5 py-2.5 text-left transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
                         osintEnabled
                           ? "border-slate-900/90 bg-slate-900/90"
                           : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
@@ -1448,6 +1519,11 @@ export default function Home() {
                           className={`text-[12.5px] font-semibold leading-none ${osintEnabled ? "text-white" : "text-slate-800"}`}
                         >
                           {t("sources.osintLookup")}
+                          {!OSINT_CONNECTED && (
+                            <span className="ml-1.5 rounded-full border border-slate-300 px-1.5 py-px align-middle text-[9.5px] font-semibold uppercase tracking-wide text-slate-500">
+                              {t("sources.phase2")}
+                            </span>
+                          )}
                         </p>
                         <p
                           className={`mt-1 text-[11px] leading-[15px] ${osintEnabled ? "text-white/70" : "text-slate-500"}`}
@@ -1659,7 +1735,15 @@ export default function Home() {
 
       {/* Analysis panel */}
       <section className="flex-1 min-w-0 overflow-auto">
-        <AnalysisPanel analysis={activeAnalysis} />
+        <AnalysisPanel
+          analysis={activeAnalysis}
+          emptyState={
+            <CommandBriefing
+              onAsk={(q) => sendMessage(q)}
+              disabled={loading || isStreaming}
+            />
+          }
+        />
       </section>
 
       {/* In-app image viewer for evidence (auth-safe, no new-tab 401s) */}

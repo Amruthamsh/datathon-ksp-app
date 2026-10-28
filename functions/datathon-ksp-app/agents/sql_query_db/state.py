@@ -13,6 +13,8 @@ class SQLAgentState(TypedDict):
     distinct_values: dict
     sql_query: str
     sql_result: list[dict]
+    # Static read-only verdict from functions/sql_guard.py (audit trail).
+    sql_guard: dict
     error: str | None
     response: str
     follow_up_questions: list[str]

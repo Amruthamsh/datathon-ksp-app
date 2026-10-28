@@ -42,6 +42,39 @@ WHERE csh.CrimeHeadName = 'Murder'
 WHERE cm.CrimeRegisteredDate BETWEEN '2025-01-01' AND '2025-12-31'
 """
 
+_data_as_of: str | None = None
+
+
+def _get_data_as_of() -> str | None:
+    """Latest FIR date in the corpus (cached). Relative windows ("last 90
+    days", "this year") are anchored here — the dataset is a static
+    snapshot, so date('now') would silently return empty windows."""
+    global _data_as_of
+    if _data_as_of is None:
+        try:
+            from db.sqlite.sqlite import get_connection
+
+            with get_connection() as conn:
+                row = conn.execute("SELECT MAX(CrimeRegisteredDate) FROM CaseMaster").fetchone()
+                _data_as_of = (row[0] or "")[:10]
+        except Exception as e:
+            print("Could not resolve data as-of date:", str(e))
+            _data_as_of = ""
+    return _data_as_of or None
+
+
+def _date_anchor_rule() -> str:
+    as_of = _get_data_as_of()
+    if not as_of:
+        return ""
+    return f"""
+7. RELATIVE DATES: the crime records are current up to {as_of}. Treat {as_of}
+   as "today". Interpret "last N days/months", "this year", "recent", "past
+   quarter" relative to '{as_of}', e.g.
+   WHERE cm.CrimeRegisteredDate > date('{as_of}', '-90 days')
+   NEVER use date('now') or CURRENT_DATE.
+"""
+
 
 def generate_sql_node(state: SQLAgentState):
     """
@@ -94,6 +127,7 @@ Rules:
 - Always add a secondary sort for ties (e.g., ORDER BY count DESC, name ASC).
 
 {SCHEMA_HINTS}
+{_date_anchor_rule()}
 """
 
     human_prompt = f"""

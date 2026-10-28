@@ -122,23 +122,61 @@ Rules:
             "response": fallback,
         }
 
-    response = "I'm sorry, I can only help with questions related to KSP Crime data. How can I assist you with that?"
-
-    # Even for non-crime-data turns, acknowledge FileStore-backed evidence.
-    # No file list/links here — the files are shown on the user bubble and
-    # in the analysis workspace.
+    # Ungrounded small talk / capability questions: answer conversationally
+    # and steer back to what CrimeLens can do — never a flat refusal.
     evidence_files: list = state.get("evidence_files") or []
-    if evidence_files:
-        response = (
-            "I can only analyse KSP crime data, so tell me what "
-            "you'd like me to cross-reference against the crime database "
-            "(e.g. matching FIRs, sections, stations, or time windows)."
-        )
+    try:
+        response = llm.generate(
+            system_prompt=CAPABILITY_PROMPT,
+            user_prompt=(
+                f"Conversation:\n{_visible_conversation(state)}\n"
+                + ("\n(The officer attached evidence files this turn.)\n" if evidence_files else "")
+                + "\nReply to the latest message now."
+            ),
+        ).strip()
+        if not response:
+            raise ValueError("empty chat reply")
+    except Exception as e:
+        print("Error during conversational reply:", e)
+        response = CAPABILITY_FALLBACK
 
     return {
         "messages": [
             AIMessage(content=response)
         ],
-        "follow_up_questions": [],
+        "follow_up_questions": list(CAPABILITY_FOLLOW_UPS),
         "response": response
     }
+
+
+CAPABILITY_PROMPT = """You are KSP CrimeLens, the crime-intelligence assistant of the
+Karnataka State Police. Reply briefly (under 120 words, GitHub Markdown) to
+greetings, thanks, or questions about what you can do. If the message is
+unrelated to policing, say politely in one sentence that you focus on KSP
+crime intelligence, then offer 2-3 concrete things to ask. Never claim to
+have run a query.
+
+What you can do (mention only what is relevant):
+- Answer questions over ~50,000 KSP FIRs: trends, hotspots, districts,
+  stations, crime types, accused, victims, arrests, chargesheets, BNSS
+  deadlines — always showing the SQL and an audit trail.
+- Evidence Desk: read attached FIRs, panchnamas, CDRs, PM reports.
+- Legal Reference: IPC/BNS/NDPS/POCSO/IT Act sections — punishment,
+  bailability, cognizability.
+- Location Query: drop a pin for crime history, repeat offenders and
+  nearby POIs within 10 km.
+- Works in English and Kannada, by text or voice; conversations export
+  to PDF."""
+
+CAPABILITY_FALLBACK = (
+    "I'm KSP CrimeLens. I can analyse ~50,000 KSP FIRs — trends, hotspots, "
+    "accused networks and BNSS deadlines — read attached evidence, look up "
+    "IPC/BNS sections, and profile any location within 10 km. Every answer "
+    "shows the SQL it ran. Try one of the questions below."
+)
+
+CAPABILITY_FOLLOW_UPS = (
+    "Which 5 districts recorded the most FIRs in the last 90 days?",
+    "How many heinous cases are past the BNSS 90-day chargesheet deadline?",
+    "Show the monthly trend of robbery cases across Karnataka this year",
+)

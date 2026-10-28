@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import * as networkApi from "../api/network";
 import ScopeBanner from "../components/ScopeBanner";
@@ -412,6 +412,17 @@ export default function CriminalNetworks() {
       setShowDropdown(false);
     }
   };
+
+  // Deep link from chat answers: /networks?person=<name>
+  const [searchParams] = useSearchParams();
+  const deepLinkPerson = useRef(null);
+  useEffect(() => {
+    const person = searchParams.get("person");
+    if (!person || !token || deepLinkPerson.current === person) return;
+    deepLinkPerson.current = person;
+    selectPerson(person);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per linked person
+  }, [searchParams, token]);
 
   const selectPerson = async (name, opts = {}) => {
     setPersonName(name);

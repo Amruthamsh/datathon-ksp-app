@@ -106,6 +106,8 @@ async def get_investigations(
     only_arrest_pending: bool = Query(False),
     only_under_investigation: bool = Query(False),
     only_pending_trial: bool = Query(False),
+    bnss_rule: str | None = Query(None),
+    bnss_band: str | None = Query(None),
 
     current_user: dict = Depends(get_current_user),
     repo: SQLiteInvestigationRepository = Depends(
@@ -141,6 +143,8 @@ async def get_investigations(
             only_arrest_pending=only_arrest_pending,
             only_under_investigation=only_under_investigation,
             only_pending_trial=only_pending_trial,
+            bnss_rule=bnss_rule,
+            bnss_band=bnss_band,
         )
 
         total = result["total"]
@@ -194,6 +198,12 @@ async def get_case_details(
 
         _assert_case_visible(data, current_user.get("scope"))
 
+        from services.bnss_service import data_as_of, get_case_clocks
+
+        if isinstance(data, dict):
+            data["bnss"] = get_case_clocks(case_id)
+            data["as_of"] = data_as_of()
+
         return {
             "status": "success",
             "data": data
@@ -210,6 +220,31 @@ async def get_case_details(
             status_code=500,
             detail="Failed to fetch case details."
         )
+
+
+@router.get("/{case_id}/final-report", status_code=status.HTTP_200_OK)
+async def get_final_report_draft(
+    case_id: int,
+    current_user: dict = Depends(get_current_user),
+    repo: SQLiteInvestigationRepository = Depends(
+        get_investigation_repository
+    ),
+):
+    """Deterministic Final Report (chargesheet) draft — records only, gaps flagged."""
+    from services.final_report_service import build_final_report
+
+    try:
+        _assert_case_visible(repo.get_case_details(case_id), current_user.get("scope"))
+        data = build_final_report(case_id)
+        if not data:
+            raise HTTPException(status_code=404, detail="Case not found.")
+        return {"status": "success", "data": data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to build the final report draft.")
 
 
 # ---------------------------------------------------------------------

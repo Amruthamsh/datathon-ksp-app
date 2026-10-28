@@ -54,6 +54,9 @@ export default function InvestigationsQueue() {
   const sortAscending = searchParams.get("sortDir") === "asc";
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
   const activeStat = searchParams.get("stat") || "";
+  // BNSS clock filter from the compliance board: ?bnss=default_bail&band=critical
+  const bnssRule = searchParams.get("bnss") || "";
+  const bnssBand = searchParams.get("band") || "";
   const activeFilters = useMemo(
     () => ({
       CaseStatusName: searchParams.get("status") || "",
@@ -75,35 +78,28 @@ export default function InvestigationsQueue() {
     setSearchParams(next);
   };
 
-  // Chargesheet countdown from real fields only: FIR date + 90d (Heinous) / 60d.
-  // Meaningful only when no chargesheet is on file — callers gate on HasChargesheet.
-  const getChargesheetDiff = (row) => {
-    if (!row.CrimeRegisteredDate) return null;
-    const isSerious = String(row.Gravity).toLowerCase().includes("heinous");
-    const limit = isSerious ? 90 : 60;
-    const due = new Date(new Date(row.CrimeRegisteredDate).getTime() + limit * 864e5);
-    return Math.ceil((due - Date.now()) / 864e5);
-  };
+  // BNSS clock from the server (services/bnss_service.py): the nearest hard
+  // statutory limit — default bail (s.187(3), from first arrest) or the
+  // s.193(2) sexual-offence window. Null when no clock is running.
+  const isOverdue = (row) => row.Bnss?.band === "breached";
 
-  const isOverdue = (row) => {
-    if (row.HasChargesheet) return false;
-    const diff = getChargesheetDiff(row);
-    return diff !== null && diff < 0;
+  const bnssWhy = (row) => {
+    const b = row.Bnss;
+    if (!b) return null;
+    const key = b.rule === "sexual_offence" ? "sexual" : "bail";
+    if (b.band === "breached")
+      return t(`investigations.queue.why.bnss.${key}Breached`, { count: Math.abs(b.days_left) });
+    if (b.band === "critical")
+      return t(`investigations.queue.why.bnss.${key}Due`, { count: b.days_left });
+    return null;
   };
 
   const hasNoArrest = (row) =>
     !row.HasArrest && Number(row.AccusedCount || 0) > 0;
 
   const getWhyNow = (row) => {
-    const diff = getChargesheetDiff(row);
-    if (isOverdue(row))
-      return t("investigations.queue.why.chargesheetOverdue", {
-        count: Math.abs(diff),
-      });
-    if (!row.HasChargesheet && diff !== null && diff <= 7)
-      return t("investigations.queue.why.chargesheetDue", {
-        count: Math.max(diff, 0),
-      });
+    const bnss = bnssWhy(row);
+    if (bnss) return bnss;
     if (hasNoArrest(row)) return t("investigations.queue.why.noArrest");
     if (!row.HasChargesheet)
       return t("investigations.queue.why.chargesheetNotFiled");
@@ -163,14 +159,8 @@ export default function InvestigationsQueue() {
   // Plain function (not memoized): depends on the rule helpers above.
   const getRowIntel = (row) => {
       const parts = [];
-      if (isOverdue(row)) {
-        const diff = getChargesheetDiff(row);
-        parts.push(
-          t("investigations.queue.why.chargesheetOverdue", {
-            count: Math.abs(diff),
-          }),
-        );
-      }
+      const bnss = bnssWhy(row);
+      if (bnss) parts.push(bnss);
       if (hasNoArrest(row)) parts.push(t("investigations.queue.why.noArrest"));
       if (!row.HasChargesheet && !isOverdue(row))
         parts.push(t("investigations.queue.why.chargesheetNotFiled"));
@@ -245,6 +235,8 @@ export default function InvestigationsQueue() {
           onlyArrestPending: activeStat === "arrests_pending",
           onlyUnderInvestigation: activeStat === "under_investigation",
           onlyPendingTrial: activeStat === "pending_trial",
+          bnssRule: bnssRule || undefined,
+          bnssBand: bnssBand || undefined,
         });
         if (cancelled) return;
         setCases(Array.isArray(res?.data) ? res.data : []);
@@ -272,6 +264,8 @@ export default function InvestigationsQueue() {
     searchQuery,
     sortAscending,
     activeStat,
+    bnssRule,
+    bnssBand,
     activeFilters.CaseStatusName,
     activeFilters.Gravity,
     activeFilters.UnitName,
@@ -597,6 +591,29 @@ export default function InvestigationsQueue() {
           )}
         </button>
       </div>
+
+      {bnssRule && (
+        <div className="mx-0 mb-2 flex items-center justify-between gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-800">
+          <span className="font-semibold">
+            {t("investigations.queue.bnssFilter", {
+              rule: t(`compliance.rules.${bnssRule}.stage`, { defaultValue: bnssRule }),
+              band: t(`compliance.band.${bnssBand || "all"}`),
+            })}
+          </span>
+          <button
+            onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              next.delete("bnss");
+              next.delete("band");
+              next.delete("page");
+              setSearchParams(next);
+            }}
+            className="rounded border border-red-300 bg-white px-2 py-0.5 text-[11px] font-semibold hover:bg-red-100 cursor-pointer"
+          >
+            {t("investigations.queue.clearBnss")}
+          </button>
+        </div>
+      )}
 
       {/* Action-oriented table — Priority | Case | Why now | Next action | Age */}
       <div className="flex-1 overflow-auto bg-white">

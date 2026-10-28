@@ -34,6 +34,7 @@ import {
   getCaseBrief,
 } from "../api/investigations";
 import { generateResponse } from "../api/chat";
+import FinalReportDraft from "../components/FinalReportDraft";
 import { useAuth } from "../auth/AuthContext";
 import { getOfficerRank } from "../utils/role";
 import { getMockExtensions } from "../data/mockCaseExtensions";
@@ -70,30 +71,36 @@ function formatMonoDate(d) {
     return String(d);
   }
 }
-function useChargesheet(caseData, mock) {
+const CHARGESHEET_REQUEST =
+  /\b(draft|prepare|prep|generate|write|create|make)\b.*\b(charge ?sheet|final report)\b|\b(charge ?sheet|final report)\b.*\bdraft\b/i;
+
+// Case ages are measured from the latest FIR on record (same anchor as the
+// BNSS clocks), not the wall clock — the dataset is a static snapshot.
+function caseNow(caseData) {
+  return caseData?.as_of ? new Date(caseData.as_of).getTime() : Date.now();
+}
+
+// Chargesheet clock from the BNSS engine (case API `bnss`): real first-arrest
+// date, statutory limit by offence, anchored to the latest FIR on record.
+const BAND_TONE = { breached: "overdue", critical: "critical", warning: "warning", on_track: "neutral" };
+
+function useChargesheet(caseData) {
   return useMemo(() => {
-    const arrests =
-      mock?.mockAccused?.filter((a) => a.arrestDate).map((a) => a.arrestDate) ||
-      [];
-    const earliestArrest = arrests.length ? arrests.sort()[0] : null;
-    const baseDate = earliestArrest || caseData?.CrimeRegisteredDate;
-    const isArrestBased = Boolean(earliestArrest);
-    if (!baseDate) return null;
-    const acts = (caseData?.acts || []).map((a) => a.ActID);
-    const isSerious =
-      acts.includes("NDPS") ||
-      String(caseData?.Gravity).toLowerCase().includes("heinous") ||
-      acts.includes("POCSO");
-    const limitDays = isSerious ? 90 : 60;
-    const base = new Date(baseDate);
-    const due = new Date(base.getTime() + limitDays * 864e5);
-    const diff = Math.ceil((due - Date.now()) / 864e5);
-    let tone = "neutral";
-    if (diff < 0) tone = "overdue";
-    else if (diff <= 14) tone = "critical";
-    else if (diff <= 30) tone = "warning";
-    return { baseDate, due, diff, limitDays, isArrestBased, tone };
-  }, [caseData, mock]);
+    const clocks = caseData?.bnss || [];
+    const clock =
+      clocks.find((c) => c.rule === "default_bail") ||
+      clocks.find((c) => c.rule === "sexual_offence");
+    if (!clock) return null;
+    return {
+      baseDate: clock.start_date,
+      due: clock.deadline ? new Date(clock.deadline) : null,
+      diff: clock.days_left,
+      limitDays: clock.limit_days,
+      isArrestBased: clock.rule === "default_bail",
+      tone: BAND_TONE[clock.band] || "neutral",
+      clock,
+    };
+  }, [caseData]);
 }
 
 export default function InvestigationWorkspace() {
@@ -126,6 +133,7 @@ export default function InvestigationWorkspace() {
   });
   const [chatInput, setChatInput] = useState("");
   const [chatSending, setChatSending] = useState(false);
+  const [showFinalReport, setShowFinalReport] = useState(false);
   useEffect(() => {
     try {
       localStorage.setItem(chatKey, JSON.stringify(chatMessages));
@@ -172,7 +180,7 @@ export default function InvestigationWorkspace() {
       cancelled = true;
     };
   }, [caseId, token]);
-  const chargesheet = useChargesheet(caseData, mock);
+  const chargesheet = useChargesheet(caseData);
   const actSectionDetails = useMemo(() => {
     if (!caseIntel?.acts) return [];
     return caseIntel.acts.map((a) => {
@@ -223,13 +231,41 @@ export default function InvestigationWorkspace() {
     setChatMessages((prev) => [...prev, userMsg]);
     const q = qRaw.trim();
     if (typeof override !== "string") setChatInput("");
+
+    // Chargesheets are legal documents: never let the language model compose
+    // one. Open the records-only Final Report draft instead.
+    if (CHARGESHEET_REQUEST.test(q)) {
+      setShowFinalReport(true);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: t("workspace.finalReport.chatReply"),
+          at: new Date().toISOString(),
+        },
+      ]);
+      return;
+    }
+
     setChatSending(true);
     setCopilotOpen(true);
     try {
-      const ctx = `Case ${caseData?.CrimeNo} (${caseData?.CrimeGroupName}, ${caseData?.Gravity}). Accused: ${(caseIntel?.accused || []).map((a) => a.AccusedName).join(", ")}. Acts: ${(caseIntel?.acts || []).map((a) => `${a.ActID} ${a.SectionID}`).join(", ")}. Timeline: ${(mock?.timeline || []).map((e) => `${e.title} ${formatDate(e.date)}`).join("; ")}. FSL:${mock?.fsl.status} Court:${mock?.court.purpose} ${formatDate(mock?.court.nextHearingDate)} Similar:${similarCases
-        .slice(0, 3)
-        .map((s) => s.CrimeNo)
-        .join(",")}`;
+      // Context from case records only — no mock timeline / FSL / court data,
+      // so the model can't present simulated facts as the case file.
+      const clocks = (caseData?.bnss || [])
+        .filter((c) => c.rule === "default_bail")
+        .map((c) => `${c.accused_name} arrested ${c.start_date}, default bail ${c.days_left < 0 ? `${-c.days_left}d past` : `in ${c.days_left}d`} (${c.deadline})`)
+        .join("; ");
+      const ctx = [
+        `Case ${caseData?.CrimeNo}: ${caseData?.CrimeHeadName} (${caseData?.CrimeGroupName}), ${caseData?.CaseStatusName}`,
+        `Registered ${caseData?.CrimeRegisteredDate?.slice(0, 10)} at ${caseData?.UnitName}, ${caseData?.DistrictName}. Records current to ${caseData?.as_of}.`,
+        `Facts: ${caseData?.BriefFacts || "not recorded"}`,
+        `Accused: ${(caseIntel?.accused || []).map((a) => `${a.PersonID} ${a.AccusedName} (${a.AgeYear}${a.AgeYear < 18 ? ", juvenile" : ""})`).join(", ") || "none recorded"}`,
+        `Victims: ${(caseIntel?.victims || []).map((v) => `${v.VictimName} (${v.AgeYear})`).join(", ") || "none recorded"}`,
+        clocks ? `BNSS default-bail clocks: ${clocks}` : "No accused in custody.",
+        `Similar cases: ${similarCases.slice(0, 3).map((x) => x.CrimeNo).join(", ") || "none"}`,
+        "Only state facts listed above; say when something is not in the records.",
+      ].join("\n");
       const res = await generateResponse(
         token,
         `Context: ${ctx}\n\nQuestion about this case (${activeTab} tab): ${q}`,
@@ -353,6 +389,9 @@ export default function InvestigationWorkspace() {
 
   return (
     <div className="ksp-workspace flex h-full overflow-hidden bg-slate-50 relative">
+      {showFinalReport && (
+        <FinalReportDraft caseId={caseId} onClose={() => setShowFinalReport(false)} />
+      )}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {/* Sub-header — breadcrumb + identity, tags moved to Key Facts */}
       <div className="shrink-0 border-b border-slate-200 bg-white">
@@ -1018,7 +1057,7 @@ function CaseBriefTab({
     );
   }
   const ageDays = Math.floor(
-    (Date.now() - new Date(caseData.CrimeRegisteredDate).getTime()) / 864e5,
+    (caseNow(caseData) - new Date(caseData.CrimeRegisteredDate).getTime()) / 864e5,
   );
   const coords =
     caseData.latitude && caseData.longitude
@@ -1046,7 +1085,13 @@ function CaseBriefTab({
         onAsk={onAsk}
       />
 
-      <DeadlinesStrip mock={mock} chargesheet={chargesheet} />
+      <BnssClocksPanel clocks={caseData.bnss} />
+
+      <DeadlinesStrip
+        mock={mock}
+        chargesheet={chargesheet}
+        preTrial={caseData.CaseStatusName === "Under Investigation"}
+      />
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white [&_p]:max-w-[70ch]">
         <div className="flex items-start justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-3">
@@ -1131,7 +1176,7 @@ function CriticalBanner({
   const absconders = accused.filter((a) => a.arrestStatus === "Absconding");
   const abscond = absconders.length;
   const ageDays = Math.floor(
-    (Date.now() - new Date(caseData.CrimeRegisteredDate).getTime()) / 864e5,
+    (caseNow(caseData) - new Date(caseData.CrimeRegisteredDate).getTime()) / 864e5,
   );
   const ageMo = Math.floor(ageDays / 30);
   const fslOverdue = mock?.fsl.status === "overdue";
@@ -1142,7 +1187,28 @@ function CriticalBanner({
   const courtPurpose = mock?.court.purpose;
 
   let state;
-  if (abscond > 0) {
+  // Real BNSS clocks (case API) take precedence over mock-backed signals.
+  // Sexual-offence clocks (s.193(2)) have their own wording: no default bail.
+  const sx = chargesheet?.clock?.rule === "sexual_offence" ? "Sexual" : "";
+  if (chargesheet?.tone === "overdue") {
+    state = {
+      tone: "critical",
+      kicker: t(`workspace.banner.overdueKicker${sx}`),
+      title: t(`workspace.banner.overdueTitle${sx}`, { count: Math.abs(chargesheet.diff), limit: chargesheet.limitDays, name: chargesheet.clock?.accused_name || t("workspace.banner.theAccused") }),
+      body: t("workspace.banner.overdueBody", { fslFrag: t("workspace.banner.overdueBodyConfirm") }),
+      action: t("workspace.banner.overdueAction"),
+      ask: t("workspace.banner.overdueAsk"),
+    };
+  } else if (chargesheet?.tone === "critical") {
+    state = {
+      tone: "warning",
+      kicker: t(`workspace.banner.criticalKicker${sx}`),
+      title: t(`workspace.banner.criticalTitle${sx}`, { count: chargesheet.diff, name: chargesheet.clock?.accused_name || t("workspace.banner.theAccused") }),
+      body: t("workspace.banner.criticalBody", { limit: chargesheet.limitDays, base: chargesheet.isArrestBased ? t("workspace.banner.criticalBaseArrest") : t("workspace.banner.criticalBaseFIR") }),
+      action: t("workspace.banner.criticalAction"),
+      ask: t("workspace.banner.criticalAsk"),
+    };
+  } else if (abscond > 0) {
     state = {
       tone: "critical",
       kicker: t("workspace.banner.abscondKicker"),
@@ -1150,15 +1216,6 @@ function CriticalBanner({
       body: abscond === accused.length ? t("workspace.banner.abscondBodyAll", { hearingDate, purpose: courtPurpose, months: ageMo }) : t("workspace.banner.abscondBodyNamed", { hearingDate, purpose: courtPurpose, names: absconders.map((a) => a.AccusedName).join(", "), months: ageMo }),
       action: t("workspace.banner.abscondAction"),
       ask: t("workspace.banner.abscondAsk"),
-    };
-  } else if (chargesheet?.tone === "overdue") {
-    state = {
-      tone: "critical",
-      kicker: t("workspace.banner.overdueKicker"),
-      title: t("workspace.banner.overdueTitle", { count: Math.abs(chargesheet.diff), limit: chargesheet.limitDays }),
-      body: t("workspace.banner.overdueBody", { fslFrag: fslOverdue ? t("workspace.banner.overdueBodyFsl") : t("workspace.banner.overdueBodyConfirm") }),
-      action: t("workspace.banner.overdueAction"),
-      ask: t("workspace.banner.overdueAsk"),
     };
   } else if (fslOverdue) {
     state = {
@@ -1168,15 +1225,6 @@ function CriticalBanner({
       body: t("workspace.banner.fslBody", { sentDate: formatDate(mock.fsl.sentDate) }),
       action: t("workspace.banner.fslAction"),
       ask: t("workspace.banner.fslAsk"),
-    };
-  } else if (chargesheet?.tone === "critical") {
-    state = {
-      tone: "warning",
-      kicker: t("workspace.banner.criticalKicker"),
-      title: t("workspace.banner.criticalTitle", { count: chargesheet.diff }),
-      body: t("workspace.banner.criticalBody", { limit: chargesheet.limitDays, base: chargesheet.isArrestBased ? t("workspace.banner.criticalBaseArrest") : t("workspace.banner.criticalBaseFIR") }),
-      action: t("workspace.banner.criticalAction"),
-      ask: t("workspace.banner.criticalAsk"),
     };
   } else if (witnessesPending) {
     state = {
@@ -1299,7 +1347,77 @@ function KeyFactsStrip({ caseData, ageDays }) {
   );
 }
 
-function DeadlinesStrip({ mock, chargesheet }) {
+const CLOCK_STYLE = {
+  breached: { pill: "bg-[#d92d20] text-white", bar: "bg-[#d92d20]" },
+  critical: { pill: "bg-[#f97316] text-white", bar: "bg-[#f97316]" },
+  warning: { pill: "bg-[#fef3c7] text-[#92400e]", bar: "bg-[#fcd34d]" },
+  on_track: { pill: "bg-slate-100 text-slate-700", bar: "bg-slate-400" },
+};
+
+// Every BNSS statutory clock running on this case, with real start dates.
+function BnssClocksPanel({ clocks }) {
+  const { t } = useTranslation();
+  if (!clocks?.length) return null;
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2">
+        <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-900">
+          {t("workspace.bnss.title")}
+        </h3>
+        <span className="text-[11px] text-slate-500">
+          {t("workspace.bnss.asOf", { date: formatDate(clocks[0].as_of) })}
+        </span>
+      </div>
+      <ul className="divide-y divide-slate-100">
+        {clocks.map((c) => {
+          const st = CLOCK_STYLE[c.band] || CLOCK_STYLE.on_track;
+          const elapsed = Math.min(1, Math.max(0, (c.limit_days - c.days_left) / c.limit_days));
+          return (
+            <li key={`${c.rule}-${c.AccusedMasterID || ""}`} className="px-4 py-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-slate-900">
+                    {t(`compliance.rules.${c.rule}.stage`, { defaultValue: c.stage })}
+                    {c.accused_name && (
+                      <span className="ml-1.5 font-normal text-slate-600">
+                        — {c.accused_name}
+                        {c.accused_age ? `, ${c.accused_age}` : ""}
+                      </span>
+                    )}
+                    <span className="ksp-mono ml-2 text-[11px] font-semibold text-slate-500">
+                      {t(`compliance.rules.${c.rule}.provision`, { defaultValue: c.provision })}
+                    </span>
+                  </p>
+                  <p className="text-[11.5px] text-slate-500">
+                    {t(`workspace.bnss.start.${c.rule}`, { date: formatDate(c.start_date) })}
+                    {" · "}
+                    {t("workspace.bnss.limit", { days: c.limit_days, date: formatDate(c.deadline) })}
+                    {c.basis ? ` · ${c.basis}` : ""}
+                  </p>
+                </div>
+                <span className={`shrink-0 rounded px-2 py-0.5 text-[11.5px] font-bold tabular-nums ${st.pill}`}>
+                  {c.days_left < 0
+                    ? t("workspace.bnss.late", { count: Math.abs(c.days_left) })
+                    : t("workspace.bnss.left", { count: c.days_left })}
+                </span>
+              </div>
+              <div className="mt-1.5 h-1.5 rounded-full bg-slate-100">
+                <div className={`h-1.5 rounded-full ${st.bar}`} style={{ width: `${elapsed * 100}%` }} />
+              </div>
+              {c.rule === "default_bail" && c.band !== "on_track" && (
+                <p className="mt-1 text-[11.5px] font-medium text-slate-700">
+                  {c.band === "breached" ? t("workspace.bnss.consequenceNow") : t("workspace.bnss.consequence")}
+                </p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function DeadlinesStrip({ mock, chargesheet, preTrial }) {
   const { t } = useTranslation();
   const csTone =
     chargesheet?.tone === "critical"
@@ -1329,7 +1447,12 @@ function DeadlinesStrip({ mock, chargesheet }) {
       <div className="grid grid-cols-2 sm:grid-cols-4">
         <StripItem
           label={t("workspace.side.nextHearing")}
-          value={`${formatDate(mock?.court.nextHearingDate)}${mock?.court.purpose ? ` · ${mock.court.purpose}` : ""}`}
+          value={
+            // No trial hearing exists before the final report is filed.
+            preTrial
+              ? t("workspace.side.awaitingChargesheet")
+              : `${formatDate(mock?.court.nextHearingDate)}${mock?.court.purpose ? ` · ${mock.court.purpose}` : ""}`
+          }
         />
         <StripItem
           label={t("workspace.side.court")}

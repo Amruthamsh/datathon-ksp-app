@@ -77,6 +77,8 @@ export async function getInvestigations(token, params = {}) {
         : undefined,
     only_pending_trial:
       params.onlyPendingTrial ?? params.only_pending_trial ? true : undefined,
+    bnss_rule: params.bnssRule,
+    bnss_band: params.bnssBand,
   };
 
   const queryString = buildQueryString(queryParams);
@@ -100,6 +102,16 @@ export async function getCaseDetails(token, caseId) {
 
 export async function getCaseIntel(token, caseId) {
   const res = await fetch(`${BASE}/investigations/${caseId}/intel`, {
+    headers: {
+      "X-Auth-Token": token,
+    },
+  });
+  return handleResponse(res);
+}
+
+// Deterministic Final Report (chargesheet) draft — records only, gaps flagged.
+export async function getFinalReport(token, caseId) {
+  const res = await fetch(`${BASE}/investigations/${caseId}/final-report`, {
     headers: {
       "X-Auth-Token": token,
     },

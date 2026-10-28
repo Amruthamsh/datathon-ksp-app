@@ -81,7 +81,15 @@ comparisons beyond the pin radius, return {"intent":"sql"}.
     if response.startswith("```"):
         response = response.replace("```json", "").replace("```", "").strip()
 
-    intent = json.loads(response)["intent"]
+    try:
+        intent = json.loads(response)["intent"]
+    except (ValueError, KeyError, TypeError):
+        # A malformed classifier reply must not crash the turn; the database
+        # path is the safe default (routing.py still catches greetings).
+        print("Router returned unparseable intent, defaulting to sql:", response[:200])
+        intent = "sql"
+    if intent not in ("sql", "chat"):
+        intent = "sql"
 
     return {
         "intent": intent

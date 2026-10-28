@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Save, Download, Copy, Check, Paperclip, BookOpen, Minus, Plus, ExternalLink, Crosshair, Users, MapPin } from "lucide-react";
+import { Save, Download, Copy, Check, Paperclip, BookOpen, Minus, Plus, ExternalLink, Crosshair, Users, MapPin, ShieldCheck } from "lucide-react";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx";
@@ -10,6 +10,7 @@ import { formatValue } from "../utils/chatUtils";
 import { saveReport } from "../api/reports";
 import { EvidenceLightbox, DocumentPreview } from "./EvidenceViewer";
 import { useAuth } from "../auth/AuthContext";
+import { AuditTrail } from "./AgentTrace";
 
 // ── Data Table ───────────────────────────────────────────────────────────────
 
@@ -621,7 +622,7 @@ function SceneIntelCards({ cards = {} }) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-export default function AnalysisPanel({ analysis }) {
+export default function AnalysisPanel({ analysis, emptyState = null }) {
   const { t } = useTranslation();
   const rows = Array.isArray(analysis?.sql_result) ? analysis.sql_result : [];
   const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
@@ -756,6 +757,7 @@ export default function AnalysisPanel({ analysis }) {
       legalReferences.length === 0 &&
       !hasScene)
   ) {
+    if (emptyState) return emptyState;
     return (
       <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white/80 px-8 text-center text-slate-500 shadow-sm">
         {t("analysis.pickResponse")}
@@ -922,6 +924,18 @@ export default function AnalysisPanel({ analysis }) {
                 </CollapsibleSection>
               );
             })}
+
+          {analysis?.audit?.trace?.length > 0 && (
+            <div id="audit-trail" className="scroll-mt-4">
+              <CollapsibleSection
+                icon={<ShieldCheck size={14} className="shrink-0 text-emerald-600" />}
+                title={t("trace.auditTitle")}
+                subtitle={t("trace.auditSub")}
+              >
+                <AuditTrail audit={analysis.audit} rowCount={rowCount} />
+              </CollapsibleSection>
+            </div>
+          )}
 
           <CollapsibleSection
             title={t("analysis.sqlResults")}

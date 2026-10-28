@@ -2,6 +2,11 @@ from typing import Optional
 
 from db.sqlite.sqlite import get_connection
 
+# Case ages and BNSS deadlines are measured from the latest FIR on record
+# ("SELECT MAX(CrimeRegisteredDate)"), not wall-clock now — the corpus is a
+# static snapshot, so 'now' would mark every open case overdue. Matches
+# db/sqlite/briefing_repository.py.
+
 
 class SQLiteInvestigationRepository:
     def get_user_employee_id(self, kgid: str) -> Optional[int]:
@@ -135,27 +140,15 @@ class SQLiteInvestigationRepository:
                 f"""
                 SELECT COUNT(*) cnt
                 FROM CaseMaster cm
-                WHERE julianday('now') - julianday(CrimeRegisteredDate) >= 30
+                WHERE julianday((SELECT MAX(CrimeRegisteredDate) FROM CaseMaster)) - julianday(CrimeRegisteredDate) >= 30
                 {scope_sql}
                 """,
                 scope_params,
             ).fetchone()["cnt"]
 
-            chargesheet_overdue = conn.execute(
-                f"""
-                SELECT COUNT(*) cnt
-                FROM CaseMaster cm
-                LEFT JOIN ChargesheetDetails cs
-                    ON cm.CaseMasterID = cs.CaseMasterID
-                LEFT JOIN GravityOffence go
-                    ON cm.GravityOffenceID = go.GravityOffenceID
-                WHERE cs.CSID IS NULL
-                  AND (julianday('now') - julianday(cm.CrimeRegisteredDate)) >
-                      CASE WHEN go.LookupValue = 'Heinous' THEN 90 ELSE 60 END
-                {scope_sql}
-                """,
-                scope_params,
-            ).fetchone()["cnt"]
+            from services import bnss_service as bnss  # lazy: avoids import cycle
+
+            chargesheet_overdue = bnss.count_overdue(conn, scope)
 
             critical = conn.execute(
                 f"""
@@ -298,8 +291,12 @@ class SQLiteInvestigationRepository:
         only_arrest_pending=False,
         only_under_investigation=False,
         only_pending_trial=False,
+        bnss_rule=None,
+        bnss_band=None,
     ) -> tuple[str, list]:
         """Shared WHERE fragment (after 'WHERE 1 = 1') for COUNT + SELECT."""
+        from services import bnss_service as bnss  # lazy: bnss_service imports this module
+
         scope_sql, scope_params = self._scope_clause(scope, "cm")
         conds = [scope_sql.lstrip(" ")] if scope_sql else []
         # strip leading AND -> normalize: _scope_clause returns " AND ..."
@@ -325,18 +322,18 @@ class SQLiteInvestigationRepository:
             add(frag[5:], vals)
         if officer:
             add("TRIM(e.FirstName) = ?", [str(officer).strip()])
-        if only_chargesheet_pending or only_overdue:
+        if only_chargesheet_pending:
             add(
                 "NOT EXISTS (SELECT 1 FROM ChargesheetDetails cs"
                 " WHERE cs.CaseMasterID = cm.CaseMasterID)",
                 [],
             )
         if only_overdue:
-            add(
-                "(julianday('now') - julianday(cm.CrimeRegisteredDate)) >"
-                " CASE WHEN go.LookupValue = 'Heinous' THEN 90 ELSE 60 END",
-                [],
-            )
+            # BNSS statutory limit crossed (services/bnss_service.py)
+            add(f"cm.CaseMasterID IN ({bnss.overdue_ids_sql()})", [])
+        if bnss_rule or bnss_band:
+            frag, vals = bnss.case_ids_sql(bnss_rule, bnss_band)
+            add(f"cm.CaseMasterID IN ({frag})", vals)
         if only_arrest_pending:
             add(
                 "NOT EXISTS (SELECT 1 FROM ArrestSurrender ars"
@@ -404,6 +401,8 @@ class SQLiteInvestigationRepository:
         only_under_investigation=False,
         only_pending_trial=False,
         sort_dir="desc",
+        bnss_rule=None,
+        bnss_band=None,
     ):
         if scope is None:
             scope = {"level": "self", "employee_id": employee_id}
@@ -425,6 +424,8 @@ class SQLiteInvestigationRepository:
                 only_arrest_pending=only_arrest_pending,
                 only_under_investigation=only_under_investigation,
                 only_pending_trial=only_pending_trial,
+                bnss_rule=bnss_rule,
+                bnss_band=bnss_band,
             )
 
             total = conn.execute(
@@ -473,7 +474,7 @@ class SQLiteInvestigationRepository:
 
                 cm.CrimeRegisteredDate,
 
-                julianday('now') - julianday(cm.CrimeRegisteredDate)
+                julianday((SELECT MAX(CrimeRegisteredDate) FROM CaseMaster)) - julianday(cm.CrimeRegisteredDate)
                     AS AgeDays,
 
                 (
@@ -513,15 +514,32 @@ class SQLiteInvestigationRepository:
 
             rows = conn.execute(sql, params).fetchall()
 
+            # Nearest hard BNSS clock per case on this page (countdown chip).
+            from services import bnss_service as bnss  # lazy: avoids import cycle
+
+            clocks: dict = {}
+            ids = [r["CaseMasterID"] for r in rows]
+            if ids:
+                marks = ",".join("?" * len(ids))
+                for c in conn.execute(
+                    f"SELECT * FROM ({bnss.clocks_sql(f'AND cm.CaseMasterID IN ({marks})')}) "
+                    f"WHERE rule IN {bnss.OVERDUE_RULES} ORDER BY days_left",
+                    ids,
+                ):
+                    clocks.setdefault(c["CaseMasterID"], dict(c))
+
             data = []
 
             for row in rows:
 
                 item = dict(row)
+                item["Bnss"] = clocks.get(item["CaseMasterID"])
 
                 age = int(item["AgeDays"])
 
-                if item["Gravity"] == "Heinous":
+                if item["Bnss"] and item["Bnss"]["band"] in ("breached", "critical"):
+                    priority = "CRITICAL"
+                elif item["Gravity"] == "Heinous":
                     priority = "CRITICAL"
                 elif age > 30:
                     priority = "HIGH"
@@ -565,7 +583,7 @@ class SQLiteInvestigationRepository:
 
                     e.FirstName,
 
-                    CAST(julianday('now') - julianday(cm.CrimeRegisteredDate) AS INTEGER)
+                    CAST(julianday((SELECT MAX(CrimeRegisteredDate) FROM CaseMaster)) - julianday(cm.CrimeRegisteredDate) AS INTEGER)
                         AS AgeDays
 
                 FROM CaseMaster cm

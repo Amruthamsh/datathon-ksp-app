@@ -64,7 +64,7 @@
           "offence_category": "Against Women",
           "cognizable": true,
           "bailable": false,
-          "punishment": "Minimum 7 years, up to Life Imprisonment + fine",
+          "punishment": "Rigorous imprisonment of not less than 10 years, up to life + fine",
           "kanoon_url": "https://indiankanoon.org/search/?formInput=IPC+Section+376"
         },
         "379": {
@@ -170,7 +170,7 @@
           "offence_category": "Child Sexual Offence",
           "cognizable": true,
           "bailable": false,
-          "punishment": "Minimum 7 years up to Life Imprisonment + fine",
+          "punishment": "Minimum 10 years (20 years if the child is below 16), up to life imprisonment + fine",
           "kanoon_url": "https://indiankanoon.org/search/?formInput=POCSO+Section+4"
         },
         "6": {

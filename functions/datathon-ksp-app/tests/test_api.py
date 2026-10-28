@@ -28,12 +28,16 @@ def test_unauthenticated_requests_rejected():
     from fastapi.testclient import TestClient
     from main import app
 
+    saved = dict(app.dependency_overrides)
     app.dependency_overrides.clear()
-    with TestClient(app, raise_server_exceptions=False) as client:
-        r = client.get("/investigations/summary")
-        assert r.status_code in (401, 403, 500)
-        r = client.get("/health")
-        assert r.status_code == 200
+    try:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            r = client.get("/investigations/summary")
+            assert r.status_code in (401, 403, 500)
+            r = client.get("/health")
+            assert r.status_code == 200
+    finally:
+        app.dependency_overrides.update(saved)
 
 
 def test_openapi_lists_all_routers(api_client):

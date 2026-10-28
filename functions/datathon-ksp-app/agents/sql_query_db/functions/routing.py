@@ -36,6 +36,30 @@ _LOCAL_ONLY = re.compile(
 )
 
 
+_DOMAIN_TERMS: list[str] | None = None
+
+
+def _domain_terms() -> list[str]:
+    """Crime types, districts and case statuses (English + Kannada) from the
+    domain dictionary — lowercase, longest first."""
+    global _DOMAIN_TERMS
+    if _DOMAIN_TERMS is None:
+        from config import domain_dictionary as dd
+
+        terms = set()
+        for table in (dd.CRIME_HEAD_KN_EN, dd.CRIME_SUBHEAD_KN_EN, dd.DISTRICT_KN_EN, dd.CASE_STATUS_KN_EN):
+            for kn, en in table.items():
+                terms.add(kn.lower())
+                terms.add(en.lower())
+        _DOMAIN_TERMS = sorted((t for t in terms if len(t) >= 4), key=len, reverse=True)
+    return _DOMAIN_TERMS
+
+
+def _mentions_crime_data(text: str) -> bool:
+    low = text.lower()
+    return bool(_DB_REF.search(text)) or any(t in low for t in _domain_terms())
+
+
 def route_after_router(state: SQLAgentState):
     print("Routing based on intent:", state["intent"])
     if state["intent"] == "sql":
@@ -51,10 +75,18 @@ def route_after_router(state: SQLAgentState):
                 return "chat"
         return "planner"
 
+    text = f"{state.get('original_query', '')} {state.get('translated_query', '')}"
     if state.get("evidence_files"):
-        text = f"{state.get('original_query', '')} {state.get('translated_query', '')}"
         if _DOC_REF.search(text):
             print("Routing override: evidence-attached query -> planner")
+            return "planner"
+
+    # Safety net: the LLM classifier sometimes labels real crime questions
+    # (often Kannada or source-hinted ones) as chat, which ends in a refusal.
+    # Ungrounded questions naming a crime type, district or status go to the DB.
+    if not state.get("legal_references") and not state.get("scene_cards"):
+        if _mentions_crime_data(text):
+            print("Routing override: crime-domain query labelled chat -> planner")
             return "planner"
 
     return "chat"

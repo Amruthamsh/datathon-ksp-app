@@ -4,12 +4,17 @@ import {
   Network,
   FileText,
   SquarePen,
+  Scale,
 } from "lucide-react";
 
 export const menuItems = [
   {
     title: "Investigations",
     icon: FolderKanban,
+  },
+  {
+    title: "BNSS Compliance",
+    icon: Scale,
   },
   {
     title: "Crime Intelligence Map",

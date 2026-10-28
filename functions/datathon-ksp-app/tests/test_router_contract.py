@@ -44,3 +44,22 @@ def test_router_prompt_contains_evidence_legal_scene_rules():
     src = inspect.getsource(router_mod.router_node)
     for keyword in ("Evidence", "Legal", "Scene"):
         assert keyword in src, f"router prompt lost the {keyword} rule"
+
+
+# ── Safety net: crime questions mislabelled "chat" must reach the DB ──
+import pytest  # noqa: E402
+
+from agents.sql_query_db.functions.routing import route_after_router  # noqa: E402
+
+
+@pytest.mark.parametrize("query,expected", [
+    ("ಕಲಬುರಗಿ ಜಿಲ್ಲೆಯಲ್ಲಿ ಗೃಹ ಹಿಂಸೆ ಪ್ರಕರಣಗಳು ತಿಂಗಳುವಾರು ಎಷ್ಟು?", "planner"),
+    ("Robbery cases in Mysuru", "planner"),
+    ("Show me pending cases in Tumakuru", "planner"),
+    ("hi", "chat"),
+    ("what can you do?", "chat"),
+    ("What's the weather in Paris?", "chat"),
+])
+def test_chat_intent_safety_net(query, expected):
+    state = {"intent": "chat", "original_query": query, "translated_query": ""}
+    assert route_after_router(state) == expected

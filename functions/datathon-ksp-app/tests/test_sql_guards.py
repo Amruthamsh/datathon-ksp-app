@@ -53,3 +53,34 @@ def test_distinct_values_helper_shape():
     assert set(out) == {"values", "total", "truncated"}
     assert out["total"] == 31
     assert out["truncated"] is True
+
+
+# ── Static guard (agents/sql_query_db/functions/sql_guard.py) ──
+from agents.sql_query_db.functions.sql_guard import validate_sql  # noqa: E402
+
+
+@pytest.mark.parametrize("sql", [
+    "SELECT COUNT(*) FROM CaseMaster",
+    "WITH x AS (SELECT 1 AS n) SELECT n FROM x;",
+    "SELECT * FROM Victim WHERE VictimName = 'Drop; delete'",
+])
+def test_guard_allows_reads(sql):
+    assert validate_sql(sql)["passed"] is True
+
+
+@pytest.mark.parametrize("sql", [
+    "DROP TABLE CaseMaster",
+    "SELECT 1; DELETE FROM CaseMaster",
+    "PRAGMA query_only = OFF",
+    "ATTACH DATABASE 'x.db' AS x",
+    "",
+])
+def test_guard_blocks_writes(sql):
+    v = validate_sql(sql)
+    assert v["passed"] is False
+    assert v["reason"].startswith("Blocked")
+
+
+def test_guard_reports_tables():
+    v = validate_sql("SELECT * FROM CaseMaster cm JOIN Unit u ON u.UnitID = cm.PoliceStationID")
+    assert v["tables"] == ["CaseMaster", "Unit"]

@@ -56,7 +56,8 @@
     "investigations": "Investigations",
     "crimeIntelligenceMap": "Crime Intelligence Map",
     "criminalNetworks": "Criminal Networks",
-    "reports": "Reports"
+    "reports": "Reports",
+    "compliance": "BNSS Compliance"
   },
   "header": {
     "searchPlaceholder": "Search FIRs, accused, victims, locations...",
@@ -225,7 +226,9 @@
     "removeFile": "Remove file",
     "moreFiles": "+{{count}} more",
     "showLess": "Show less",
-    "clearAll": "Clear all"
+    "clearAll": "Clear all",
+    "osintNotConnected": "Open-source search isn't connected in this build — planned for Phase 2.",
+    "phase2": "Phase 2"
   },
   "investigations": {
     "title": "Investigations Queue",
@@ -292,7 +295,21 @@
     "empty": "No investigations match the selected filters or search terms.",
     "loading": "Loading Investigations Queue...",
     "allLabel": "All {{label}}s",
-    "reset": "Reset"
+    "reset": "Reset",
+    "queue": {
+      "bnssFilter": "Filtered: {{rule}} · {{band}}",
+      "clearBnss": "Clear",
+      "why": {
+        "bnss": {
+          "bailBreached": "Default bail: {{count}}d past §187(3) limit",
+          "bailDue": "Default bail in {{count}}d · §187(3)",
+          "sexualBreached": "§193(2): {{count}}d past 2-month limit",
+          "sexualDue": "§193(2): {{count}}d to 2-month limit",
+          "bailDue_zero": "Default bail due today · §187(3)",
+          "sexualDue_zero": "§193(2): 2-month limit ends today"
+        }
+      }
+    }
   },
   "crimeMap": {
     "title": "Crime Intelligence Map",
@@ -454,7 +471,6 @@
       "clear": "Clear Selection",
       "analyzeAI": "Analyze Selection with AI"
     },
-
     "context": {
       "title": "Predictive Context",
       "socioeconomic": "Socio-Economic Factors",
@@ -548,5 +564,355 @@
     "copied": "Copied",
     "detailedView": "Detailed view and source query",
     "loading": "Executing queries and generating dashboard..."
+  },
+  "briefing": {
+    "eyebrow": "Command Briefing",
+    "unavailable": "Command briefing is unavailable right now. You can still ask questions in the chat.",
+    "scopeNote": "Data as of {{asOf}} · last {{days}} days · figures limited to your jurisdiction",
+    "tier": {
+      "state": "State Command",
+      "district": "District Command",
+      "station": "Station Command",
+      "field": "Field Force"
+    },
+    "jurisdiction": {
+      "state": "Karnataka · 31 districts",
+      "district": "{{district}} district",
+      "station": "{{station}}",
+      "field": "Assigned cases only"
+    },
+    "kpi": {
+      "firs": "FIRs · {{days}}d",
+      "vsPrev": "vs previous period",
+      "open": "Under investigation",
+      "ofTotal": "of {{total}} FIRs on record",
+      "overdue": "BNSS overdue",
+      "heinous": "{{count}} heinous · no chargesheet",
+      "rising": "Fastest rising",
+      "bailRisk": "Default bail ≤ 15 days",
+      "bailBreached": "{{count}} already past the limit"
+    },
+    "trendTitle": "FIRs registered · last 12 months",
+    "hotspotTitle": {
+      "district": "Top districts · last {{days}} days",
+      "station": "Top stations · last {{days}} days",
+      "crime": "Top crime types · last {{days}} days"
+    },
+    "hotspotSub": "FIR volume, change vs previous period",
+    "askTitle": "Start with a question",
+    "explainNote": "Every answer shows the SQL it ran, the tables it used and a step-by-step audit trail.",
+    "prompts": {
+      "state": [
+        {
+          "kind": "trend",
+          "tag": "Trend",
+          "text": "Show the monthly trend of {{crime}} cases across Karnataka over the last 12 months"
+        },
+        {
+          "kind": "hotspot",
+          "tag": "Hotspots",
+          "text": "Which 10 districts recorded the most FIRs in the last 90 days, compared with the previous 90 days?"
+        },
+        {
+          "kind": "compliance",
+          "tag": "BNSS compliance",
+          "text": "How many heinous cases are still under investigation with no chargesheet after 90 days, by district?"
+        },
+        {
+          "kind": "kannada",
+          "tag": "ಕನ್ನಡ",
+          "text": "ಕಳೆದ 90 ದಿನಗಳಲ್ಲಿ ಅತಿ ಹೆಚ್ಚು ಪ್ರಕರಣಗಳು ದಾಖಲಾದ ಐದು ಜಿಲ್ಲೆಗಳು ಯಾವುವು?"
+        }
+      ],
+      "district": [
+        {
+          "kind": "trend",
+          "tag": "Trend",
+          "text": "Show the monthly trend of {{crime}} cases in {{district}} district over the last 12 months"
+        },
+        {
+          "kind": "hotspot",
+          "tag": "Hotspots",
+          "text": "Which police stations in {{district}} district recorded the most FIRs in the last 90 days?"
+        },
+        {
+          "kind": "compliance",
+          "tag": "BNSS compliance",
+          "text": "List cases in {{district}} district under investigation with no chargesheet past the BNSS deadline, by police station"
+        },
+        {
+          "kind": "kannada",
+          "tag": "ಕನ್ನಡ",
+          "text": "{{district}} ಜಿಲ್ಲೆಯಲ್ಲಿ ಕಳೆದ 90 ದಿನಗಳಲ್ಲಿ ದಾಖಲಾದ ಪ್ರಕರಣಗಳನ್ನು ಅಪರಾಧ ಪ್ರಕಾರವಾರು ತೋರಿಸಿ"
+        }
+      ],
+      "station": [
+        {
+          "kind": "hotspot",
+          "tag": "Station picture",
+          "text": "Show FIRs registered at {{station}} in the last 90 days by crime type"
+        },
+        {
+          "kind": "trend",
+          "tag": "Repeat offenders",
+          "text": "Which accused persons appear in more than one case registered at {{station}}?"
+        },
+        {
+          "kind": "compliance",
+          "tag": "BNSS compliance",
+          "text": "List cases at {{station}} under investigation with no chargesheet past the BNSS deadline"
+        },
+        {
+          "kind": "kannada",
+          "tag": "ಕನ್ನಡ",
+          "text": "{{station}} ಠಾಣೆಯಲ್ಲಿ ಕಳೆದ 90 ದಿನಗಳಲ್ಲಿ ದಾಖಲಾದ ಪ್ರಕರಣಗಳನ್ನು ಅಪರಾಧ ಪ್ರಕಾರವಾರು ತೋರಿಸಿ"
+        }
+      ],
+      "field": [
+        {
+          "kind": "compliance",
+          "tag": "My cases",
+          "text": "Show the cases assigned to the officer with KGID {{kgid}} and their current status"
+        },
+        {
+          "kind": "hotspot",
+          "tag": "Station picture",
+          "text": "Which crime types were most common at {{station}} in the last 90 days?"
+        },
+        {
+          "kind": "trend",
+          "tag": "Trend",
+          "text": "How many stalking cases were registered in {{district}} district each month this year?"
+        },
+        {
+          "kind": "kannada",
+          "tag": "ಕನ್ನಡ",
+          "text": "{{station}} ಠಾಣೆಯಲ್ಲಿ ಕಳೆದ 90 ದಿನಗಳಲ್ಲಿ ದಾಖಲಾದ ಪ್ರಕರಣಗಳನ್ನು ಅಪರಾಧ ಪ್ರಕಾರವಾರು ತೋರಿಸಿ"
+        }
+      ]
+    },
+    "openQueue": "Open overdue queue",
+    "modules": {
+      "map": "Crime Intelligence Map",
+      "mapSub": "See why crime clusters — POIs, socio-economics, patrol gaps",
+      "networks": "Criminal Networks",
+      "networksSub": "Offenders no single district can see on its own",
+      "queue": "Investigations",
+      "queueSub": "{{count}} cases past a BNSS limit",
+      "compliance": "BNSS Compliance",
+      "complianceSub": "{{count}} accused near default bail — direct the SPs today"
+    },
+    "openCompliance": "Open BNSS board"
+  },
+  "trace": {
+    "liveTitle": "CrimeLens agent at work",
+    "live": {
+      "language": "Detecting language",
+      "intent": "Understanding the question",
+      "tables": "Selecting relevant tables",
+      "sql": "Writing SQL",
+      "guard": "Validating query is read-only",
+      "query": "Querying 50,000 FIRs",
+      "compose": "Composing answer & charts",
+      "evidence": "Reading attached evidence",
+      "legal": "Looking up statutes in the Legal Codebook",
+      "scene": "Profiling 10 km around the scene pin"
+    },
+    "openAudit": "Open the audit trail for this answer",
+    "chipVerified": "Verified",
+    "chipBlocked": "Query blocked",
+    "chipAnswered": "Answered",
+    "steps_one": "{{count}} step",
+    "steps_other": "{{count}} steps",
+    "auditTitle": "Explainability & audit trail",
+    "auditSub": "How this answer was produced",
+    "guardTitle": "SQL guard",
+    "guardPassed": "Read-only · passed",
+    "guardNa": "No database query",
+    "sourcesTitle": "Data sources",
+    "officerTitle": "Requested by",
+    "scope": {
+      "all": "Statewide scope",
+      "district": "District scope",
+      "unit": "Station scope",
+      "self": "Own cases"
+    },
+    "total": "Total processing time {{seconds}}s · logged for audit",
+    "lang": {
+      "en": "English",
+      "kn": "Kannada detected"
+    },
+    "notNeeded": "Not needed",
+    "intentSql": "Crime database query",
+    "intentChat": "Conversational answer",
+    "sqlChars": "{{count}} characters of SQL",
+    "rows_one": "{{count}} row returned",
+    "rows_other": "{{count}} rows returned",
+    "guardBlocked": "Blocked by SQL guard",
+    "noChart": "No chart needed",
+    "followUps": "{{count}} follow-up questions suggested",
+    "translatedKn": "Answer translated to Kannada",
+    "sections": "{{count}} statutes referenced",
+    "nodes": {
+      "language_detection": "Language detection",
+      "translate_query": "Query translation",
+      "evidence": "Evidence ingestion",
+      "legal_reference": "Legal codebook",
+      "scene": "Scene intelligence",
+      "router": "Intent routing",
+      "planner": "Schema planning",
+      "fetch_column_values": "Value lookup",
+      "generate_sql": "SQL generation",
+      "execute_sql": "Guarded execution",
+      "response": "Answer synthesis",
+      "chart": "Visualisation",
+      "chat": "Conversational reply",
+      "finalize": "Finalise",
+      "translate_response": "Response translation"
+    },
+    "columns_one": "{{count}} column sampled for exact values",
+    "columns_other": "{{count}} columns sampled for exact values",
+    "sourcesConsulted": "Sources consulted for this answer",
+    "source": {
+      "case": "Case Intelligence",
+      "evidence": "Evidence Desk",
+      "legal": "Legal Reference",
+      "scene": "Location Query"
+    },
+    "sourceUsed": "Used",
+    "sourceIdle": "Not needed"
+  },
+  "pdf": {
+    "button": "Export PDF",
+    "exporting": "Preparing PDF…",
+    "failed": "Could not export the conversation. Please retry.",
+    "sessionLabel_one": "{{count}} question in this session",
+    "sessionLabel_other": "{{count}} questions in this session",
+    "org": "KARNATAKA STATE POLICE · KSP CRIMELENS",
+    "title": "Conversation Intelligence Record",
+    "classification": "RESTRICTED",
+    "officer": "Officer",
+    "kgid": "KGID",
+    "jurisdiction": "Jurisdiction",
+    "generated": "Generated",
+    "conversation": "Conversation ID",
+    "unsaved": "Unsaved session",
+    "turns": "Questions asked",
+    "question": "QUESTION",
+    "answer": "CRIMELENS ANSWER",
+    "verified": "Read-only query verified",
+    "steps": "steps",
+    "sources": "Tables",
+    "rows": "rows",
+    "moreRows": "+ {{count}} more rows in the full result"
+  },
+  "speech": {
+    "noKannadaVoice": "No Kannada or Hindi voice is installed on this device, so the answer can't be read aloud. Install one in your system's text-to-speech settings (macOS: System Settings → Accessibility → Spoken Content; Windows: Settings → Time & language → Speech; Android: Google Text-to-speech → Kannada).",
+    "hindiFallback": "No Kannada voice on this device — reading in Kannada using a Hindi voice. Install a Kannada voice for native pronunciation."
+  },
+  "intelActions": {
+    "title": "Continue in",
+    "mapDistrict": "{{district}} on Crime Map",
+    "mapCrime": "{{crime}} hotspots on map",
+    "network": "Network of {{person}}",
+    "case": "Open case {{id}}",
+    "queueDistrict": "{{district}} case queue",
+    "queueStation": "{{station}} case queue",
+    "queueCrime": "{{crime}} case queue"
+  },
+  "compliance": {
+    "eyebrow": "Statutory clocks · BNSS 2023",
+    "title": "BNSS Compliance",
+    "ruleSentence": "Under BNSS §187(3), if the chargesheet isn't filed within 60 days of arrest — 90 for offences punishable with death, life or 10+ years — the accused is entitled to default bail. CrimeLens runs that clock on every open case.",
+    "asOf": "Clocks measured as of {{date}} (latest FIR on record)",
+    "unavailable": "The compliance board is unavailable right now.",
+    "headline": {
+      "critical": "people in custody can claim default bail within the next {{days}} days unless chargesheets are filed",
+      "breached": "people in custody are already past the chargesheet limit — entitled to default bail",
+      "onTime": "of chargesheets were filed within the statutory limit ({{filed}} filed)"
+    },
+    "viewCases": "View cases",
+    "expiringTitle": "Expiring next — act this week",
+    "expiringSub": "Ranked by how far the accused's network reaches: offenders active in several districts first — no single SP sees them whole.",
+    "daysLeft_one": "day left",
+    "daysLeft_other": "days left",
+    "deadline": "deadline {{date}}",
+    "reach": "{{name}}: {{firs}} FIRs across {{districts}} districts",
+    "noAccused": "No accused recorded",
+    "openCase": "Case",
+    "network": "Network",
+    "map": "Map",
+    "rulebookTitle": "Statutory rulebook — live",
+    "rulebookSub": "Every BNSS clock CrimeLens tracks, with today's status. Click a segment to open those cases.",
+    "needsFeed": "Needs CCTNS field: {{field}} — Phase 2",
+    "noOpenClocks": "No open clocks in your jurisdiction",
+    "unitsTitle": {
+      "district": "Where compliance is failing — by district",
+      "station": "Where compliance is failing — by station"
+    },
+    "unitsSub": "Default-bail clocks · historic on-time chargesheet rate",
+    "unitCol": {
+      "district": "District",
+      "station": "Station"
+    },
+    "onTimeCol": "On time",
+    "band": {
+      "breached": "Past limit",
+      "critical": "≤ 15 days",
+      "warning": "Approaching",
+      "on_track": "On track",
+      "all": "All stages"
+    },
+    "rules": {
+      "default_bail": {
+        "stage": "Chargesheet before default bail",
+        "provision": "BNSS §187(3) · §193",
+        "limit": "90 days (death / life / 10+ yrs) · 60 days (others)",
+        "clock": "From the first arrest of an accused",
+        "response": "Counts down on every case. At 15 days the case turns CRITICAL in the briefing and the SP is alerted; past the limit the accused can claim default bail."
+      },
+      "sexual_offence": {
+        "stage": "Sexual offence investigation",
+        "provision": "BNSS §193(2)",
+        "limit": "2 months",
+        "clock": "From FIR registration (BNS 64–68, 70, 71 · POCSO)",
+        "response": "Priority HIGH HEINOUS; tracks the 2-month completion window."
+      },
+      "victim_update": {
+        "stage": "Victim progress update",
+        "provision": "BNSS §193(3)(ii)",
+        "limit": "90 days",
+        "clock": "From FIR registration",
+        "response": "Computes the due date for every case with a victim and drafts the update in Kannada / English.",
+        "note": "Due dates are live; dispatch confirmation needs the CCTNS victim-communication log."
+      },
+      "preliminary_enquiry": {
+        "stage": "Preliminary enquiry",
+        "provision": "BNSS §173(3)",
+        "limit": "14 days",
+        "clock": "From complaint (offences punishable 3–7 yrs)",
+        "response": "Flags unverified complaints to the SHO before FIR registration.",
+        "missing": "complaint receipt date (CCTNS petition register)"
+      },
+      "medical_report": {
+        "stage": "Rape medical report",
+        "provision": "BNSS §184(6)",
+        "limit": "7 days",
+        "clock": "From medical examination",
+        "response": "Tracks pending hospital reports; reminds the IO desk.",
+        "missing": "medical examination & report dates"
+      },
+      "further_investigation": {
+        "stage": "Further investigation",
+        "provision": "BNSS §193(9) proviso",
+        "limit": "90 days",
+        "clock": "From court permission",
+        "response": "Alerts the IO when a court extension is required.",
+        "missing": "court order date for further investigation"
+      }
+    },
+    "today": "Today",
+    "dueToday": "deadline today",
+    "inCustody": "In custody: {{name}} ({{age}}) since {{date}}"
   }
 }

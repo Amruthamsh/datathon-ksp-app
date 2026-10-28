@@ -874,7 +874,9 @@ export default function MapChatPanel({ token, mapContext, onMapAction, initialQu
                           setSpeakingIndex(null);
                         } else {
                           stop();
-                          speak(m.content);
+                          speak(m.content, {
+                            onEnd: () => setSpeakingIndex((cur) => (cur === i ? null : cur)),
+                          });
                           setSpeakingIndex(i);
                         }
                       }}

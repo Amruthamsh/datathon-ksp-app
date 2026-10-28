@@ -12,6 +12,7 @@ import InvestigationWorkspace from "./pages/InvestigationWorkspace";
 import CrimeIntelligenceMap from "./pages/CrimeIntelligenceMap";
 import Networks from "./pages/Networks";
 import Reports from "./pages/Reports";
+import Compliance from "./pages/Compliance";
 import DashboardLayout from "./components/DashboardLayout";
 
 import { AuthProvider, useAuth } from "./auth/AuthContext";
@@ -60,6 +61,7 @@ function AppRoutes() {
               </ProtectedRoute>
             }
           />
+          <Route path="/compliance" element={<Compliance />} />
           <Route path="/networks" element={<Networks />} />
           <Route path="/reports" element={<Reports />} />
         </Route>

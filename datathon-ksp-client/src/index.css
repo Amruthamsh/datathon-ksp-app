@@ -46,3 +46,34 @@
 body {
   background-color: var(--color-surface-subtle);
 }
+/* Letter-spacing breaks Kannada conjuncts apart — tracking is a Latin-caps device. */
+html[lang="kn"] [class*="tracking-"] {
+  letter-spacing: 0;
+}
+
+/* Final Report draft: print only the report, across as many pages as needed.
+   The app shell is a fixed-height, overflow-hidden layout, so unclip it. */
+@media print {
+  html, body, #root, #root * {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  html, body {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden;
+    /* Positioned app containers would otherwise offset the report. */
+    position: static !important;
+  }
+  #final-report,
+  #final-report * {
+    visibility: visible;
+  }
+  #final-report {
+    position: absolute !important;
+    inset: 0 auto auto 0;
+    width: 100%;
+  }
+}

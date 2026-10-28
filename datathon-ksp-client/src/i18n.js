@@ -41,4 +41,7 @@ i18n.on("languageChanged", (lng) => {
   document.documentElement.lang = lng === "kn" ? "kn" : "en";
 });
 
+// The listener above misses the initial language restored from storage.
+document.documentElement.lang = savedLang === "kn" ? "kn" : "en";
+
 export default i18n;
