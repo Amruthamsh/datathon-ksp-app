@@ -14,6 +14,7 @@ import Networks from "./pages/Networks";
 import Reports from "./pages/Reports";
 import Compliance from "./pages/Compliance";
 import Officers from "./pages/Officers";
+import StationCommand from "./pages/StationCommand";
 import DashboardLayout from "./components/DashboardLayout";
 
 import { AuthProvider, useAuth } from "./auth/AuthContext";
@@ -52,6 +53,14 @@ function AppRoutes() {
         <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route path="/" element={<Home />} />
           <Route path="/chat/:id" element={<Home />} />
+          <Route
+            path="/station-command"
+            element={
+              <ProtectedRoute allowedTiers={["station_command"]}>
+                <StationCommand />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/investigations" element={<InvestigationsQueue />} />
           <Route path="/investigations/:caseId" element={<InvestigationWorkspace />} />
           <Route

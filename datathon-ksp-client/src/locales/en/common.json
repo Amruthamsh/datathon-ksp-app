@@ -58,7 +58,8 @@
     "criminalNetworks": "Criminal Networks",
     "reports": "Reports",
     "compliance": "BNSS Compliance",
-    "officers": "Investigating Officers"
+    "officers": "Investigating Officers",
+    "stationCommand": "Station Command"
   },
   "header": {
     "searchPlaceholder": "Search FIRs, accused, victims, locations...",
@@ -712,7 +713,9 @@
       "compliance": "BNSS Compliance",
       "complianceSub": "{{count}} accused near default bail — direct the SPs today",
       "officers": "Investigating Officers",
-      "officersSub": "Who investigates your cases — and who should"
+      "officersSub": "Who investigates your cases — and who should",
+      "station": "Station Command",
+      "stationSub": "Today's queue, BNSS clocks and the local picture"
     },
     "openCompliance": "Open BNSS board",
     "women": {
@@ -977,5 +980,107 @@
       "bail": "Default bail"
     },
     "bailCell": "{{breached}} past · {{critical}} ≤15d"
+  },
+  "station": {
+    "eyebrow": "Station Command",
+    "title": "Station Command",
+    "tier": "Station Command",
+    "unavailable": "The station command view is unavailable right now.",
+    "scope": "Scoped to {{station}}",
+    "asOf": "Data as of {{date}} · last {{days}} days",
+    "openCompliance": "BNSS board",
+    "openQueue": "Case queue",
+    "kpi": {
+      "firs": "FIRs · {{days}}d",
+      "vsPrev": "vs previous period",
+      "open": "Under investigation",
+      "ofTotal": "of {{total}} FIRs on record",
+      "review": "Review queue",
+      "pastLimit": "Past a BNSS limit",
+      "bailBreached": "{{count}} accused already past default bail",
+      "clusters": "Co-accused clusters",
+      "clustersSub": "{{count}} repeat offenders by name",
+      "openNetworks": "Open networks"
+    },
+    "queue": {
+      "title": "Today's action queue",
+      "sub": "Open cases at your station, statutory clocks first — then heinous gravity and age.",
+      "all": "Full queue",
+      "empty": "No open cases need action right now.",
+      "footer": "Every row opens the case workspace with evidence, similar cases and the audit trail.",
+      "meta": "IO {{officer}} · {{count}} accused · {{age}} days old",
+      "unassigned": "Unassigned",
+      "open": "Open case",
+      "breached": "Past limit by {{count}} days",
+      "critical": "{{count}} days left",
+      "warning": "{{count}} days left",
+      "noChargesheet": "No chargesheet filed",
+      "noArrest": "No arrest yet",
+      "routine": "Routine review",
+      "noCsShort": "no chargesheet"
+    },
+    "crime": {
+      "title": "Crime picture · last {{days}} days",
+      "sub": "What is actually being registered at your station.",
+      "all": "Filter queue"
+    },
+    "clusters": {
+      "title": "Local co-accused clusters",
+      "sub": "Groups charged together in the same FIR at your station.",
+      "all": "Open networks",
+      "empty": "No co-accused clusters at this station.",
+      "footer": "Open a cluster to see the co-accused graph, associates and timeline.",
+      "meta": "{{members}} members · {{firs}} linked FIRs",
+      "view": "View graph"
+    },
+    "bnss": {
+      "title": "BNSS deadline board",
+      "sub": "Default bail turns critical at {{days}} days left. Red is already past the limit.",
+      "breached": "Past limit",
+      "critical": "≤ critical",
+      "onTime": "On time",
+      "days": "days",
+      "open": "Open case"
+    },
+    "women": {
+      "title": "Women safety",
+      "sub": "{{firs}} FIRs in the window · {{open}} still open",
+      "sexual": "sexual-offence cases past the 2-month window",
+      "victim": "victim updates due"
+    },
+    "io": {
+      "title": "Your investigating officers",
+      "sub": "{{officers}} IOs · {{share}}% of open cases sit below SI rank",
+      "all": "Full workload",
+      "footer": "{{count}} officers hold accused at or past the default-bail limit.",
+      "flagged": "below SI",
+      "open": "Open cases",
+      "noCs": "No chargesheet",
+      "bail": "Default-bail exposure"
+    },
+    "playbook": {
+      "title": "Station playbook",
+      "sub": "{{crime}} · peak window {{window}}",
+      "teams": "{{teams}} teams · {{officers}} officers",
+      "askCta": "Ask CrimeLens about this",
+      "ask": "What should {{crime}} prevention look like at my station this week?",
+      "deploy": {
+        "physical_patrol": "Physical patrol",
+        "women_safety": "Women safety response",
+        "cyber_cell": "Cyber cell response",
+        "economic_cell": "Economic offences response",
+        "public_order": "Public order deployment",
+        "homicide_prevention": "Homicide prevention"
+      }
+    },
+    "evidence": {
+      "title": "Evidence Desk",
+      "sub": "Parse the documents that decide the case.",
+      "body": "Attach a scanned FIR, Panchnama recovery memo, post-mortem report, CDR or witness statement in the chat. CrimeLens extracts entities, dates, sections and locations for the case workspace.",
+      "cta": "Attach evidence in chat"
+    },
+    "ask": {
+      "title": "Ask CrimeLens about your station"
+    }
   }
 }

@@ -17,6 +17,7 @@ import {
   MapPinned,
   Network,
   FolderKanban,
+  Building2,
   ChevronRight,
   HeartHandshake,
   UserCog,
@@ -419,6 +420,14 @@ export default function CommandBriefing({ onAsk, disabled = false }) {
 
         {/* One briefing, every module — each says what it unlocks for this officer */}
         <div className="grid gap-2.5 @4xl:grid-cols-2">
+          {tierKey === "station" && (
+            <ModuleLink
+              icon={Building2}
+              title={t("briefing.modules.station")}
+              sub={t("briefing.modules.stationSub")}
+              onClick={() => navigate("/station-command")}
+            />
+          )}
           <ModuleLink
             icon={Scale}
             title={t("briefing.modules.compliance")}

@@ -175,6 +175,7 @@ const LeftNav = ({
   const showCrimeMap = canViewCrimeMap(officer);
 
   const menuKeys = [
+    "stationCommand",
     "investigations",
     "compliance",
     "officers",
@@ -183,6 +184,7 @@ const LeftNav = ({
     "reports",
   ];
   const routeMap = {
+    [t("nav.stationCommand")]: "/station-command",
     [t("nav.investigations")]: "/investigations",
     [t("nav.compliance")]: "/compliance",
     [t("nav.officers")]: "/officers",
@@ -200,7 +202,9 @@ const LeftNav = ({
     // Step 3: Crime Intelligence Map is a command-tier feature
     .filter((item) => item.key !== "crimeIntelligenceMap" || showCrimeMap)
     // Supervising investigations is a command function (not field force).
-    .filter((item) => item.key !== "officers" || getOfficerTier(officer) !== TIERS.FIELD);
+    .filter((item) => item.key !== "officers" || getOfficerTier(officer) !== TIERS.FIELD)
+    // The station workspace belongs to the officer running the station.
+    .filter((item) => item.key !== "stationCommand" || getOfficerTier(officer) === TIERS.STATION);
 
   return (
     <aside

@@ -1,4 +1,5 @@
 import {
+  Building2,
   FolderKanban,
   MapPinned,
   Network,
@@ -9,6 +10,10 @@ import {
 } from "lucide-react";
 
 export const menuItems = [
+  {
+    title: "Station Command",
+    icon: Building2,
+  },
   {
     title: "Investigations",
     icon: FolderKanban,
