@@ -289,6 +289,16 @@ Remember:
 Return valid JSON only.
 """
 
+    label = state.get("scope_label")
+    if label and (state.get("scope") or {}).get("level") != "all":
+        prompt += (
+            f"\nJurisdiction: these results cover only {label}, the officer's "
+            "jurisdiction (enforced on the query). State this in the Executive "
+            "Summary. If the question was about another district or station, "
+            "explain that it is outside the officer's jurisdiction instead of "
+            "reporting zero crime there.\n"
+        )
+
     try:
         response = llm.generate(
             system_prompt=system_prompt,

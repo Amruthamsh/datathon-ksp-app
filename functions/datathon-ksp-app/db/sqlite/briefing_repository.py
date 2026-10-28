@@ -110,6 +110,28 @@ def get_briefing(scope: dict) -> dict:
             LIMIT 3
         """)
 
+        # Crimes against women (CrimeHead 3) — an SP / SHO priority, with the
+        # BNSS clocks that protect these victims.
+        women_rows = q(f"""
+            SELECT csh.CrimeHeadName AS name,
+                   SUM(CASE WHEN {window} THEN 1 ELSE 0 END) AS cur,
+                   SUM(CASE WHEN {prev_window} THEN 1 ELSE 0 END) AS prev,
+                   SUM(CASE WHEN cm.CaseStatusID = 1 THEN 1 ELSE 0 END) AS open_cases
+            FROM CaseMaster cm
+            JOIN CrimeSubHead csh ON csh.CrimeSubHeadID = cm.CrimeMinorHeadID
+            WHERE csh.CrimeHeadID = 3 {{scope}}
+            GROUP BY csh.CrimeHeadName
+            ORDER BY cur DESC
+        """)
+        women_clocks = {
+            (r["rule"], r["band"]): r["n"]
+            for r in conn.execute(
+                f"SELECT rule, band, COUNT(*) n FROM ({bnss.clocks_sql(scope_sql)}) "
+                "WHERE rule IN ('sexual_offence', 'victim_update') GROUP BY rule, band",
+                scope_params,
+            )
+        }
+
         monthly = q("""
             SELECT substr(cm.CrimeRegisteredDate, 1, 7) AS month, COUNT(*) AS firs
             FROM CaseMaster cm
@@ -141,4 +163,27 @@ def get_briefing(scope: dict) -> dict:
             for r in rising_rows
         ],
         "monthly": [dict(r) for r in monthly],
+        "women": {
+            "by_type": [
+                {"name": r["name"], "firs": r["cur"] or 0, "change_pct": _pct(r["cur"] or 0, r["prev"] or 0),
+                 "open_cases": r["open_cases"] or 0}
+                for r in women_rows
+            ],
+            "firs_window": sum(r["cur"] or 0 for r in women_rows),
+            "firs_prev": sum(r["prev"] or 0 for r in women_rows),
+            "open_cases": sum(r["open_cases"] or 0 for r in women_rows),
+            "sexual_breached": women_clocks.get(("sexual_offence", "breached"), 0),
+            "sexual_critical": women_clocks.get(("sexual_offence", "critical"), 0),
+            "victim_updates_due": women_clocks.get(("victim_update", "critical"), 0),
+        },
+        # Fastest-rising unit with enough volume to matter (drives the
+        # "what drove the rise at …?" starter question).
+        "top_rising": max(
+            (h for h in [
+                {"name": r["name"], "firs": r["cur"] or 0, "change_pct": _pct(r["cur"] or 0, r["prev"] or 0)}
+                for r in hot_rows
+            ] if h["firs"] >= 10 and h["change_pct"] is not None),
+            key=lambda h: h["change_pct"],
+            default=None,
+        ),
     }

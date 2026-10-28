@@ -37,6 +37,7 @@ import AnalysisPanel from "../components/AnalysisPanel";
 import CommandBriefing from "../components/CommandBriefing";
 import { AgentPipelineLoader, TraceChip } from "../components/AgentTrace";
 import IntelActions from "../components/IntelActions";
+import { getOfficerTier, TIERS } from "../utils/role";
 import { exportConversationPdf } from "../utils/conversationPdf";
 import {
   EvidenceLightbox,
@@ -569,6 +570,7 @@ export default function Home() {
       evidence: filesToSend.length > 0,
       codebook: codebookEnabled,
       scene: hasSceneCoords,
+      scoped: getOfficerTier(officer) !== TIERS.STATE,
     });
     setLoading(true);
     setFollowUps([]);

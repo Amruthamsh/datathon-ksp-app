@@ -36,6 +36,8 @@ import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom
 import { useAuth } from "../auth/AuthContext";
 import * as networkApi from "../api/network";
 import ScopeBanner from "../components/ScopeBanner";
+import { getCrossBorder } from "../api/supervision";
+import { getOfficerTier, TIERS } from "../utils/role";
 
 // ── Cytoscape styles — refined for hierarchy & edge clarity
 const cyStylesheet = [
@@ -260,6 +262,78 @@ function getRiskBadge(firs, stations, districts, t) {
 // can be ordered by severity, not just volume or connectivity.
 function riskScore(b) {
   return (b.fir_count || 0) * 1.2 + (b.stations_covered || 0) * 1.5 + (b.districts_covered || 0) * 1.8;
+}
+
+// ── Cross-border offenders (district / station command)
+// Accused in this jurisdiction who also appear in other districts. Only the
+// district names and FIR counts are shown for elsewhere — case details stay
+// with the SP who owns them.
+function CrossBorderPanel({ token, onOpen }) {
+  const { t } = useTranslation();
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    getCrossBorder(token, 8)
+      .then((d) => !cancelled && setData(d))
+      .catch(() => !cancelled && setData({ people: [] }));
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  if (!data?.people?.length) return null;
+  return (
+    <section className="rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
+      <div className="flex flex-wrap items-end justify-between gap-2 border-b border-[#E2E8F0] px-5 py-3">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#B91C1C]">
+            {t("networks.crossBorder.eyebrow")}
+          </p>
+          <h2 className="text-[14px] font-semibold text-[#17233C]">
+            {t("networks.crossBorder.title", { total: data.total, home: data.home })}
+          </h2>
+          <p className="text-[12px] text-[#64748B]">
+            {t("networks.crossBorder.sub", { nearby: data.with_neighbours, min: data.min_firs })}
+          </p>
+        </div>
+        <p className="max-w-[360px] text-[11px] text-[#94A3B8]">{t("networks.crossBorder.privacy")}</p>
+      </div>
+      <ul className="divide-y divide-[#F1F5F9]">
+        {data.people.map((p) => (
+          <li key={p.name}>
+            <button
+              onClick={() => onOpen(p.name)}
+              className="grid w-full gap-2 px-5 py-2.5 text-left hover:bg-[#F8FAFC] md:grid-cols-[220px_minmax(0,1fr)_auto] md:items-center cursor-pointer"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] font-semibold text-[#17233C]">{p.name}</span>
+                <span className="text-[11.5px] text-[#64748B]">
+                  {t("networks.crossBorder.reach", { firs: p.firs_total, districts: p.districts, here: p.firs_here })}
+                </span>
+              </span>
+              <span className="flex flex-wrap gap-1">
+                {p.elsewhere.map((e) => (
+                  <span
+                    key={e.district}
+                    className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                      e.nearby
+                        ? "border-red-200 bg-red-50 text-red-800"
+                        : "border-[#E2E8F0] bg-[#F8FAFC] text-[#475569]"
+                    }`}
+                  >
+                    {e.district} · {e.firs}
+                  </span>
+                ))}
+              </span>
+              <span className="text-[11.5px] font-semibold text-[#17233C]">{t("networks.crossBorder.open")}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 // ── Main
@@ -878,6 +952,9 @@ export default function CriminalNetworks() {
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[1280px] mx-auto px-6 lg:px-8 py-6 space-y-6">
+            {[TIERS.DISTRICT, TIERS.STATION].includes(getOfficerTier(officer)) && (
+              <CrossBorderPanel token={token} onOpen={(name) => selectPerson(name)} />
+            )}
             {/* KPI Cards → Interactive Tabs */}
             <div>
               <div className="flex items-center justify-between mb-3">

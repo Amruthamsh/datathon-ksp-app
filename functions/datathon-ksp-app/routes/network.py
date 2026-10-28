@@ -156,3 +156,20 @@ async def get_bridge_individuals(
         logger.error(e)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to fetch bridge individuals.")
+
+
+@router.get("/cross-border", status_code=status.HTTP_200_OK)
+async def get_cross_border_offenders(
+    limit: int = Query(15, ge=1, le=50),
+    current_user: dict = Depends(require_networks_bulk),
+):
+    """Accused in the caller's jurisdiction who also appear in other
+    districts — names and FIR counts only, no outside case details."""
+    from services.cross_border_service import get_cross_border
+
+    try:
+        return {"status": "success", "data": get_cross_border(current_user.get("scope") or {}, limit=limit)}
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch cross-border offenders.")

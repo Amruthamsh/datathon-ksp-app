@@ -57,7 +57,8 @@
     "crimeIntelligenceMap": "Crime Intelligence Map",
     "criminalNetworks": "Criminal Networks",
     "reports": "Reports",
-    "compliance": "BNSS Compliance"
+    "compliance": "BNSS Compliance",
+    "officers": "Investigating Officers"
   },
   "header": {
     "searchPlaceholder": "Search FIRs, accused, victims, locations...",
@@ -479,7 +480,8 @@
     },
     "chat": {
       "greeting": "I'm CrimeLens—your investigative analyst. Ask about what's on the map and I'll blend live view context with the KSP crime database. Try a suggested prompt below or type your own."
-    }
+    },
+    "scopeOnly": "Showing {{district}} district only"
   },
   "networks": {
     "title": "CRIMINAL NETWORK INTELLIGENCE",
@@ -540,7 +542,15 @@
       "lastSeen": "Last Seen"
     },
     "empty": "Select a person or network to view their intelligence profile.",
-    "deepDive": "Deep dive with AI"
+    "deepDive": "Deep dive with AI",
+    "crossBorder": {
+      "eyebrow": "Cross-border offenders",
+      "title": "{{total}} repeat offenders from {{home}} are also active in other districts",
+      "sub": "{{nearby}} of them in neighbouring districts — coordinate with that SP today. Repeat offenders only ({{min}}+ FIRs).",
+      "privacy": "Other districts are shown as names and FIR counts only — case details stay with the SP who owns them.",
+      "reach": "{{firs}} FIRs · {{districts}} districts · {{here}} here",
+      "open": "Open network →"
+    }
   },
   "reports": {
     "title": "Saved Analytics Reports",
@@ -626,14 +636,14 @@
       ],
       "district": [
         {
-          "kind": "trend",
-          "tag": "Trend",
-          "text": "Show the monthly trend of {{crime}} cases in {{district}} district over the last 12 months"
+          "kind": "hotspot",
+          "tag": "Why here",
+          "text": "What crimes drove the rise at {{topStation}} in the last 90 days compared with the previous 90 days?"
         },
         {
-          "kind": "hotspot",
-          "tag": "Hotspots",
-          "text": "Which police stations in {{district}} district recorded the most FIRs in the last 90 days?"
+          "kind": "trend",
+          "tag": "Women safety",
+          "text": "Which police stations in {{district}} district recorded the most domestic violence and sexual assault cases in the last 90 days?"
         },
         {
           "kind": "compliance",
@@ -700,9 +710,20 @@
       "queue": "Investigations",
       "queueSub": "{{count}} cases past a BNSS limit",
       "compliance": "BNSS Compliance",
-      "complianceSub": "{{count}} accused near default bail — direct the SPs today"
+      "complianceSub": "{{count}} accused near default bail — direct the SPs today",
+      "officers": "Investigating Officers",
+      "officersSub": "Who investigates your cases — and who should"
     },
-    "openCompliance": "Open BNSS board"
+    "openCompliance": "Open BNSS board",
+    "women": {
+      "title": "Crimes against women",
+      "sub": "{{jurisdiction}} · {{firs}} FIRs in 90 days · {{open}} open",
+      "plan": "Plan women-safety deployment",
+      "open_one": "{{count}} open",
+      "open_other": "{{count}} open",
+      "sexualBreached": "sexual-offence investigations past the §193(2) 2-month limit",
+      "victimDue": "victim progress updates due within 15 days"
+    }
   },
   "trace": {
     "liveTitle": "CrimeLens agent at work",
@@ -716,7 +737,8 @@
       "compose": "Composing answer & charts",
       "evidence": "Reading attached evidence",
       "legal": "Looking up statutes in the Legal Codebook",
-      "scene": "Profiling 10 km around the scene pin"
+      "scene": "Profiling 10 km around the scene pin",
+      "scope": "Restricting results to your jurisdiction"
     },
     "openAudit": "Open the audit trail for this answer",
     "chipVerified": "Verified",
@@ -780,7 +802,13 @@
       "scene": "Location Query"
     },
     "sourceUsed": "Used",
-    "sourceIdle": "Not needed"
+    "sourceIdle": "Not needed",
+    "scopeEnforcedShort": "scope enforced",
+    "jurisdictionTitle": "Jurisdiction",
+    "jurisdictionAll": "Statewide access — no restriction applied",
+    "jurisdictionEnforced": "Enforced: {{label}} only ({{tables}} filtered before the query ran)",
+    "jurisdictionNoQuery": "{{label}} — no case data was queried",
+    "viewEnforcedSql": "View the query as executed"
   },
   "pdf": {
     "button": "Export PDF",
@@ -804,7 +832,8 @@
     "steps": "steps",
     "sources": "Tables",
     "rows": "rows",
-    "moreRows": "+ {{count}} more rows in the full result"
+    "moreRows": "+ {{count}} more rows in the full result",
+    "scope": "Scope"
   },
   "speech": {
     "noKannadaVoice": "No Kannada or Hindi voice is installed on this device, so the answer can't be read aloud. Install one in your system's text-to-speech settings (macOS: System Settings → Accessibility → Spoken Content; Windows: Settings → Time & language → Speech; Android: Google Text-to-speech → Kannada).",
@@ -914,5 +943,39 @@
     "today": "Today",
     "dueToday": "deadline today",
     "inCustody": "In custody: {{name}} ({{age}}) since {{date}}"
+  },
+  "officers": {
+    "eyebrow": "Supervision",
+    "title": "Investigating Officers",
+    "unavailable": "The officer supervision view is unavailable right now.",
+    "intro": "Who is investigating your open cases, at what rank, and where cases are sliding toward the BNSS default-bail limit.",
+    "asOf": "as of {{date}}",
+    "headline": {
+      "belowRank": "of open cases ({{cases}} of {{total}}) are investigated by Head Constables or Constables",
+      "siPlus": "open cases are with a Sub-Inspector or Inspector (of {{total}})",
+      "bailExposed": "officers hold accused at or past the default-bail limit (of {{officers}} IOs)"
+    },
+    "suggestTitle": "Suggested reassignments — your decision",
+    "suggestSub": "Pending cases of under-ranked IOs, matched to the least-loaded Sub-Inspector or Inspector — same station first, then elsewhere in the district.",
+    "suggestNote": "Suggestions only. Nothing is reassigned until you order it and it is updated in CCTNS.",
+    "pending_one": "{{count}} case without chargesheet",
+    "pending_other": "{{count}} cases without chargesheet",
+    "bailExposure_one": "{{count}} person near/past default bail",
+    "bailExposure_other": "{{count}} people near/past default bail",
+    "load_one": "{{count}} open case now",
+    "load_other": "{{count}} open cases now",
+    "sameStation": "Same station",
+    "otherStation": "Another station in the district",
+    "viewCases": "View cases",
+    "tableTitle": "Officer workload",
+    "tableSub": "Open cases by investigating officer. Ranks below ASI are flagged.",
+    "col": {
+      "officer": "Officer",
+      "station": "Station",
+      "open": "Open",
+      "noCs": "No chargesheet",
+      "bail": "Default bail"
+    },
+    "bailCell": "{{breached}} past · {{critical}} ≤15d"
   }
 }

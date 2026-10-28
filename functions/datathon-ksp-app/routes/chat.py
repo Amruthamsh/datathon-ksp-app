@@ -65,6 +65,7 @@ def _trace_detail(node: str, update: dict) -> dict:
         return {
             "rows": len(u.get("sql_result") or []),
             "guard": guard.get("passed"),
+            "scoped": bool((u.get("sql_scope") or {}).get("applied")),
             "error": bool(u.get("error")),
         }
     if node == "chart":
@@ -102,6 +103,28 @@ def _run_graph_with_trace(state: dict) -> tuple[dict, list]:
             })
         t_prev = now
     return final, trace
+
+
+def _scope_label(scope: dict) -> str:
+    """Human label for the officer's jurisdiction ("Bengaluru Urban district")."""
+    level = (scope or {}).get("level", "self")
+    if level == "all":
+        return "Karnataka (statewide)"
+    try:
+        from db.sqlite.sqlite import get_connection
+
+        with get_connection() as conn:
+            if level == "district" and scope.get("district_id") is not None:
+                row = conn.execute(
+                    "SELECT DistrictName FROM District WHERE DistrictID = ?", [scope["district_id"]]
+                ).fetchone()
+                return f"{row[0]} district" if row else "your district"
+            if level == "unit" and scope.get("unit_id") is not None:
+                row = conn.execute("SELECT UnitName FROM Unit WHERE UnitID = ?", [scope["unit_id"]]).fetchone()
+                return row[0] if row else "your station"
+    except Exception:
+        pass
+    return "cases assigned to you"
 
 
 def _build_state_messages(history: list, current_query: str) -> list:
@@ -318,8 +341,12 @@ async def generate_response(
             return None
         return v
 
+    scope = current_user.get("scope") or {"level": "self", "employee_id": current_user.get("employee_id")}
     state = {
         "messages": _build_state_messages(history, user_query),
+        # RBAC: enforced on every executed query (functions/sql_scope.py).
+        "scope": scope,
+        "scope_label": _scope_label(scope),
         "language": language or "en",
         "original_query": user_query,
         "translated_query": "",
@@ -354,11 +381,13 @@ async def generate_response(
     audit = {
         "trace": trace,
         "sql_guard": result.get("sql_guard") or None,
+        "sql_scope": result.get("sql_scope") or None,
         "officer": {
             "kgid": user_id,
             "rank": current_user.get("rank"),
             "tier": current_user.get("tier"),
-            "scope": (current_user.get("scope") or {}).get("level"),
+            "scope": scope.get("level"),
+            "jurisdiction": state["scope_label"],
         },
         "language": result.get("language") or language or "en",
     }

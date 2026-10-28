@@ -19,6 +19,38 @@ router = APIRouter(
 require_crime_map_access = require_tier(STATE_COMMAND, DISTRICT_COMMAND)
 
 
+def _own_district(current_user: dict) -> str | None:
+    """District name a district-tier officer is confined to (None = statewide)."""
+    if current_user.get("tier") != DISTRICT_COMMAND or current_user.get("district_id") is None:
+        return None
+    from db.sqlite.sqlite import get_connection
+
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT DistrictName FROM District WHERE DistrictID = ?", [current_user["district_id"]]
+        ).fetchone()
+    return row[0] if row else None
+
+
+def _scoped_district(current_user: dict, requested: str | None) -> str | None:
+    """RBAC: a district officer's map queries are always their own district,
+    whatever the client asked for."""
+    return _own_district(current_user) or requested
+
+
+def _scoped_district_id(current_user: dict, requested: int | None) -> int | None:
+    if current_user.get("tier") == DISTRICT_COMMAND and current_user.get("district_id") is not None:
+        return int(current_user["district_id"])
+    return requested
+
+
+def _only_own_district(current_user: dict, rows):
+    own = _own_district(current_user)
+    if not own or not isinstance(rows, list):
+        return rows
+    return [r for r in rows if not isinstance(r, dict) or r.get("district") in (None, own)]
+
+
 @router.get("/summary", status_code=status.HTTP_200_OK)
 async def get_summary(
     date_from: str = Query(None),
@@ -29,6 +61,7 @@ async def get_summary(
     current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
+    district = _scoped_district(current_user, district)
     try:
         data = repo.get_summary(
             date_from=date_from, date_to=date_to, crime_head=crime_head,
@@ -67,6 +100,7 @@ async def get_heatmap(
     current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
+    district = _scoped_district_id(current_user, district)
     try:
         data = repo.get_heatmap(
             district=district, station=station, crime_head=crime_head,
@@ -91,6 +125,7 @@ async def get_clusters(
     current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
+    district = _scoped_district_id(current_user, district)
     try:
         data = repo.get_clusters(
             district=district, station=station, crime_head=crime_head,
@@ -109,7 +144,7 @@ async def get_district_summary(
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
-        data = repo.get_district_summary()
+        data = _only_own_district(current_user, repo.get_district_summary())
         return {"status": "success", "data": data}
     except Exception as e:
         logger.error(e)
@@ -187,6 +222,7 @@ async def get_distribution(
     current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
+    district = _scoped_district_id(current_user, district)
     try:
         data = repo.get_distribution(
             group_by=group_by, district=district, station=station,
@@ -275,6 +311,7 @@ async def get_heatmap_trends(
     current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
+    district = _scoped_district_id(current_user, district)
     try:
         data = repo.get_heatmap_trends(
             date_from=date_from, date_to=date_to,
@@ -316,6 +353,7 @@ async def get_crimes(
     current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
+    district = _scoped_district_id(current_user, district)
     try:
         data = repo.get_crimes(
             date_from=date_from, date_to=date_to, district=district,
@@ -339,6 +377,7 @@ async def get_crimes_light(
     current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
+    district = _scoped_district_id(current_user, district)
     try:
         data = repo.get_crimes_light(
             date_from=date_from, date_to=date_to, district=district,
@@ -376,7 +415,7 @@ async def get_district_risk(
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
-        data = repo.get_district_risk_summary()
+        data = _only_own_district(current_user, repo.get_district_risk_summary())
         return {"status": "success", "data": data}
     except Exception as e:
         logger.error(e)
@@ -411,6 +450,7 @@ async def get_patrol_plan(
     current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
+    area = _scoped_district(current_user, area)
     try:
         data = repo.get_patrol_plan(
             time_range=time_range, units=units,
@@ -433,6 +473,7 @@ async def get_prevention_plan(
     current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
+    area = _scoped_district(current_user, area)
     try:
         stats = repo.get_prevention_stats(crime_label=crime_label, district=area)
         # keep physical routes for context where relevant
@@ -486,7 +527,7 @@ async def get_stations(
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
-        data = repo.get_station_coverage(date_from=date_from, date_to=date_to)
+        data = _only_own_district(current_user, repo.get_station_coverage(date_from=date_from, date_to=date_to))
         return {"status": "success", "data": data}
     except Exception as e:
         logger.error(e)
@@ -520,6 +561,7 @@ async def get_intelligence_pois(
     current_user: dict = Depends(require_crime_map_access),
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
+    district = _scoped_district(current_user, district)
     try:
         data = repo.get_pois(district=district, poi_type=poi_type, limit=limit)
         return {"status": "success", "data": data}
@@ -577,7 +619,7 @@ async def get_intelligence_risk_enhanced(
     repo: CrimeMapRepository = Depends(get_crime_map_repository),
 ):
     try:
-        data = repo.get_district_risk_enhanced()
+        data = _only_own_district(current_user, repo.get_district_risk_enhanced())
         return {"status": "success", "data": data}
     except Exception as e:
         logger.error(e)

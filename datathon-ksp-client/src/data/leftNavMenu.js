@@ -5,6 +5,7 @@ import {
   FileText,
   SquarePen,
   Scale,
+  UserCog,
 } from "lucide-react";
 
 export const menuItems = [
@@ -15,6 +16,10 @@ export const menuItems = [
   {
     title: "BNSS Compliance",
     icon: Scale,
+  },
+  {
+    title: "Investigating Officers",
+    icon: UserCog,
   },
   {
     title: "Crime Intelligence Map",

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { menuItems } from "../data/leftNavMenu.js";
 import { useAuth } from "../auth/AuthContext";
-import { canViewCrimeMap } from "../utils/role";
+import { canViewCrimeMap, getOfficerTier, TIERS } from "../utils/role";
 
 const ConversationItem = ({ conv, isActive, onSelect, onRename, onDelete }) => {
   const { t } = useTranslation();
@@ -177,6 +177,7 @@ const LeftNav = ({
   const menuKeys = [
     "investigations",
     "compliance",
+    "officers",
     "crimeIntelligenceMap",
     "criminalNetworks",
     "reports",
@@ -184,6 +185,7 @@ const LeftNav = ({
   const routeMap = {
     [t("nav.investigations")]: "/investigations",
     [t("nav.compliance")]: "/compliance",
+    [t("nav.officers")]: "/officers",
     [t("nav.crimeIntelligenceMap")]: "/crime-intelligence-map",
     [t("nav.criminalNetworks")]: "/networks",
     [t("nav.reports")]: "/reports",
@@ -196,7 +198,9 @@ const LeftNav = ({
       key: menuKeys[i],
     }))
     // Step 3: Crime Intelligence Map is a command-tier feature
-    .filter((item) => item.key !== "crimeIntelligenceMap" || showCrimeMap);
+    .filter((item) => item.key !== "crimeIntelligenceMap" || showCrimeMap)
+    // Supervising investigations is a command function (not field force).
+    .filter((item) => item.key !== "officers" || getOfficerTier(officer) !== TIERS.FIELD);
 
   return (
     <aside

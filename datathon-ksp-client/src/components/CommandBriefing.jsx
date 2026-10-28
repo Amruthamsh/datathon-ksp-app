@@ -18,6 +18,8 @@ import {
   Network,
   FolderKanban,
   ChevronRight,
+  HeartHandshake,
+  UserCog,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
@@ -100,6 +102,61 @@ function ModuleLink({ icon: Icon, title, sub, onClick }) {
       </span>
       <ChevronRight size={14} className="shrink-0 text-ink-muted transition group-hover:translate-x-0.5 group-hover:text-navy" />
     </button>
+  );
+}
+
+function WomenSafetyCard({ women, jurisdiction, onCompliance, onPlan }) {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-card border border-rose-200 bg-surface p-4 shadow-card">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink">
+            <HeartHandshake size={14} className="text-rose-600" />
+            {t("briefing.women.title")}
+          </p>
+          <p className="text-[11px] text-ink-secondary">
+            {t("briefing.women.sub", { jurisdiction, firs: fmt(women.firs_window), open: fmt(women.open_cases) })}
+          </p>
+        </div>
+        {onPlan && (
+          <button
+            onClick={onPlan}
+            className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11.5px] font-semibold text-rose-800 hover:bg-rose-100 cursor-pointer"
+          >
+            {t("briefing.women.plan")} <ChevronRight size={12} />
+          </button>
+        )}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 @2xl:grid-cols-4">
+        {women.by_type.map((w) => (
+          <div key={w.name} className="rounded-md bg-slate-50 px-2.5 py-2">
+            <p className="truncate text-[11.5px] text-ink-secondary">{w.name}</p>
+            <p className="mt-0.5 flex items-baseline gap-1.5">
+              <span className="text-[17px] font-semibold tabular-nums text-ink">{fmt(w.firs)}</span>
+              <Delta pct={w.change_pct} />
+            </p>
+            <p className="text-[10.5px] text-ink-muted">{t("briefing.women.open", { count: w.open_cases })}</p>
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={onCompliance}
+        className="mt-3 flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-line px-3 py-2 text-left text-[12px] hover:border-navy cursor-pointer"
+      >
+        <span>
+          <span className="font-semibold text-[#b42318]">{fmt(women.sexual_breached)}</span>{" "}
+          {t("briefing.women.sexualBreached")}
+        </span>
+        <span>
+          <span className="font-semibold text-[#c2410c]">{fmt(women.victim_updates_due)}</span>{" "}
+          {t("briefing.women.victimDue")}
+        </span>
+        <span className="ml-auto inline-flex items-center gap-0.5 font-semibold text-navy">
+          {t("briefing.openCompliance")} <ChevronRight size={12} />
+        </span>
+      </button>
+    </div>
   );
 }
 
@@ -188,6 +245,7 @@ export default function CommandBriefing({ onAsk, disabled = false }) {
     district,
     station,
     kgid: officer?.kgid || "",
+    topStation: data.top_rising?.name || station || district,
   });
 
   const asOf = data.as_of
@@ -348,6 +406,17 @@ export default function CommandBriefing({ onAsk, disabled = false }) {
           </div>
         </div>
 
+        {/* Crimes against women — an SP / SHO priority, with the BNSS clocks
+            that protect these victims */}
+        {tierKey !== "state" && data.women?.by_type?.length > 0 && (
+          <WomenSafetyCard
+            women={data.women}
+            jurisdiction={jurisdiction}
+            onCompliance={() => navigate("/compliance")}
+            onPlan={mapAllowed ? () => navigate("/crime-intelligence-map") : null}
+          />
+        )}
+
         {/* One briefing, every module — each says what it unlocks for this officer */}
         <div className="grid gap-2.5 @4xl:grid-cols-2">
           <ModuleLink
@@ -356,6 +425,14 @@ export default function CommandBriefing({ onAsk, disabled = false }) {
             sub={t("briefing.modules.complianceSub", { count: fmt(k.bail_critical) })}
             onClick={() => navigate("/compliance")}
           />
+          {(tierKey === "district" || tierKey === "station") && (
+            <ModuleLink
+              icon={UserCog}
+              title={t("briefing.modules.officers")}
+              sub={t("briefing.modules.officersSub")}
+              onClick={() => navigate("/officers")}
+            />
+          )}
           {mapAllowed && (
             <ModuleLink
               icon={MapPinned}

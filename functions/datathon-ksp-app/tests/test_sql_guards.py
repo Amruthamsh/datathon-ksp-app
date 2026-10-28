@@ -84,3 +84,55 @@ def test_guard_blocks_writes(sql):
 def test_guard_reports_tables():
     v = validate_sql("SELECT * FROM CaseMaster cm JOIN Unit u ON u.UnitID = cm.PoliceStationID")
     assert v["tables"] == ["CaseMaster", "Unit"]
+
+
+# ── Jurisdiction enforcement (agents/sql_query_db/functions/sql_scope.py) ──
+from agents.sql_query_db.functions.sql_scope import apply_scope  # noqa: E402
+
+_DISTRICT = {"level": "district", "district_id": 5}
+
+
+def _run(sql):
+    return SQLiteMetadataRepository().execute_sql(sql)
+
+
+def test_scope_limits_district_rollup_to_own_district():
+    sql = (
+        "SELECT d.DistrictName, COUNT(*) AS n FROM CaseMaster cm "
+        "JOIN Unit u ON cm.PoliceStationID = u.UnitID "
+        "JOIN District d ON u.DistrictID = d.DistrictID GROUP BY d.DistrictName"
+    )
+    scoped, info = apply_scope(sql, _DISTRICT)
+    assert info["applied"] and info["tables"] == ["CaseMaster"]
+    assert {r["DistrictName"] for r in _run(scoped)} == {"Bengaluru Urban"}
+
+
+def test_scope_blocks_other_district_question():
+    sql = (
+        "SELECT COUNT(*) AS n FROM CaseMaster cm JOIN Unit u ON cm.PoliceStationID = u.UnitID "
+        "JOIN District d ON u.DistrictID = d.DistrictID WHERE d.DistrictName = 'Mysuru'"
+    )
+    scoped, _ = apply_scope(sql, _DISTRICT)
+    assert _run(sql)[0]["n"] > 0
+    assert _run(scoped)[0]["n"] == 0
+
+
+@pytest.mark.parametrize("sql", [
+    "SELECT COUNT(*) AS n FROM Accused WHERE AgeYear < 18",
+    "SELECT COUNT(*) AS n FROM Victim v",
+    "WITH x AS (SELECT CaseMasterID FROM CaseMaster) SELECT COUNT(*) AS n FROM x",
+])
+def test_scope_covers_child_tables_and_ctes(sql):
+    scoped, info = apply_scope(sql, _DISTRICT)
+    assert info["applied"]
+    assert _run(scoped)[0]["n"] < _run(sql)[0]["n"]
+
+
+def test_statewide_scope_is_untouched():
+    sql = "SELECT COUNT(*) FROM CaseMaster"
+    assert apply_scope(sql, {"level": "all"}) == (sql, {"applied": False, "tables": [], "level": "all"})
+
+
+def test_scope_without_identity_denies():
+    scoped, _ = apply_scope("SELECT COUNT(*) AS n FROM CaseMaster", {"level": "self"})
+    assert _run(scoped)[0]["n"] == 0

@@ -13,6 +13,7 @@ import CrimeIntelligenceMap from "./pages/CrimeIntelligenceMap";
 import Networks from "./pages/Networks";
 import Reports from "./pages/Reports";
 import Compliance from "./pages/Compliance";
+import Officers from "./pages/Officers";
 import DashboardLayout from "./components/DashboardLayout";
 
 import { AuthProvider, useAuth } from "./auth/AuthContext";
@@ -62,6 +63,14 @@ function AppRoutes() {
             }
           />
           <Route path="/compliance" element={<Compliance />} />
+          <Route
+            path="/officers"
+            element={
+              <ProtectedRoute allowedTiers={["state_command", "district_command", "station_command"]}>
+                <Officers />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/networks" element={<Networks />} />
           <Route path="/reports" element={<Reports />} />
         </Route>

@@ -15,6 +15,12 @@ class SQLAgentState(TypedDict):
     sql_result: list[dict]
     # Static read-only verdict from functions/sql_guard.py (audit trail).
     sql_guard: dict
+    # Officer's RBAC scope ({level, district_id, unit_id, employee_id}) and a
+    # human label ("Bengaluru Urban district"). Enforced on every executed
+    # query by functions/sql_scope.py; sql_scope records what was applied.
+    scope: dict
+    scope_label: str
+    sql_scope: dict
     error: str | None
     response: str
     follow_up_questions: list[str]

@@ -88,6 +88,7 @@ function evidenceBlock(analysis, labels) {
           guard?.passed === false ? `✕ ${guard.reason}` : `✓ ${labels.verified}`,
           steps ? ` · ${steps} ${labels.steps} · ${(ms / 1000).toFixed(1)}s` : "",
           guard?.tables?.length ? ` · ${labels.sources}: ${guard.tables.join(", ")}` : "",
+          audit?.sql_scope?.applied ? ` · ${labels.scope}: ${audit.sql_scope.label}` : "",
           ` · ${rows.length} ${labels.rows}`,
         ],
       ),

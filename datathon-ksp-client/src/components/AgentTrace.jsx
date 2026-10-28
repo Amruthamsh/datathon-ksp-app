@@ -11,6 +11,7 @@ import {
   Paperclip,
   BookOpen,
   Crosshair,
+  Lock,
 } from "lucide-react";
 
 // Display stages while the request is in flight. The real per-node trace
@@ -25,7 +26,10 @@ function liveStages(sources = {}) {
   if (sources.evidence) extra.push("evidence");
   if (sources.codebook) extra.push("legal");
   if (sources.scene) extra.push("scene");
-  return [BASE_STAGES[0], ...extra, ...BASE_STAGES.slice(1)];
+  const stages = [BASE_STAGES[0], ...extra, ...BASE_STAGES.slice(1)];
+  // Below state level, results are confined to the officer's jurisdiction.
+  if (sources.scoped) stages.splice(stages.indexOf("guard") + 1, 0, "scope");
+  return stages;
 }
 
 export function AgentPipelineLoader({ sources }) {
@@ -139,7 +143,7 @@ function detailText(t, step) {
     case "execute_sql":
       return d.guard === false
         ? t("trace.guardBlocked")
-        : t("trace.rows", { count: d.rows || 0 });
+        : `${t("trace.rows", { count: d.rows || 0 })}${d.scoped ? ` · ${t("trace.scopeEnforcedShort")}` : ""}`;
     case "chart":
       return d.charts?.length ? d.charts.join(", ") : t("trace.noChart");
     case "response":
@@ -159,6 +163,38 @@ const SOURCE_DEFS = [
   { id: "legal", icon: BookOpen, used: (by) => by.legal_reference && !by.legal_reference.detail?.skipped },
   { id: "scene", icon: Crosshair, used: (by) => by.scene && !by.scene.detail?.skipped },
 ];
+
+// Row-level jurisdiction: what scope the query actually ran under.
+function JurisdictionCard({ audit }) {
+  const { t } = useTranslation();
+  const sc = audit?.sql_scope;
+  const label = sc?.label || audit?.officer?.jurisdiction;
+  if (!label) return null;
+  const statewide = audit?.officer?.scope === "all";
+  return (
+    <div className="rounded-card border border-navy/20 bg-navy-soft px-3 py-2.5">
+      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-secondary">
+        <Lock size={12} className="text-navy" />
+        {t("trace.jurisdictionTitle")}
+      </p>
+      <p className="mt-1 text-[12.5px] font-semibold text-ink">
+        {statewide
+          ? t("trace.jurisdictionAll")
+          : sc?.applied
+            ? t("trace.jurisdictionEnforced", { label, tables: sc.tables.join(", ") })
+            : t("trace.jurisdictionNoQuery", { label })}
+      </p>
+      {sc?.executed_sql && (
+        <details className="mt-1.5">
+          <summary className="cursor-pointer text-[11.5px] font-medium text-navy">{t("trace.viewEnforcedSql")}</summary>
+          <pre className="mt-1.5 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md bg-slate-950 px-3 py-2 text-[10.5px] leading-5 text-slate-100">
+            {sc.executed_sql}
+          </pre>
+        </details>
+      )}
+    </div>
+  );
+}
 
 function SourcesConsulted({ audit }) {
   const { t } = useTranslation();
@@ -204,6 +240,8 @@ export function AuditTrail({ audit, rowCount = 0 }) {
   return (
     <div className="@container space-y-4">
       <SourcesConsulted audit={audit} />
+
+      <JurisdictionCard audit={audit} />
 
       {/* Verification header */}
       <div className="grid gap-2.5 sm:grid-cols-3">

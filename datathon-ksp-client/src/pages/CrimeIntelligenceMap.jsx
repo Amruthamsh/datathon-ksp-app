@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useAuth } from "../auth/AuthContext";
+import { getOfficerTier, TIERS } from "../utils/role";
 import * as crimeMapApi from "../api/crimeMap";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -167,7 +168,10 @@ function peakToTimeRange(peak) {
 
 export default function CrimeIntelligenceMap() {
   const { t } = useTranslation();
-  const { token } = useAuth();
+  const { token, officer } = useAuth();
+  // District command sees only their own district (also enforced server-side).
+  const ownDistrict =
+    getOfficerTier(officer) === TIERS.DISTRICT ? officer?.district_name || officer?.district || null : null;
 
   const [summary, setSummary] = useState(null);
   const [, setLoading] = useState({
@@ -553,14 +557,17 @@ export default function CrimeIntelligenceMap() {
   const deepLinkDistrictDone = useRef(false);
   const deepLinkCrimeDone = useRef(false);
   useEffect(() => {
-    const district = searchParams.get("district");
+    const district = ownDistrict || searchParams.get("district");
     if (!district || deepLinkDistrictDone.current || !(enhancedRisk || []).length) return;
     deepLinkDistrictDone.current = true;
     const match = enhancedRisk.find(
       (d) => String(d.district).toLowerCase() === district.toLowerCase(),
     );
-    if (match) handleMapAction({ type: "flyToDistrict", district: match.district });
-  }, [searchParams, enhancedRisk, handleMapAction]);
+    if (!match) return;
+    // Own district: select it but keep the boundary-fitted view (MapView).
+    if (ownDistrict) handleMapAction({ type: "selectDistrict", payload: { district: match.district } });
+    else handleMapAction({ type: "flyToDistrict", district: match.district });
+  }, [searchParams, enhancedRisk, handleMapAction, ownDistrict]);
   useEffect(() => {
     const crime = searchParams.get("crime");
     if (!crime || deepLinkCrimeDone.current || !headOptions.length) return;
@@ -698,6 +705,12 @@ export default function CrimeIntelligenceMap() {
               <p className="text-[13px] text-[#64748B] mt-0.5">
                 {t("crimeMap.subtitle")}
               </p>
+              {ownDistrict && (
+                <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-[#17233C]/15 bg-[#EEF2F7] px-2.5 py-0.5 text-[11.5px] font-semibold text-[#17233C]">
+                  <MapPin size={12} />
+                  {t("crimeMap.scopeOnly", { district: ownDistrict })}
+                </p>
+              )}
             </div>
             <div
               className="flex items-center gap-3 bg-white rounded-[10px] border border-[#E2E8F0] px-3 py-2 flex-wrap"
@@ -782,6 +795,7 @@ export default function CrimeIntelligenceMap() {
                 watchRadiusKm={watchRadiusKm}
                 onAnnotateClick={handleAnnotateClick}
                 onFinishCorridor={finishCorridor}
+                focusDistrict={ownDistrict}
               />
 
               {viewMode === "Heatmap" &&
@@ -1669,6 +1683,7 @@ function MapView({
   watchRadiusKm,
   onAnnotateClick,
   onFinishCorridor,
+  focusDistrict,
 }) {
   const { t } = useTranslation();
   const [clusterData, setClusterData] = useState([]);
@@ -1676,6 +1691,8 @@ function MapView({
   const [networkOverlay, setNetworkOverlay] = useState([]);
   const [poiData, setPoiData] = useState([]);
   const [karnatakaGeo, setKarnatakaGeo] = useState(null);
+  // Real district boundaries (Census 2011) — risk polygons + district focus.
+  const [districtsGeo, setDistrictsGeo] = useState(null);
   // Station coverage (response rings)
   const [stations, setStations] = useState([]);
   // Planning marks come from the parent overlay (toggleable like Network
@@ -1723,6 +1740,12 @@ function MapView({
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         if (j) setKarnatakaGeo(j);
+      })
+      .catch(() => {});
+    fetch("/data/karnataka_districts.geojson")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (j?.features) setDistrictsGeo(j);
       })
       .catch(() => {});
   }, []);
@@ -1797,6 +1820,63 @@ function MapView({
     [clusterData],
   );
 
+  const districtShapes = useMemo(
+    () =>
+      Object.fromEntries(
+        (districtsGeo?.features || []).map((f) => [f.properties.district, f.geometry]),
+      ),
+    [districtsGeo],
+  );
+
+  // District command: grey out everything except the officer's own district.
+  const focusShape = focusDistrict ? districtShapes[focusDistrict] : null;
+  const districtFocusMask = useMemo(() => {
+    if (!focusShape) return null;
+    const holes =
+      focusShape.type === "Polygon" ? [focusShape.coordinates[0]] : focusShape.coordinates.map((p) => p[0]);
+    // Generous Karnataka-wide frame; the state mask already dims beyond it.
+    const frame = [[70, 6], [84, 6], [84, 22], [70, 22], [70, 6]];
+    return {
+      type: "Feature",
+      properties: {},
+      geometry: { type: "Polygon", coordinates: [frame, ...holes] },
+    };
+  }, [focusShape]);
+
+  // Clip points to the focus district: synthetic coordinates can spill a little
+  // past the real boundary and would otherwise sit on top of the grey mask.
+  const pointInFocus = useMemo(() => {
+    if (!focusShape) return null;
+    const feature = { type: "Feature", properties: {}, geometry: focusShape };
+    return (lng, lat) => booleanPointInPolygon([lng, lat], feature);
+  }, [focusShape]);
+  const focusedCrimePoints = useMemo(
+    () => (pointInFocus ? crimePointsData.filter((d) => pointInFocus(d.coordinates[0], d.coordinates[1])) : crimePointsData),
+    [crimePointsData, pointInFocus],
+  );
+
+  // Fit the view to the focus district once its boundary is known.
+  const focusFitted = useRef(false);
+  useEffect(() => {
+    if (!focusShape || focusFitted.current) return;
+    focusFitted.current = true;
+    const pts = (focusShape.type === "Polygon" ? [focusShape.coordinates] : focusShape.coordinates).flatMap(
+      (poly) => poly[0],
+    );
+    const lngs = pts.map((p) => p[0]);
+    const lats = pts.map((p) => p[1]);
+    const [minLng, maxLng, minLat, maxLat] = [Math.min(...lngs), Math.max(...lngs), Math.min(...lats), Math.max(...lats)];
+    const span = Math.max(maxLng - minLng, (maxLat - minLat) * 1.3);
+    onViewStateChange((prev) => ({
+      ...prev,
+      longitude: (minLng + maxLng) / 2,
+      latitude: (minLat + maxLat) / 2,
+      zoom: Math.min(11, Math.max(7, Math.log2(360 / span) - 0.6)),
+      pitch: 0,
+      bearing: 0,
+    }));
+  }, [focusShape, onViewStateChange]);
+
   const districtGeoJson = useMemo(() => {
     if (!districtRisk.length) return null;
     return {
@@ -1822,7 +1902,9 @@ function MapView({
           poi_total: d.multipliers?.poi_total,
           weather_rain: d.multipliers?.weather_rain_14d_avg,
         },
-        geometry: {
+        // Real boundary when we have one; bounding box otherwise
+        // (e.g. Vijayanagara, formed after the 2011 census boundaries).
+        geometry: districtShapes[d.district] || {
           type: "Polygon",
           coordinates: [
             [
@@ -1836,7 +1918,7 @@ function MapView({
         },
       })),
     };
-  }, [districtRisk]);
+  }, [districtRisk, districtShapes]);
 
   const networkEdges = useMemo(() => {
     if (!networkOverlay.length) return [];
@@ -2031,12 +2113,26 @@ function MapView({
       );
     }
 
+    // District command: everything outside the officer's district goes grey.
+    if (districtFocusMask) {
+      activeLayers.push(
+        new GeoJsonLayer({
+          id: "district-focus-mask",
+          data: districtFocusMask,
+          pickable: false,
+          stroked: false,
+          filled: true,
+          getFillColor: [100, 116, 139, 150],
+        }),
+      );
+    }
+
     if (viewMode === "Heatmap") {
-      if (crimePointsData.length) {
+      if (focusedCrimePoints.length) {
         activeLayers.push(
           new ScatterplotLayer({
             id: "crime-points",
-            data: crimePointsData,
+            data: focusedCrimePoints,
             getPosition: (d) => d.coordinates,
             getRadius: 4,
             radiusMinPixels: 2,
@@ -2212,6 +2308,7 @@ function MapView({
     if (poiData.length) {
       const grouped = {};
       poiData.forEach((p) => {
+        if (pointInFocus && !pointInFocus(p.lng, p.lat)) return;
         (grouped[p.POIType] = grouped[p.POIType] || []).push(p);
       });
       Object.entries(grouped).forEach(([type, data]) => {
@@ -2411,6 +2508,21 @@ function MapView({
       }
     }
 
+    if (focusShape) {
+      activeLayers.push(
+        new GeoJsonLayer({
+          id: "district-focus-outline",
+          data: { type: "Feature", properties: {}, geometry: focusShape },
+          pickable: false,
+          stroked: true,
+          filled: false,
+          getLineColor: [23, 35, 60, 255],
+          getLineWidth: 3,
+          lineWidthMinPixels: 2.5,
+        }),
+      );
+    }
+
     // Karnataka state outline — always on top
     if (karnatakaGeo) {
       activeLayers.push(
@@ -2440,7 +2552,11 @@ function MapView({
     onClusterClick,
     subTypeColorMap,
     poiData,
+    focusedCrimePoints,
+    pointInFocus,
     karnatakaGeo,
+    districtFocusMask,
+    focusShape,
     karnatakaMask,
     pick,
     showCoverage,

@@ -86,9 +86,16 @@ class CrimeMapRepository:
     # ------------------------------------------------------------------
     def get_summary(self, date_from=None, date_to=None, crime_head=None,
                     crime_sub_head_name=None, district=None):
+        # District filter (by name) — also how a district officer's map is
+        # confined to their jurisdiction (routes/crime_map.py).
+        dsql, dp = "", []
+        if district:
+            dsql = (" AND PoliceStationID IN (SELECT u.UnitID FROM Unit u "
+                    "JOIN District d ON d.DistrictID = u.DistrictID WHERE d.DistrictName = ?)")
+            dp = [district]
         with get_connection() as conn:
             total_crimes = conn.execute(
-                "SELECT COUNT(*) AS cnt FROM CaseMaster"
+                f"SELECT COUNT(*) AS cnt FROM CaseMaster WHERE 1 = 1{dsql}", dp
             ).fetchone()["cnt"]
 
             max_date_row = conn.execute("SELECT MAX(CrimeRegisteredDate) AS d FROM CaseMaster").fetchone()
@@ -98,51 +105,55 @@ class CrimeMapRepository:
             sixty_days_ago = (ref - timedelta(days=60)).strftime("%Y-%m-%d")
 
             recent_crimes = conn.execute(
-                "SELECT COUNT(*) AS cnt FROM CaseMaster WHERE CrimeRegisteredDate >= ?",
-                (thirty_days_ago,),
+                f"SELECT COUNT(*) AS cnt FROM CaseMaster WHERE CrimeRegisteredDate >= ?{dsql}",
+                (thirty_days_ago, *dp),
             ).fetchone()["cnt"]
 
             prev_period = conn.execute(
-                "SELECT COUNT(*) AS cnt FROM CaseMaster WHERE CrimeRegisteredDate >= ? AND CrimeRegisteredDate < ?",
-                (sixty_days_ago, thirty_days_ago),
+                f"SELECT COUNT(*) AS cnt FROM CaseMaster WHERE CrimeRegisteredDate >= ? AND CrimeRegisteredDate < ?{dsql}",
+                (sixty_days_ago, thirty_days_ago, *dp),
             ).fetchone()["cnt"]
 
             emerging = max(0, recent_crimes - prev_period)
 
             repeat_offenders = conn.execute(
-                """
+                f"""
                 SELECT COUNT(*) AS cnt FROM (
                     SELECT AccusedName FROM Accused
                     WHERE AccusedName IS NOT NULL
+                      AND CaseMasterID IN (SELECT CaseMasterID FROM CaseMaster WHERE 1 = 1{dsql})
                     GROUP BY AccusedName
                     HAVING COUNT(DISTINCT CaseMasterID) > 1
                 )
-                """
+                """,
+                dp,
             ).fetchone()["cnt"]
 
             top_crime = conn.execute(
-                """
+                f"""
                 SELECT ch.CrimeGroupName, COUNT(*) AS cnt
                 FROM CaseMaster cm
                 LEFT JOIN CrimeHead ch ON cm.CrimeMajorHeadID = ch.CrimeHeadID
+                WHERE 1 = 1{dsql}
                 GROUP BY ch.CrimeGroupName
                 ORDER BY cnt DESC
                 LIMIT 1
-                """
+                """,
+                dp,
             ).fetchone()
 
             top_district_row = conn.execute(
-                """
+                f"""
                 SELECT d.DistrictName, COUNT(*) AS cnt
                 FROM CaseMaster cm
                 JOIN Unit u ON cm.PoliceStationID = u.UnitID
                 JOIN District d ON u.DistrictID = d.DistrictID
-                WHERE cm.CrimeRegisteredDate >= ?
+                WHERE cm.CrimeRegisteredDate >= ?{dsql}
                 GROUP BY d.DistrictName
                 ORDER BY cnt DESC
                 LIMIT 1
                 """,
-                (thirty_days_ago,),
+                (thirty_days_ago, *dp),
             ).fetchone()
 
             data = {

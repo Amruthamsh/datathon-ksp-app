@@ -56,8 +56,8 @@ ARCHETYPE_GUIDANCE = {
     "kidnapping_response": "Checkpoint deployment, CCTV tracing, missing-person SOP",
     "property_patrol": "Night patrol, nakabandi at entry/exit points, CCTV, second-hand dealer checks",
     "vehicle_patrol": "Vehicle naka, parking lot surveillance, interstate coordination",
-    "women_safety": "Women Safety Wing, 112 helpline, family counselling, SHE teams, home visits — NOT routine lathi patrol",
-    "public_order": "Preventive detention (Sec 107/151), crowd control, liquor shop surveillance, peace committee meetings",
+    "women_safety": "Women Safety Wing, ERSS 112, family counselling, Pink Hoysala / Obavva Pade women police squads, home visits — NOT routine lathi patrol",
+    "public_order": "Preventive action (BNSS s.126 / s.170), crowd control, liquor shop surveillance, peace committee meetings",
     "economic_cell": "Economic Offences Wing, bank coordination, document verification, awareness",
     "cyber_cell": "Cyber Crime Cell, 1930 helpline, digital forensics, payment gateway lien, telecom CEIR — NO physical lathi patrol",
 }
@@ -99,7 +99,7 @@ HEURISTIC_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "deployment_type": "women_safety",
         "why_this_deployment": "Domestic/sexual offences need victim-centric intervention, not punitive patrol.",
         "immediate_actions": [
-            {"title": "SHE teams + 112", "detail": "Home visit + counselling within 24h", "priority": "High", "where": ""},
+            {"title": "Pink Hoysala / Obavva Pade + ERSS 112", "detail": "Women police home visit + counselling within 24h", "priority": "High", "where": ""},
             {"title": "Protection officer link", "detail": "Connect with Women & Child Dept for shelter/legal aid", "priority": "High", "where": ""},
             {"title": "Repeat offender check", "detail": "Verify bail conditions, history of DV", "priority": "Medium", "where": ""},
         ],
@@ -124,7 +124,7 @@ HEURISTIC_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "deployment_type": "public_order",
         "why_this_deployment": "Rioting/unlawful assembly needs preventive and crowd-control deployment, not crime-scene patrol.",
         "immediate_actions": [
-            {"title": "Preventive CRPC 107/151", "detail": "Bind over habitual instigators", "priority": "High", "where": ""},
+            {"title": "Preventive action — BNSS s.126 / s.170", "detail": "Bind over habitual instigators (formerly CrPC s.107 / s.151)", "priority": "High", "where": ""},
             {"title": "Peace committee", "detail": "Convene leaders at sensitive stations", "priority": "High", "where": ""},
             {"title": "Liquor & DJ check", "detail": "Evening excise + loudspeaker checks", "priority": "Medium", "where": ""},
         ],

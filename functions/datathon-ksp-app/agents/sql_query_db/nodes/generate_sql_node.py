@@ -63,6 +63,17 @@ def _get_data_as_of() -> str | None:
     return _data_as_of or None
 
 
+def _jurisdiction_rule(state) -> str:
+    label = state.get("scope_label")
+    if not label or (state.get("scope") or {}).get("level") == "all":
+        return ""
+    return f"""
+8. JURISDICTION: the officer may only see cases in {label}. Results are
+   automatically restricted to it, so write the query for the question as
+   asked; do not filter on other districts or stations to work around it.
+"""
+
+
 def _date_anchor_rule() -> str:
     as_of = _get_data_as_of()
     if not as_of:
@@ -128,6 +139,7 @@ Rules:
 
 {SCHEMA_HINTS}
 {_date_anchor_rule()}
+{_jurisdiction_rule(state)}
 """
 
     human_prompt = f"""
