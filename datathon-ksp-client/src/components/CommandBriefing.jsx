@@ -18,6 +18,7 @@ import {
   Network,
   FolderKanban,
   Building2,
+  ClipboardList,
   ChevronRight,
   HeartHandshake,
   UserCog,
@@ -426,6 +427,14 @@ export default function CommandBriefing({ onAsk, disabled = false }) {
               title={t("briefing.modules.station")}
               sub={t("briefing.modules.stationSub")}
               onClick={() => navigate("/station-command")}
+            />
+          )}
+          {tierKey === "field" && (
+            <ModuleLink
+              icon={ClipboardList}
+              title={t("briefing.modules.field")}
+              sub={t("briefing.modules.fieldSub")}
+              onClick={() => navigate("/field-workbench")}
             />
           )}
           <ModuleLink

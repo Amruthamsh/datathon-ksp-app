@@ -59,7 +59,8 @@
     "reports": "Reports",
     "compliance": "BNSS Compliance",
     "officers": "Investigating Officers",
-    "stationCommand": "Station Command"
+    "stationCommand": "Station Command",
+    "fieldWorkbench": "Field Workbench"
   },
   "header": {
     "searchPlaceholder": "Search FIRs, accused, victims, locations...",
@@ -715,7 +716,9 @@
       "officers": "Investigating Officers",
       "officersSub": "Who investigates your cases — and who should",
       "station": "Station Command",
-      "stationSub": "Today's queue, BNSS clocks and the local picture"
+      "stationSub": "Today's queue, BNSS clocks and the local picture",
+      "field": "Field Workbench",
+      "fieldSub": "Your assigned cases, field tasks and beat context"
     },
     "openCompliance": "Open BNSS board",
     "women": {
@@ -1081,6 +1084,79 @@
     },
     "ask": {
       "title": "Ask CrimeLens about your station"
+    }
+  },
+  "field": {
+    "eyebrow": "Field Workbench",
+    "title": "My Field Workbench",
+    "tier": "Field Investigator",
+    "unavailable": "The field workbench is unavailable right now.",
+    "scope": "Assigned cases only · {{station}}",
+    "asOf": "Data as of {{date}} · last {{days}} days",
+    "openQueue": "My cases",
+    "openCompliance": "BNSS board",
+    "kpi": {
+      "assigned": "Assigned cases",
+      "openSub": "{{open}} under investigation",
+      "arrests": "Arrests pending",
+      "arrestSub": "surrender or arrest to execute",
+      "chargesheet": "Chargesheets pending",
+      "overdueSub": "{{count}} past a BNSS limit",
+      "review": "Review today",
+      "reviewSub": "priority files on your desk"
+    },
+    "tasks": {
+      "title": "Today's field tasks",
+      "sub": "One next action per assigned case, statutory clocks first.",
+      "all": "All my cases",
+      "empty": "No field tasks right now.",
+      "footer": "Open a task to see the case file, evidence and witness details.",
+      "open": "Open case",
+      "kind": {
+        "bnss": "Statutory deadline",
+        "chargesheet": "File chargesheet",
+        "arrest": "Arrest / surrender pending",
+        "victim": "Victim statement / update",
+        "review": "Review case file"
+      },
+      "band": {
+        "breached": "Past limit by {{count}} days",
+        "critical": "{{count}} days left",
+        "warning": "{{count}} days left",
+        "on_track": "On track"
+      },
+      "meta": "{{crime}} · {{status}}",
+      "counts": "{{accused}} accused · {{victims}} victims"
+    },
+    "cases": {
+      "title": "My assigned cases",
+      "sub": "FIRs assigned to you, priority first.",
+      "all": "Open full queue",
+      "empty": "No cases are assigned to you right now.",
+      "open": "Open",
+      "age": "{{days}} days old",
+      "counts": "{{accused}} accused · {{victims}} victims",
+      "bnss": "BNSS",
+      "noBnss": "No live clock"
+    },
+    "beat": {
+      "title": "Station beat context",
+      "sub": "What is being registered around {{station}} — aggregate only.",
+      "firs": "FIRs · 30d",
+      "open": "Open at station",
+      "total": "Total FIRs",
+      "top": "Top crime types · 30d",
+      "empty": "No FIRs in the last 30 days."
+    },
+    "evidence": {
+      "title": "Evidence & statements",
+      "sub": "Collect it once, correctly.",
+      "body": "Attach the FIR, Panchnama, CDR, post-mortem report or witness statement in the chat. CrimeLens extracts dates, sections, people and locations for the case file.",
+      "cta": "Attach evidence in chat",
+      "ask": "Help me review the evidence documents for this case"
+    },
+    "ask": {
+      "title": "Ask CrimeLens about your cases"
     }
   }
 }

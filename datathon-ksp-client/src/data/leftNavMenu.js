@@ -1,10 +1,10 @@
 import {
   Building2,
+  ClipboardList,
   FolderKanban,
   MapPinned,
   Network,
   FileText,
-  SquarePen,
   Scale,
   UserCog,
 } from "lucide-react";
@@ -13,6 +13,10 @@ export const menuItems = [
   {
     title: "Station Command",
     icon: Building2,
+  },
+  {
+    title: "Field Workbench",
+    icon: ClipboardList,
   },
   {
     title: "Investigations",

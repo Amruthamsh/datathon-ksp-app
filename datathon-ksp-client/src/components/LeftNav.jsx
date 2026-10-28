@@ -176,6 +176,7 @@ const LeftNav = ({
 
   const menuKeys = [
     "stationCommand",
+    "fieldWorkbench",
     "investigations",
     "compliance",
     "officers",
@@ -185,6 +186,7 @@ const LeftNav = ({
   ];
   const routeMap = {
     [t("nav.stationCommand")]: "/station-command",
+    [t("nav.fieldWorkbench")]: "/field-workbench",
     [t("nav.investigations")]: "/investigations",
     [t("nav.compliance")]: "/compliance",
     [t("nav.officers")]: "/officers",
@@ -204,7 +206,9 @@ const LeftNav = ({
     // Supervising investigations is a command function (not field force).
     .filter((item) => item.key !== "officers" || getOfficerTier(officer) !== TIERS.FIELD)
     // The station workspace belongs to the officer running the station.
-    .filter((item) => item.key !== "stationCommand" || getOfficerTier(officer) === TIERS.STATION);
+    .filter((item) => item.key !== "stationCommand" || getOfficerTier(officer) === TIERS.STATION)
+    // The field workbench belongs to field investigators only.
+    .filter((item) => item.key !== "fieldWorkbench" || getOfficerTier(officer) === TIERS.FIELD);
 
   return (
     <aside
